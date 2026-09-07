@@ -84,6 +84,10 @@ scripts = ["install/setup.sh"]
 # Only applies through `pixi run` / `pixi shell` — a raw shell must export it itself.
 [activation.env]
 ROS_DOMAIN_ID = "42"
+# F' GDS web UI, opened by `ground_station.launch.py fprime_gds:=true`. Single place to
+# change the address; override per shell with `export FPRIME_GDS_URL=...` or per launch
+# with `fprime_gds_url:=...`.
+FPRIME_GDS_URL = "http://192.168.4.73:5000"
 
 [tasks]
 fmt = "ruff check src/ --fix"
