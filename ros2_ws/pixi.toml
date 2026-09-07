@@ -74,6 +74,8 @@ ros-humble-ros2-control = ">=2.54.0,<3"
 ros-humble-ign-ros2-control = ">=0.7.19,<0.8"
 # Foxglove WebSocket bridge: rover publishes on :8765, ground station connects with Foxglove Studio.
 ros-humble-foxglove-bridge = "*"
+# Keyboard teleop — the drive path where no /dev/input gamepad exists (Mac devcontainer, CI).
+ros-humble-teleop-twist-keyboard = "*"
 
 [activation]
 scripts = ["install/setup.sh"]

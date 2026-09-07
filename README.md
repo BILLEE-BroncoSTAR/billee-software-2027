@@ -130,16 +130,14 @@ flowchart LR
 ```
 
 
-## Apple-Silicon CPU devcontainer
+## Apple-Silicon Mac — headless ground station
 
 The default devcontainer is for Linux hosts with an NVIDIA GPU and a ZED camera.
-For local CPU-only development on an Apple-Silicon Mac, use the `Mac` configuration
-in `.devcontainer/mac/devcontainer.json` (VS Code: **Dev Containers: Reopen in
-Container**, then select **desktop-roshumble-mac-cpu**).
-
-This configuration intentionally excludes CUDA, the ZED SDK, GPU/device forwarding,
-and physical-robot networking. It uses the separate `mac-cpu` Pixi environment
-(backed by the shared `aarch64-cpu` feature):
+On an Apple-Silicon Mac, use the `Mac` configuration in
+`.devcontainer/mac/devcontainer.json` (VS Code: **Dev Containers: Reopen in
+Container**, then **desktop-roshumble-mac-cpu**). It uses the `mac-cpu` Pixi
+environment (shared `aarch64-cpu` feature — same package set as the Jetson `l4t`
+env, so the build behaves the same).
 
 ```sh
 cd ros2_ws
@@ -147,7 +145,34 @@ pixi install --environment mac-cpu
 pixi run --environment mac-cpu build
 ```
 
-X11/XQuartz GUI forwarding must be configured by users invidually
+**What runs** (all headless, in the container):
+
+- **Headless Gazebo sim** — wrap launches in `xvfb-run -a`; the image ships `xvfb`
+  and a mesa `llvmpipe` software renderer. Slow, and camera sensors are marginal,
+  but the drivetrain + physics run.
+- The full **`ros2_control` stack** (`diff_drive_controller`, mock/sim backends,
+  `/odom`, `/tf`) and **`foxglove_bridge`** on `:8765` (forwarded to the macOS host).
+- **Keyboard teleop** — `teleop_twist_keyboard` (reads stdin), remapped to
+  `/diff_drive_controller/cmd_vel_unstamped`.
+
+**What does not** (by design — Docker Desktop on macOS):
+
+- **RViz** — no X server. Use Foxglove Studio (the macOS app) → `ws://localhost:8765`
+  and build the operator view there. Skip RViz in the launch with `rviz:=false`.
+- **USB gamepad** — `/dev/input/js*` is not passed into the container. Use keyboard
+  teleop, or Foxglove Studio's Teleop / Gamepad panel (publishes `Twist` through the
+  bridge).
+- **Direct DDS to a real rover** — no host networking. A Mac views a *remote* rover
+  only through the Foxglove bridge (`ws://<rover-ip>:8765`); it cannot join the
+  rover's DDS graph.
+
+Two ways to use it:
+
+1. **Self-contained sim** — one container runs sim + control + bridge; Foxglove
+   Studio on the host connects to `ws://localhost:8765`; drive with keyboard teleop.
+2. **Remote viewer** — just point Foxglove Studio at the rover's `ws://<rover-ip>:8765`.
+
+See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → "Mac (Apple Silicon)" for the commands.
 
 ## NVIDIA Jetson (L4T) rover devcontainer
 

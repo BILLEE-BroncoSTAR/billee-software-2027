@@ -12,7 +12,32 @@
   "workspaceFolder": "/root/ros2_ws",
   "postStartCommand": "if ! grep -Fq \"'exec' /root/ros2_ws/.pixi/envs/mac-cpu/bin/python\" .pixi/envs/mac-cpu/bin/ros2 2>/dev/null; then pixi clean --environment mac-cpu || true; pixi install --environment mac-cpu; fi",
 
+  // Foxglove Studio on the macOS host connects to the container's foxglove_bridge here.
+  // There is no host networking on Docker Desktop, so this forward is how :8765 gets out.
+  "forwardPorts": [8765],
+  "portsAttributes": {
+    "8765": { "label": "Foxglove bridge" }
+  },
+
   "containerEnv": {
-    "ROS_DISTRO": "humble"
+    "ROS_DISTRO": "humble",
+    // No GPU passthrough on Apple Silicon Docker — force the mesa llvmpipe software
+    // renderer so Gazebo (under xvfb-run) does not probe for a nonexistent GPU.
+    "LIBGL_ALWAYS_SOFTWARE": "1",
+    "GALLIUM_DRIVER": "llvmpipe"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "renan-r-santos.pixi-code",
+        "Ranch-Hand-Robotics.urdf-editor",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "smilerobotics.urdf",
+        "waderyan.gitblame"
+      ]
+    }
   }
 }

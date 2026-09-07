@@ -6,7 +6,8 @@
 
 Starts:
   - viz.launch.py  -> rviz2 (drivetrain.rviz) + foxglove_bridge on :8765
-  - teleop.launch.py -> joy_node + joy_tank_drive  (publishes cmd_vel over DDS)
+  - teleop.launch.py -> joy_node + joy_tank_drive  (publishes cmd_vel over DDS);
+    skip with joystick:=false (e.g. headless / Mac container / Foxglove-only station)
   - optionally opens the F' GDS web UI in a browser (fprime_gds:=true); the address is
     $FPRIME_GDS_URL (set in ros2_ws/pixi.toml) or fprime_gds_url:=
 
@@ -37,6 +38,12 @@ declare_args = [
         "foxglove",
         default_value="true",
         description="Start the local foxglove_bridge WebSocket server on :8765.",
+    ),
+    DeclareLaunchArgument(
+        "joystick",
+        default_value="true",
+        description="Start teleop (joy_node + joy_tank_drive). Set false for a "
+        "view-only station or where no /dev/input gamepad exists (Mac container, CI).",
     ),
     DeclareLaunchArgument(
         "fprime_gds",
@@ -73,7 +80,8 @@ def generate_launch_description():
             PathJoinSubstitution(
                 [FindPackageShare("teleop"), "launch", "teleop.launch.py"]
             )
-        )
+        ),
+        condition=IfCondition(LaunchConfiguration("joystick")),
     )
 
     # `python3 -m webbrowser` honours $BROWSER and falls back through installed

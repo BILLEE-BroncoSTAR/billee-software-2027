@@ -20,6 +20,21 @@ export PATH="$HOME/.pixi/bin:$PATH"
 Command form: `pixi run --environment <env> <cmd>` — `<env>` is `l4t` on **[rover]**,
 `default` on **[ground]**. Commands below already have the right env.
 
+### Mac (Apple Silicon)
+
+An Apple-Silicon Mac runs as a **headless** ground station / self-contained sim host in the
+`mac-cpu` devcontainer (`--environment mac-cpu`). No RViz (no X); view in **Foxglove
+Studio** (the macOS app) → `ws://localhost:8765`. Differences from `[ground]` above:
+
+- **Sim**: wrap in `xvfb-run -a`, e.g.
+  `xvfb-run -a pixi run --environment mac-cpu ros2 launch chassis_bringup rover.launch.py mode:=sim`.
+- **View**: `... ros2 launch chassis_bringup ground_station.launch.py rviz:=false joystick:=false`
+  (just the bridge), or rely on the bridge that `rover.launch.py` already starts.
+- **Drive** (own terminal — reads stdin):
+  `pixi run --environment mac-cpu ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel_unstamped`
+- **No USB gamepad**, **no DDS to a remote rover** — for a remote rover, point Foxglove
+  Studio at `ws://<rover-ip>:8765` and drive from its Teleop panel. See `README.md`.
+
 ---
 
 ## Quick launch (2 commands)
@@ -311,7 +326,7 @@ unaffected by it.
 | Foxglove: robot shows as bare axes, no meshes | Bridge not serving `package://` assets. Confirm `robot_description` is in the sourced overlay on the rover and the `foxglove_bridge` build supports asset fetch. |
 | Foxglove layout imports but a display is missing | Studio schema drift — add the layer via the 3D panel settings, then Layouts → Export and overwrite `foxglove/drivetrain.json`. |
 | Robot model shows but never moves (sim) | Deadman (RB/R1) not held, triggers not pulled once (they read 0 until first pull), or nothing on `/diff_drive_controller/cmd_vel_unstamped` (`ros2 topic echo` it). |
-| Model sits still while the odom trail / pose drives away | The view is *following* the robot. RViz: Views → Target Frame → `odom` (or `<Fixed Frame>`). Foxglove: Frame → Follow mode → `Off`, Display frame → `odom`. Re-import `drivetrain.json` / reload `drivetrain.rviz` to pick up the checked-in fix. |
+| Model sits still while the odom trail / pose drives away | Expected — the view *follows the robot* (RViz Target Frame `base_link`, Foxglove Follow mode `Position`). The model is attached to `odom → base_footprint` and is moving; the camera rides with it. To watch it traverse a static grid, set RViz Target Frame → `<Fixed Frame>` / Foxglove Follow mode → `Off` — but note `odom` is offset from the rover at spawn (the sim settles), so the world will not be centred on 0. |
 | Real: wheels dead, `list_controllers` shows `inactive` | `can0` down / wrong bitrate → `on_activate` failed. `tooling/can-up` first; check `dmesg`. No motors: `can_interface:=mock` or `vcan0`. |
 | Real: hangs at "Loading controller 'diff_drive_controller'" | Standalone `ros2_control_node` on `use_sim_time:=true` with no `/clock`. `real.launch.py` handles it; if hand-rolled, pass `-p use_sim_time:=false`. |
 | `can_interface:=vcan0` but no frames | `tooling/can-up vcan0` first; `candump -L vcan0`. Expect six `0x07` frames on activate, then `0x0D` per write while driving. |
