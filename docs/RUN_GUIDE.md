@@ -143,26 +143,38 @@ The Gazebo rover on the Jetson should drive a circle.
 
 ## B. Real drivetrain (ODESC over CAN)
 
-**1. [rover] — CAN bus up**
+**1. [rover] — bring up the real CAN bus** (`can0`)
 ```bash
 ~/billee-software-2027/tooling/can-up            # can0 @ 500000 bit/s
 ~/billee-software-2027/tooling/can-up status can0
 ```
 Persist across reboots: `sudo cp tooling/can0.service /etc/systemd/system/ && sudo systemctl enable --now can0.service`
+(Skip this step for `can_interface:=mock`; for `:=vcan0` run `tooling/can-up vcan0` instead.)
 
 **2. [rover] — drivetrain**
 ```bash
 pixi run --environment l4t ros2 launch chassis_bringup real.launch.py
 ```
-Args:
-- `gear_ratio:=48.0` — default (ODESC V4.2 + NEO REV v1.1)
-- `can_interface:=can0` — default. `mock` = no CAN, loopback feedback. `vcan0` = virtual bus.
-- `foxglove:=true` — fold the bridge in instead of running step 3.
+Bare command = real ODESC bus (`can0`) at the 48:1 gear ratio. **The CAN node → wheel
+mapping is already in the URDF** (`ros2_control.urdf.xacro`, canonical
+`odesc/config/node_map.yaml`) — `real.launch.py` expands it for you, there is nothing to
+pass. Everything below is an *optional* arg with a default:
 
-No hardware yet — use one of:
+| arg | default | meaning |
+|---|---|---|
+| `can_interface:=` | `can0` | `can0` real bus · `vcan0` virtual bus · `mock` no CAN — see [CAN backend](#can-backend-can_interface) |
+| `gear_ratio:=` | `48.0` | motor-shaft turns per wheel turn |
+| `foxglove:=` | `false` | `true` folds the bridge in (skip step 3) |
+
+`rover.launch.py mode:=real` is the one-command form — it forwards `can_interface:=` /
+`gear_ratio:=` and turns the bridge on.
+
+**No ODESC hardware yet?** Pick one:
 ```bash
+# full control stack, no CAN at all — /odom, TF and the viewers still work:
 pixi run --environment l4t ros2 launch chassis_bringup real.launch.py can_interface:=mock
-# or a virtual bus:
+
+# CAN-protocol test on a virtual bus (inject / watch frames by hand):
 ~/billee-software-2027/tooling/can-up vcan0
 pixi run --environment l4t ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 ```
@@ -241,6 +253,27 @@ topics now cross DDS — fine on a LAN; for a bandwidth-limited radio link switc
 `zenoh-bridge-ros2dds` on each side bridging only `cmd_vel` up and `odom`/`tf`/
 `robot_description`/`joint_states` down (not yet set up).
 
+### CAN backend (`can_interface`)
+
+`sim_gz.launch.py` loads the Gazebo backend; `real.launch.py` loads
+`odesc/OdescSystemHardware` (the xacro arg `use_sim` is set for you by the launch file —
+not something you pass). For the real backend, `can_interface:=` picks *what the driver
+talks to*:
+
+| `can_interface` | opens a socket? | other end of the bus | use it for |
+|---|---|---|---|
+| **`can0`** (default) | yes — real Jetson SocketCAN | the 6 physical ODESC V4.2 + NEO controllers (ODrive CANSimple, 500 kbit/s) | driving the actual rover |
+| **`vcan0`** | yes — a kernel *virtual* CAN device (`tooling/can-up vcan0`) | nothing — you `cansend` fake `Get_Encoder_Estimates` frames and `candump -L vcan0` the driver's `0x07`/`0x0D` | checking the exact CAN frames the driver emits, no hardware |
+| **`mock`** / `none` | **no** | n/a — the plugin loops the commanded wheel velocity back through the 48:1 ratio and integrates position | bringing up the whole real (non-Gazebo) stack → `/odom` → TF → RViz/Foxglove with zero CAN and zero motors |
+
+The **node ID ↔ wheel-joint map** is baked into
+`robot_description/urdf/ros2_control.urdf.xacro` (per-joint `<param name="node_id">`,
+0–5), canonical copy `odesc/config/node_map.yaml` — kept in sync by hand, expanded
+automatically by `real.launch.py`. It is **not** a launch argument. `gear_ratio` (48:1) is
+the motor-shaft-turns-per-wheel-turn conversion, applied only inside
+`OdescSystemHardware`; `controllers.yaml` / `wheel_radius` / `wheel_separation` are
+unaffected by it.
+
 ### Notes
 
 - **`use_sim_time`**: sim = `true` (Gazebo `/clock`), real = `false` (wall clock).
@@ -248,11 +281,9 @@ topics now cross DDS — fine on a LAN; for a bandwidth-limited radio link switc
   `use_sim_time:=true` and no `/clock` wedges at "Loading controller 'diff_drive_controller'".
 - **CAN bitrate 500000** matches `BILLEE_NEO_ODESC_Hardware_Integration_Guide.md` §3.4.
   Override: `tooling/can-up can0 250000`.
-- **Node ↔ wheel map**: `odesc/config/node_map.yaml` is canonical; the `node_id` params in
-  `robot_description/urdf/ros2_control.urdf.xacro` are hand-copied — keep in sync.
-- **Backend select**: `use_sim:=true` → Gazebo `IgnitionSystem`; `use_sim:=false` →
-  `odesc/OdescSystemHardware` (SocketCAN, ODrive CAN Simple v0.5.4, nodes 0–5).
-  `sim_gz.launch.py` sets `true`, `real.launch.py` sets `false`.
+- **Backend / node map / `can_interface`**: see [CAN backend](#can-backend-can_interface)
+  above. Short version — sim vs real is picked by the launch file, the node→wheel map is
+  in the URDF (not an arg), and `can_interface:=` only chooses `can0` / `vcan0` / `mock`.
 - **Teleop** (`teleop/config/joystick.yaml`, `joy_teleop.cpp`) — arcade, Xbox + PlayStation:
   `deadman_button 5` (RB/R1), `steer_axis 0` (left stick X), `throttle_axis 5` (RT/R2),
   `reverse_axis 2` (LT/L2), `steer_scale 1.5`, `speed_scale 2.0`.
