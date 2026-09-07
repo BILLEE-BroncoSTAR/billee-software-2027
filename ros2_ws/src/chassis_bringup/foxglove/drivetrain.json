@@ -13,8 +13,8 @@
         "near": 0.01,
         "far": 5000
       },
-      "followMode": "follow-position",
-      "followTf": "base_link",
+      "followMode": "follow-none",
+      "followTf": "odom",
       "scene": {
         "transforms": { "showLabel": true, "labelSize": 0.06, "axisScale": 0.3 },
         "backgroundColor": "#303030"
