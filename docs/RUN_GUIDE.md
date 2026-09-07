@@ -24,7 +24,8 @@ Command form: `pixi run --environment <env> <cmd>` — `<env>` is `l4t` on **[ro
 
 ## Quick launch (2 commands)
 
-One launch per machine. Sections A/B below are the manual, per-node breakdown for
+One launch per machine — you run **both** (on one box for local sim, or one each for a
+real rover + ground station). Sections A/B below are the manual, per-node breakdown for
 debugging.
 
 **[rover]**
@@ -35,22 +36,26 @@ xvfb-run -a pixi run --environment l4t ros2 launch chassis_bringup rover.launch.
 pixi run --environment l4t ros2 launch chassis_bringup rover.launch.py mode:=real
 #   mode:=real also takes can_interface:= (can0 | mock | vcan0) and gear_ratio:=
 ```
-`rover.launch.py` runs the right backend **and** the `foxglove_bridge` (:8765).
+`rover.launch.py` runs the right backend **and** the `foxglove_bridge` (:8765). No viewer,
+no teleop, no browser — those are all on `ground_station.launch.py` below.
 
 **[ground]**
 ```bash
-pixi run --environment default ros2 launch chassis_bringup ground_station.launch.py
-#   use_sim_time:=false   when the rover is on real hardware (not sim)
-#   fprime_gds:=true       also open the F' GDS web UI in a browser
+pixi run --environment default ros2 launch chassis_bringup ground_station.launch.py fprime_gds:=true
+#   drop fprime_gds:=true  to skip opening the GDS web UI
+#   use_sim_time:=false    when the rover is on real hardware (not sim)
 ```
 `ground_station.launch.py` runs the joystick (teleop) + RViz + a local `foxglove_bridge`
-(:8765). Open Foxglove Studio → `ws://localhost:8765` → import
+(:8765) — **this** is the launch with `fprime_gds:=true` (needs a real browser + a
+graphical session on that machine; it's a no-op in a headless container). Open Foxglove
+Studio → `ws://localhost:8765` → import
 `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json`.
 
 ### Setting the F' GDS address
 
 `fprime_gds:=true` opens the GDS web UI. The address resolves in this order (first wins):
-`fprime_gds_url:=` arg → `$FPRIME_GDS_URL` → built-in `http://192.168.4.74:5000`. Pick one:
+`fprime_gds_url:=` arg → `$FPRIME_GDS_URL` → the launch file's built-in fallback. The
+checked-in value is in `ros2_ws/pixi.toml` (`[activation.env]` → `FPRIME_GDS_URL`). Pick one:
 
 1. **Permanent, whole team** — edit `FPRIME_GDS_URL` under `[activation.env]` in
    `ros2_ws/pixi.toml` and commit. Every `pixi run` / `pixi shell` uses it.
@@ -275,6 +280,7 @@ topics now cross DDS — fine on a LAN; for a bandwidth-limited radio link switc
 | Foxglove: robot shows as bare axes, no meshes | Bridge not serving `package://` assets. Confirm `robot_description` is in the sourced overlay on the rover and the `foxglove_bridge` build supports asset fetch. |
 | Foxglove layout imports but a display is missing | Studio schema drift — add the layer via the 3D panel settings, then Layouts → Export and overwrite `foxglove/drivetrain.json`. |
 | Robot model shows but never moves (sim) | Deadman (RB/R1) not held, triggers not pulled once (they read 0 until first pull), or nothing on `/diff_drive_controller/cmd_vel_unstamped` (`ros2 topic echo` it). |
+| Model sits still while the odom trail / pose drives away | The view is *following* the robot. RViz: Views → Target Frame → `odom` (or `<Fixed Frame>`). Foxglove: Frame → Follow mode → `Off`, Display frame → `odom`. Re-import `drivetrain.json` / reload `drivetrain.rviz` to pick up the checked-in fix. |
 | Real: wheels dead, `list_controllers` shows `inactive` | `can0` down / wrong bitrate → `on_activate` failed. `tooling/can-up` first; check `dmesg`. No motors: `can_interface:=mock` or `vcan0`. |
 | Real: hangs at "Loading controller 'diff_drive_controller'" | Standalone `ros2_control_node` on `use_sim_time:=true` with no `/clock`. `real.launch.py` handles it; if hand-rolled, pass `-p use_sim_time:=false`. |
 | `can_interface:=vcan0` but no frames | `tooling/can-up vcan0` first; `candump -L vcan0`. Expect six `0x07` frames on activate, then `0x0D` per write while driving. |
