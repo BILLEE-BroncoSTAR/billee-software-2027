@@ -22,6 +22,47 @@ Command form: `pixi run --environment <env> <cmd>` — `<env>` is `l4t` on **[ro
 
 ---
 
+## Quick launch (2 commands)
+
+One launch per machine. Sections A/B below are the manual, per-node breakdown for
+debugging.
+
+**[rover]**
+```bash
+# sim (Gazebo, no ODESC):
+xvfb-run -a pixi run --environment l4t ros2 launch chassis_bringup rover.launch.py
+# real drivetrain (ODESC over CAN — bring up can0 first, see B.1):
+pixi run --environment l4t ros2 launch chassis_bringup rover.launch.py mode:=real
+#   mode:=real also takes can_interface:= (can0 | mock | vcan0) and gear_ratio:=
+```
+`rover.launch.py` runs the right backend **and** the `foxglove_bridge` (:8765).
+
+**[ground]**
+```bash
+pixi run --environment default ros2 launch chassis_bringup ground_station.launch.py
+#   use_sim_time:=false   when the rover is on real hardware (not sim)
+#   fprime_gds:=true       also open the F' GDS web UI in a browser
+```
+`ground_station.launch.py` runs the joystick (teleop) + RViz + a local `foxglove_bridge`
+(:8765). Open Foxglove Studio → `ws://localhost:8765` → import
+`ros2_ws/src/chassis_bringup/foxglove/drivetrain.json`.
+
+### Setting the F' GDS address
+
+`fprime_gds:=true` opens the GDS web UI. The address resolves in this order (first wins):
+`fprime_gds_url:=` arg → `$FPRIME_GDS_URL` → built-in `http://192.168.4.74:5000`. Pick one:
+
+1. **Permanent, whole team** — edit `FPRIME_GDS_URL` under `[activation.env]` in
+   `ros2_ws/pixi.toml` and commit. Every `pixi run` / `pixi shell` uses it.
+2. **Your shell only** — `export FPRIME_GDS_URL=http://<host>:<port>` (add to `~/.bashrc`
+   to keep it), then launch normally.
+3. **One run** —
+   `... ros2 launch chassis_bringup ground_station.launch.py fprime_gds:=true fprime_gds_url:=http://<host>:<port>`
+
+In every case you still need `fprime_gds:=true` for the browser to open.
+
+---
+
 ## Build (once, and after code changes)
 
 **[rover]**
@@ -82,8 +123,9 @@ Layouts → Import from file → `ros2_ws/src/chassis_bringup/foxglove/drivetrai
 (same content as `drivetrain.rviz`: grid, TF, robot model, `odom` trail, fixed frame
 `odom`).
 
-**Drive:** hold gamepad button 5 (deadman) and push the sticks. Left stick = left track,
-right stick = right track. Release button 5 = stop.
+**Drive:** hold **RB / R1** (deadman); **RT / R2** = forward, **LT / L2** = reverse; **left
+stick** = steer (push right → turn right). Release the deadman = stop. Xbox and PlayStation
+pads both work.
 
 **Drive without a gamepad — [ground]:** (also the quickest cross-machine link test)
 ```bash
@@ -145,7 +187,7 @@ pixi run --environment l4t ros2 control list_hardware_components   # 'Robot' = A
 pixi run --environment l4t ros2 control list_controllers           # both 'active'
 ```
 
-**Drive:** same as sim (button 5 + sticks).
+**Drive:** same as sim (hold RB/R1; RT/R2 forward, LT/L2 reverse; left stick steers).
 
 ---
 
@@ -206,8 +248,11 @@ topics now cross DDS — fine on a LAN; for a bandwidth-limited radio link switc
 - **Backend select**: `use_sim:=true` → Gazebo `IgnitionSystem`; `use_sim:=false` →
   `odesc/OdescSystemHardware` (SocketCAN, ODrive CAN Simple v0.5.4, nodes 0–5).
   `sim_gz.launch.py` sets `true`, `real.launch.py` sets `false`.
-- **Teleop** (`teleop/config/joystick.yaml`, `joy_teleop.cpp`): `left_axis 1`, `right_axis 4`,
-  `safety_button 5`, `max_vel 2.0`. `linear.x=(L+R)/2·max_vel`, `angular.z=(R−L)/2·max_vel`.
+- **Teleop** (`teleop/config/joystick.yaml`, `joy_teleop.cpp`) — arcade, Xbox + PlayStation:
+  `deadman_button 5` (RB/R1), `steer_axis 0` (left stick X), `throttle_axis 5` (RT/R2),
+  `reverse_axis 2` (LT/L2), `steer_scale 1.5`, `speed_scale 2.0`.
+  `linear.x = (fwd−rev)·speed_scale`, `angular.z = steer·steer_scale`; all-zero unless the
+  deadman is held. Every index/sign is a param — retune in the yaml, no rebuild.
 - **`xvfb-run`** is only for headless Gazebo on the rover. Never needed for RViz — RViz runs
   on **[ground]** with a real display.
 - **RT warning** `Could not enable FIFO RT scheduling policy` from `ros2_control_node` is
@@ -224,14 +269,14 @@ topics now cross DDS — fine on a LAN; for a bandwidth-limited radio link switc
 | Gazebo window never appears (rover, SSH) | Expected — headless. Use `xvfb-run -a`; view in RViz/Foxglove. |
 | RViz empty tree / no topics ([ground]) | Not on the rover's DDS graph. Same LAN + `ROS_DOMAIN_ID` (`echo $ROS_DOMAIN_ID` → `42` on both); DDS UDP ports open. Test: `pixi run --environment default ros2 topic list`. See [Cross-machine ROS 2](#cross-machine-ros-2). |
 | RViz "package 'chassis_bringup' not found" / missing meshes | `[ground]` workspace not built: `pixi run --environment default build`. |
-| Gamepad on [ground] but the Gazebo rover doesn't move | `[ground]` not on the rover's DDS graph — `ros2 topic list` from `[ground]` must show `/diff_drive_controller/cmd_vel_unstamped`. Check same `ROS_DOMAIN_ID` (`42`), same LAN, firewall. Then `ros2 topic echo /joy` shows pad input, and the deadman (button 5) is held. |
+| Gamepad on [ground] but the Gazebo rover doesn't move | `[ground]` not on the rover's DDS graph — `ros2 topic list` from `[ground]` must show `/diff_drive_controller/cmd_vel_unstamped`. Check same `ROS_DOMAIN_ID` (`42`), same LAN, firewall. Then `ros2 topic echo /joy` shows pad input, and the deadman (RB/R1) is held. |
 | `joy_node` not found / teleop won't launch ([ground]) | `joy` missing from the `default` env. `pixi run --environment default ros2 pkg executables joy` should list `joy_node`; if not, add `ros-humble-joy` to `pixi.toml` `[dependencies]` and rebuild the env. |
 | Foxglove "connection refused" | Bridge not running or wrong IP. `hostname -I` on rover; port 8765. |
 | Foxglove: robot shows as bare axes, no meshes | Bridge not serving `package://` assets. Confirm `robot_description` is in the sourced overlay on the rover and the `foxglove_bridge` build supports asset fetch. |
 | Foxglove layout imports but a display is missing | Studio schema drift — add the layer via the 3D panel settings, then Layouts → Export and overwrite `foxglove/drivetrain.json`. |
-| Robot model shows but never moves (sim) | Deadman (button 5) not held, or nothing on `/diff_drive_controller/cmd_vel_unstamped` (`ros2 topic echo` it). |
+| Robot model shows but never moves (sim) | Deadman (RB/R1) not held, triggers not pulled once (they read 0 until first pull), or nothing on `/diff_drive_controller/cmd_vel_unstamped` (`ros2 topic echo` it). |
 | Real: wheels dead, `list_controllers` shows `inactive` | `can0` down / wrong bitrate → `on_activate` failed. `tooling/can-up` first; check `dmesg`. No motors: `can_interface:=mock` or `vcan0`. |
 | Real: hangs at "Loading controller 'diff_drive_controller'" | Standalone `ros2_control_node` on `use_sim_time:=true` with no `/clock`. `real.launch.py` handles it; if hand-rolled, pass `-p use_sim_time:=false`. |
 | `can_interface:=vcan0` but no frames | `tooling/can-up vcan0` first; `candump -L vcan0`. Expect six `0x07` frames on activate, then `0x0D` per write while driving. |
 | `ros2 pkg list` missing the 4 packages | Overlay not sourced — go through `pixi run --environment <env>`; confirm `install/` exists. |
-| Joystick does nothing, `/joy` silent | Wrong `device_id` / not `/dev/input/js0`. `ls /dev/input/js*`, `jstest`. Chain: `/joy` → `joy_tank_drive` → `/diff_drive_controller/cmd_vel_unstamped` (hold button 5). |
+| Joystick does nothing, `/joy` silent | Wrong `device_id` / not `/dev/input/js0`. `ls /dev/input/js*`, `jstest`. Chain: `/joy` → `joy_tank_drive` → `/diff_drive_controller/cmd_vel_unstamped` (hold RB/R1). |
