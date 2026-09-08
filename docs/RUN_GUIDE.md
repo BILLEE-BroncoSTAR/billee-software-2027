@@ -118,6 +118,29 @@ xvfb-run -a pixi run --environment l4t ros2 launch chassis_bringup sim_gz.launch
 ```
 Drop `xvfb-run -a` only if the Jetson has a monitor and you want the Gazebo window.
 
+### Nav2 → ODESC shadow test in Gazebo
+
+Enable `odesc_shadow` to keep Gazebo as the physics plant while also testing the
+actual `OdescSystemHardware` command and feedback path. The shadow controller
+manager receives the same `/diff_drive_controller/cmd_vel_unstamped` command as
+Gazebo, so this exercises Nav2/teleop → diff drive → ODESC CAN commands without
+moving real motors. Its controller topics stay under `/odesc_shadow/`; its TF is
+disabled so Gazebo remains the authoritative transform publisher.
+
+```bash
+# Creates the kernel virtual CAN bus; requires sudo and is idempotent.
+~/billee-software-2027/tooling/can-up vcan0
+
+# Starts Gazebo plus the ODESC shadow manager and six-node ODrive CAN emulator.
+xvfb-run -a pixi run --environment l4t ros2 launch chassis_bringup sim_gz.launch.py \
+  odesc_shadow:=true can_interface:=vcan0
+```
+
+The built-in vCAN emulator converts `Set_Input_Vel` frames into cyclic
+`Get_Encoder_Estimates` feedback for nodes 0–5. Watch the real frames with
+`candump -L vcan0` (install `can-utils` if needed). Tear down the virtual device
+afterwards with `~/billee-software-2027/tooling/can-up down vcan0`.
+
 **2. [rover] — Foxglove bridge** (port 8765)
 ```bash
 pixi run --environment l4t ros2 launch chassis_bringup viz.launch.py rviz:=false use_sim_time:=true

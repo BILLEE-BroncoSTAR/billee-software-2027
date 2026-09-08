@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
+from launch.conditions import IfCondition
 from launch_ros.parameter_descriptions import ParameterValue
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
@@ -82,6 +83,15 @@ declare_args = [
             "foxglove",
             default_value="false",
             description="Also start the foxglove_bridge WebSocket server on :8765.",
+        ),
+        DeclareLaunchArgument(
+            "odesc_shadow",
+            default_value="false",
+            description=(
+                "Also run a namespaced ODESC controller manager against vCAN. It receives "
+                "the same cmd_vel as Gazebo, so system can exercise CAN commands while Gazebo "
+                "remains the physics plant. Requires tooling/can-up vcan0 first."
+            ),
         ),
 ]
 
@@ -214,6 +224,22 @@ def _launch_description(ctx):
         }.items(),
     )
 
+    # A second, namespaced controller manager mirrors the command into the
+    # ODESC/vCAN path. Gazebo remains authoritative for robot physics and TF.
+    odesc_shadow = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare("chassis_bringup"), "launch", "odesc_shadow.launch.py"
+            ])
+        ),
+        launch_arguments={
+            "description_pkg": description_pkg,
+            "xacro_file": xacro_file,
+            "can_interface": 'vcan0',
+        }.items(),
+        condition=IfCondition(LaunchConfiguration("odesc_shadow")),
+    )
+
     return set_env + [
             set_resource_path,
             gz_sim_launch,
@@ -222,6 +248,7 @@ def _launch_description(ctx):
             robot_state_publisher,
             spawn_entity,
             diff_drive_controller_spawner,
+            odesc_shadow,
             viz,
         ]
 

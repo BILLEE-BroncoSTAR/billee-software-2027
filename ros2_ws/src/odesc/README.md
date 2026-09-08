@@ -89,6 +89,49 @@ pipeline runs with no ODESC/NEO present. Use it to bring up and view the real
 graph. It is a perfect-tracking loopback, not a physics model — for dynamics use
 the Gazebo backend (`sim_gz.launch.py`).
 
+### vCAN ODrive emulator (CAN-path test, no motor hardware)
+
+[`scripts/odesc_vcan_emulator.py`](scripts/odesc_vcan_emulator.py) is a small,
+Linux-only ODrive CANSimple peer for the driver. Unlike `mock` mode, the driver
+opens a real SocketCAN socket and exchanges frames; this verifies the CAN
+arbitration IDs, `Set_Input_Vel` payload encoding, and encoder-feedback parsing.
+
+It emulates nodes 0–5 and, at 100 Hz, publishes cyclic
+`Get_Encoder_Estimates` (`0x09`) frames. Each node's motor-shaft position is
+integrated from the most recently received `Set_Input_Vel` (`0x0D`) command.
+The ODESC driver continues to perform its normal 48:1 motor-turns ↔ wheel-radian
+conversion, so the emulator communicates only in motor-shaft turns and turns/s.
+
+Create the virtual CAN interface in the same Linux network namespace as the ROS
+processes, then either start the emulator directly or let the Gazebo shadow
+launch do it:
+
+```bash
+# From the repository root. Requires sudo; safe to run again.
+tooling/can-up vcan0
+
+# Direct protocol / driver test (terminal 1):
+ros2 run odesc odesc_vcan_emulator.py --interface vcan0
+
+# Start the real ODESC controller path (terminal 2):
+ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
+```
+
+For the Nav2 integration test, `sim_gz.launch.py odesc_shadow:=true` starts the
+emulator itself and mirrors Gazebo's controller command through an isolated
+ODESC controller manager. Monitor the traffic with `candump -L vcan0` (from the
+`can-utils` package), and remove the interface when finished:
+
+```bash
+tooling/can-up down vcan0
+```
+
+This is a deterministic protocol emulator, not an ODrive firmware or vehicle
+simulation. It does not model arming/axis-state transitions, faults, limits,
+latency, torque/current control, encoder noise, wheel slip, or CAN bus errors.
+Use it to prove command/feedback integration; use Gazebo for vehicle dynamics
+and hardware tests for ODrive behaviour.
+
 ### Canonical node map
 
 [`config/node_map.yaml`](config/node_map.yaml) is the single source of truth for

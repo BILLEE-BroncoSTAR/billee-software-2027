@@ -58,6 +58,9 @@ if(UNIX AND NOT APPLE)
   install(FILES odesc_plugin.xml
     DESTINATION share/${PROJECT_NAME}
   )
+  install(PROGRAMS scripts/odesc_vcan_emulator.py
+    DESTINATION lib/${PROJECT_NAME}
+  )
 
   ament_export_include_directories(include)
   ament_export_libraries(odesc)
