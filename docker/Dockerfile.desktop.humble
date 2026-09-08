@@ -130,6 +130,21 @@ ENV PATH=${PIXI_HOME}/bin:${PATH}
 
 RUN curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
 
-#ENTRYPOINT ["/sbin/ros_entrypoint.sh"]
+# Install autocomplete dependencies as root
+USER root
+RUN apt-get update && apt-get install -y \
+    bash-completion \
+    && rm -rf /var/lib/apt/lists/*
+
+# Switch user to configure the non-root shell for autocomplete
 USER ${USERNAME}
+# Initialize ROS 2 toolchain from the Pixi Environment
+RUN echo 'source /workspaces/URC-2027/ros2_ws/.pixi/envs/default/setup.bash' >> ~/.bashrc
+# Source the local workspace overlay to enable autocomplete
+RUN echo "source /workspaces/URC-2027/ros2_ws/install/setup.bash" >> ~/.bashrc
+# Override GNU Readline defaults to display ambiguous autocomplete matches on first tab (instead of second)
+RUN echo "bind 'set show-all-if-ambiguous on'" >> ~/.bashrc
+
+#ENTRYPOINT ["/sbin/ros_entrypoint.sh"]
 CMD ["pixi", "shell"]
+

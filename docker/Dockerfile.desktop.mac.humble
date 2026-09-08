@@ -42,4 +42,16 @@ RUN pixi install --environment mac-cpu
 COPY ros2_ws ./
 RUN if [ -d src ]; then pixi run --environment mac-cpu build; fi
 
+# Install autocomplete dependencies as root
+RUN apt-get update && apt-get install -y \
+    bash-completion \
+    && rm -rf /var/lib/apt/lists/*
+
+# Initialize ROS 2 toolchain from the Pixi Environment
+RUN echo 'source /root/ros2_ws/.pixi/envs/mac-cpu/setup.bash' >> ~/.bashrc
+# Source the local workspace overlay to enable autocomplete
+RUN echo "source /root/ros2_ws/install/setup.bash" >> ~/.bashrc
+# Override GNU Readline defaults to display ambiguous autocomplete matches on first tab (instead of second)
+RUN echo "bind 'set show-all-if-ambiguous on'" >> ~/.bashrc
+
 CMD ["bash"]
