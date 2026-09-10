@@ -34,6 +34,17 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
 
 RUN curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
 
+# Headless GL for Gazebo Fortress on Apple-Silicon Docker (no GPU passthrough):
+# xvfb provides the throwaway X display for `xvfb-run`, and a mesa new enough
+# (kisak-mesa, as in Dockerfile.desktop.humble) gives an llvmpipe software
+# renderer that satisfies ogre2's GL 3.3+ requirement.
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common \
+    && add-apt-repository -y ppa:kisak/kisak-mesa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+      xvfb x11-utils mesa-utils \
+      libgl1 libgl1-mesa-dri libglx-mesa0 libglu1-mesa libegl1 libgles2 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /root/ros2_ws
 
 COPY ros2_ws/pixi.toml ros2_ws/pixi.lock ./
@@ -41,5 +52,17 @@ RUN pixi install --environment mac-cpu
 
 COPY ros2_ws ./
 RUN if [ -d src ]; then pixi run --environment mac-cpu build; fi
+
+# Install autocomplete dependencies as root
+RUN apt-get update && apt-get install -y \
+    bash-completion \
+    && rm -rf /var/lib/apt/lists/*
+
+# Initialize ROS 2 toolchain from the Pixi Environment
+RUN echo 'source /root/ros2_ws/.pixi/envs/mac-cpu/setup.bash' >> ~/.bashrc
+# Source the local workspace overlay to enable autocomplete
+RUN echo "source /root/ros2_ws/install/setup.bash" >> ~/.bashrc
+# Override GNU Readline defaults to display ambiguous autocomplete matches on first tab (instead of second)
+RUN echo "bind 'set show-all-if-ambiguous on'" >> ~/.bashrc
 
 CMD ["bash"]

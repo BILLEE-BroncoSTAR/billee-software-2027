@@ -1,63 +1,53 @@
-# Define the L4T_VERSION argument
-ARG L4T_VERSION=l4t-r36.3.0
-ARG IMAGE_NAME=dustynv/ros:humble-ros-base-l4t-r36.3.0
+# NVIDIA Jetson (L4T) rover image.
+#
+# Structural mirror of docker/Dockerfile.desktop.humble: a CUDA-capable base ->
+# apt basics -> non-root `ros_user` -> (optional ZED SDK) -> pixi in /opt/pixi ->
+# `CMD ["pixi", "shell"]`. ROS 2 Humble itself comes from pixi / RoboStack (see
+# ros2_ws/pixi.toml, environment `l4t`), NOT from apt or the base image.
+#
+# Default base is nvcr.io/nvidia/l4t-jetpack:r39.2.1 -> JetPack 7.2, Ubuntu 24.04,
+# CUDA 13.2.1, aarch64: an exact match for a JetPack 7.2 host. The image is keyed
+# to the JetPack/L4T version, not the board, so it runs on any Orin-family board
+# (AGX Orin / Orin NX / Orin Nano) or Thor that is flashed with JetPack 7.2.
+#
+# Re-target another board's JetPack with `--build-arg L4T_VERSION=rXX.Y.Z` (or a
+# per-board devcontainer `build.args`). Fallbacks if the jetpack image will not
+# pull or is too large: `--build-arg IMAGE_NAME=nvcr.io/nvidia/l4t-base:r39.2.1`
+# or `--build-arg IMAGE_NAME=ubuntu:24.04` (CUDA is still injected at runtime by
+# `--runtime nvidia`; the RoboStack ROS stack is CPU regardless).
+
+ARG L4T_VERSION=r39.2.1
+ARG IMAGE_NAME=nvcr.io/nvidia/l4t-jetpack:${L4T_VERSION}
 
 FROM ${IMAGE_NAME}
 
-ARG ZED_SDK_MAJOR=4
-ARG ZED_SDK_MINOR=2
-ARG ZED_SDK_PATCH=3
-ARG L4T_MAJOR=36
-ARG L4T_MINOR=3
-# Optional: Override ZED SDK URL
-ARG CUSTOM_ZED_SDK_URL=""
+ARG PIXI_VERSION=0.76.1
 
-# ROS 2 distribution
-ARG ROS2_DIST=humble
+# create a non-root user (matches Dockerfile.desktop.humble)
+ARG USERNAME=ros_user
+ARG USER_UID=1000
+ARG USER_GID=1000
 
-# ZED ROS2 Wrapper dependencies version
-ARG XACRO_VERSION=2.0.8
-ARG DIAGNOSTICS_VERSION=4.0.0
-ARG AMENT_LINT_VERSION=0.12.11
-ARG ROBOT_LOCALIZATION_VERSION=3.5.3
-ARG ZED_MSGS_VERSION=5.0.0
-ARG NMEA_MSGS_VERSION=2.0.0
-ARG ANGLES_VERSION=1.15.0
-ARG GEOGRAPHIC_INFO_VERSION=1.0.6
-ARG POINTCLOUD_TRANSPORT_VERSION=1.0.18
-ARG POINTCLOUD_TRANSPORT_PLUGINS_VERSION=1.0.11
-ARG RMW_CYCLONEDDS_VERSION=1.3.4
-ARG BACKWARD_ROS_VERSION=1.0.7
-ENV PYPI_URL=https://pypi.jetson-ai-lab.io/jp6/cu126
+ARG DEBIAN_FRONTEND=noninteractive
 
+# ZED SDK: no L4T r39 / JetPack 7.2 build exists yet (Stereolabs supports up to
+# JetPack 7.1 / L4T 38.4). Left OFF by default; flip with `--build-arg
+# INSTALL_ZED=true` once a matching SDK ships.
+ARG INSTALL_ZED=false
+ARG ZED_SDK_MAJOR=5
+ARG ZED_SDK_MINOR=4
+ARG L4T_MAJOR=39
+ARG L4T_MINOR=2
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV NVIDIA_DRIVER_CAPABILITIES=all
 
-# ZED SDK link
-ENV ZED_SDK_URL=${CUSTOM_ZED_SDK_URL:-"https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}.${ZED_SDK_PATCH}/l4t${L4T_MAJOR}.${L4T_MINOR}/jetsons"}
-
-# Check that this SDK exists
-RUN if [ "$(curl -L -I "${ZED_SDK_URL}" -o /dev/null -s -w '%{http_code}\n' | head -n 1)" = "200" ]; then \
-        echo "The URL points to something."; \
-    else \
-        echo "The URL does not point to a .run file or the file does not exist."; \
-        exit 1; \
-    fi
-
-# Disable apt-get warnings
-RUN curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
-   apt-get update || true && apt-get install -y --no-install-recommends \
-   apt-utils \
-   dialog && \
-   rm -rf /var/lib/apt/lists/*
-
-ENV TZ=Europe/Paris
-
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \ 
-  apt-get update && \
-  apt-get install --yes \
+RUN apt-get update || true && apt-get install -y --no-install-recommends \
+  apt-utils \
+  bash-completion \
   build-essential \
   cmake \
+  curl \
+  dialog \
   git \
   jq \
   less \
@@ -68,82 +58,57 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &
   python3-pip \
   python3-wheel \
   sudo \
+  tmux \
   udev \
   usbutils \
   wget \
   zstd && \
   rm -rf /var/lib/apt/lists/*
 
-RUN echo "# R${L4T_MAJOR} (release), REVISION: ${L4T_MINOR}" > /etc/nv_tegra_release && \
-  apt-get update -y || true && \
-  apt-get install -y --no-install-recommends \
-  build-essential \
-  cmake \
-  curl \
-  gnupg2 \
-  libdraco-dev \
-  libgeographic-dev \
-  libusb-1.0-0-dev \
-  less \
-  python3 \
-  python3-dev \
-  python3-pip \
-  python3-setuptools \
-  wget \
-  zlib1g-dev \
-  zstd \
-  -y && \
-  export PIP_INDEX_URL="${PYPI_URL}" && \
-  pip install protobuf && \
-  wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run \
-  ${ZED_SDK_URL} && \
-  chmod +x ZED_SDK_Linux_JP.run ; ./ZED_SDK_Linux_JP.run silent skip_tools && \
-  rm -rf /usr/local/zed/resources/* && \
-  rm -rf ZED_SDK_Linux_JP.run && \
-  rm -rf /var/lib/apt/lists/*
+# Ubuntu 24.04 base images (incl. nvcr.io/nvidia/l4t-jetpack:r39.x) ship a default
+# 'ubuntu' user at UID/GID 1000 — remove it so ros_user can own 1000.
+RUN userdel -r ubuntu 2>/dev/null || true; \
+  groupadd --gid ${USER_GID} ${USERNAME} && \
+  useradd --uid ${USER_UID} --gid ${USER_GID} -m -s /bin/bash ${USERNAME} && \
+  mkdir -p /home/${USERNAME}/ros2_ws/src && \
+  chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/ros2_ws && \
+  usermod -aG sudo ${USERNAME} && \
+  echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
+  chmod 0440 /etc/sudoers.d/${USERNAME}
 
-# Install the ZED ROS2 Wrapper
-ENV ROS_DISTRO=${ROS2_DIST}
+# optional ZED SDK for Jetson (silent .run installer), gated behind INSTALL_ZED
+RUN if [ "$INSTALL_ZED" = "true" ]; then \
+    apt-get update || true && apt-get install -y --no-install-recommends \
+      libusb-1.0-0-dev zlib1g-dev libgeographic-dev && \
+    rm -rf /var/lib/apt/lists/* && \
+    wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run \
+      "https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}/l4t${L4T_MAJOR}.${L4T_MINOR}/jetsons" && \
+    chmod +x ZED_SDK_Linux_JP.run && \
+    ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda && \
+    rm -rf ZED_SDK_Linux_JP.run /usr/local/zed/resources/* && \
+    chown -R ${USERNAME}:${USERNAME} /usr/local/zed ; \
+  else \
+    echo "Skipping ZED SDK (INSTALL_ZED=${INSTALL_ZED})" ; \
+  fi
 
-# Copy the sources in the Docker image
-WORKDIR /root/ros2_ws/src
-COPY ./ ./
+# pixi -> provides ROS 2 Humble + colcon via the `l4t` environment in ros2_ws/pixi.toml
+ENV PIXI_HOME=/opt/pixi
+ENV PATH=${PIXI_HOME}/bin:${PATH}
+RUN curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
 
-# Install missing dependencies from the sources
-WORKDIR /root/ros2_ws/src
-RUN wget https://github.com/ros/xacro/archive/refs/tags/${XACRO_VERSION}.tar.gz -O - | tar -xvz && mv xacro-${XACRO_VERSION} xacro && \
-    wget https://github.com/ros/diagnostics/archive/refs/tags/${DIAGNOSTICS_VERSION}.tar.gz -O - | tar -xvz && mv diagnostics-${DIAGNOSTICS_VERSION} diagnostics && \
-    wget https://github.com/ament/ament_lint/archive/refs/tags/${AMENT_LINT_VERSION}.tar.gz -O - | tar -xvz && mv ament_lint-${AMENT_LINT_VERSION} ament-lint && \
-    wget https://github.com/cra-ros-pkg/robot_localization/archive/refs/tags/${ROBOT_LOCALIZATION_VERSION}.tar.gz -O - | tar -xvz && mv robot_localization-${ROBOT_LOCALIZATION_VERSION} robot-localization && \
-    wget https://github.com/stereolabs/zed-ros2-interfaces/archive/refs/tags/${ZED_MSGS_VERSION}.tar.gz -O - | tar -xvz && mv zed-ros2-interfaces-${ZED_MSGS_VERSION} zed-ros2-interfaces && \
-    wget https://github.com/ros-drivers/nmea_msgs/archive/refs/tags/${NMEA_MSGS_VERSION}.tar.gz -O - | tar -xvz && mv nmea_msgs-${NMEA_MSGS_VERSION} nmea_msgs && \
-    wget https://github.com/ros/angles/archive/refs/tags/${ANGLES_VERSION}.tar.gz -O - | tar -xvz && mv angles-${ANGLES_VERSION} angles && \
-    #wget https://github.com/ros-perception/point_cloud_transport/archive/refs/tags/${POINTCLOUD_TRANSPORT_VERSION}.tar.gz -O - | tar -xvz && mv point_cloud_transport-${POINTCLOUD_TRANSPORT_VERSION} point_cloud_transport && \
-    #wget https://github.com/ros-perception/point_cloud_transport_plugins/archive/refs/tags/${POINTCLOUD_TRANSPORT_PLUGINS_VERSION}.tar.gz -O - | tar -xvz && mv point_cloud_transport_plugins-${POINTCLOUD_TRANSPORT_PLUGINS_VERSION} point_cloud_transport_plugins && \
-    wget https://github.com/ros2/rmw_cyclonedds/archive/refs/tags/${RMW_CYCLONEDDS_VERSION}.tar.gz -O - | tar -xvz && mv rmw_cyclonedds-${RMW_CYCLONEDDS_VERSION} rmw_cyclonedds && \
-    wget https://github.com/ros-geographic-info/geographic_info/archive/refs/tags/${GEOGRAPHIC_INFO_VERSION}.tar.gz -O - | tar -xvz && mv geographic_info-${GEOGRAPHIC_INFO_VERSION} geographic-info && \
-    wget https://github.com/pal-robotics/backward_ros/archive/refs/tags/${BACKWARD_ROS_VERSION}.tar.gz -O - | tar -xvz && mv backward_ros-${BACKWARD_ROS_VERSION} backward_ros && \
-    cp -r geographic-info/geographic_msgs/ . && \
-    rm -rf geographic-info
-    
-# Install cython
-RUN python3 -m pip install --upgrade cython
+# Install autocomplete dependencies as root
+USER root
+RUN apt-get update && apt-get install -y \
+    bash-completion \
+    && rm -rf /var/lib/apt/lists/*
 
-# Build the dependencies and the ZED ROS2 Wrapper
-WORKDIR /root/ros2_ws
-RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/install/setup.bash && \
-  colcon build --parallel-workers $(nproc) --symlink-install \
-  --event-handlers console_direct+ --base-paths src \
-  --cmake-args ' -DCMAKE_BUILD_TYPE=Release' \
-  ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' \
-  ' -DCMAKE_CXX_FLAGS="-Wl,--allow-shlib-undefined"' \
-  ' --no-warn-unused-cli' "
+USER ${USERNAME}
 
-WORKDIR /root/ros2_ws
+# Initialize ROS 2 toolchain from the Pixi Environment
+RUN echo 'source /workspaces/URC-2027/ros2_ws/.pixi/envs/default/setup.bash' >> ~/.bashrc
+# Source the local workspace overlay to enable autocomplete
+RUN echo "source /workspaces/URC-2027/ros2_ws/install/setup.bash" >> ~/.bashrc
+# Override GNU Readline defaults to display ambiguous autocomplete matches on first tab (instead of second)
+RUN echo "bind 'set show-all-if-ambiguous on'" >> ~/.bashrc
 
-# Setup environment variables 
-COPY docker/ros_entrypoint_jetson.sh /sbin/ros_entrypoint.sh
-RUN sudo chmod 755 /sbin/ros_entrypoint.sh
-
-ENTRYPOINT ["/sbin/ros_entrypoint.sh"]
-CMD ["bash"]
+CMD ["pixi", "shell"]

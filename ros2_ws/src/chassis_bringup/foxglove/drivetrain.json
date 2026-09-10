@@ -1,0 +1,72 @@
+{
+  "configById": {
+    "3D!drivetrain": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 4,
+        "phi": 58,
+        "thetaOffset": 46,
+        "target": [0, 0, 0],
+        "targetOffset": [0, 0, 0],
+        "targetOrientation": [0, 0, 0, 1],
+        "fovy": 45,
+        "near": 0.01,
+        "far": 5000
+      },
+      "followMode": "follow-position",
+      "followTf": "base_link",
+      "scene": {
+        "transforms": { "showLabel": true, "labelSize": 0.06, "axisScale": 0.3 },
+        "backgroundColor": "#303030"
+      },
+      "transforms": {},
+      "topics": {
+        "/diff_drive_controller/odom": {
+          "visible": true,
+          "type": "axis",
+          "axisScale": 0.2,
+          "historySize": 100
+        }
+      },
+      "layers": {
+        "grid": {
+          "layerId": "foxglove.Grid",
+          "instanceId": "grid",
+          "label": "Grid",
+          "visible": true,
+          "frameLocked": true,
+          "order": 1,
+          "size": 20,
+          "divisions": 20,
+          "lineWidth": 1,
+          "color": "#a0a0a4ff",
+          "position": [0, 0, 0],
+          "rotation": [0, 0, 0]
+        },
+        "urdf": {
+          "layerId": "foxglove.Urdf",
+          "instanceId": "urdf",
+          "label": "Robot Model",
+          "visible": true,
+          "frameLocked": false,
+          "order": 2,
+          "sourceType": "topic",
+          "topic": "/robot_description"
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26
+      }
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": { "speed": 1 },
+  "layout": "3D!drivetrain"
+}

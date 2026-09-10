@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
+from launch.conditions import IfCondition
 from launch_ros.parameter_descriptions import ParameterValue
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
@@ -7,14 +8,27 @@ from launch_ros.actions import Node
 from launch.actions import OpaqueFunction
 from launch_ros.substitutions import FindPackageShare
 
+import glob
 import os
+import sys
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
 
-desc_share = get_package_share_directory("robot_description")  
-share_root = os.path.dirname(desc_share)                         
+desc_share = get_package_share_directory("robot_description")
+share_root = os.path.dirname(desc_share)
 ign_ros2_control_plugin_path = os.path.join(
     get_package_prefix("ign_ros2_control"), "lib"
 )
+
+# Ignition/Gazebo GUI plugin dir, discovered from the active environment prefix
+# instead of a hardcoded path. `ros2 launch` runs under the Pixi env's python, so
+# sys.prefix is that env; fall back to CONDA_PREFIX. The ign-gazebo-<N> version is
+# globbed so a Fortress point-release bump doesn't break this.
+_env_prefix = os.environ.get("CONDA_PREFIX") or sys.prefix
+_gui_plugin_dirs = sorted(
+    glob.glob(os.path.join(_env_prefix, "lib", "ign-gazebo-*", "plugins", "gui"))
+    + glob.glob(os.path.join(_env_prefix, "lib", "gz-sim-*", "plugins", "gui"))
+)
+_gui_plugin_path = _gui_plugin_dirs[-1] if _gui_plugin_dirs else ""
 
 # environment variables required for GZ to render models properly
 set_env = [
@@ -27,16 +41,16 @@ set_env = [
     SetEnvironmentVariable(
         "IGN_GAZEBO_SYSTEM_PLUGIN_PATH", ign_ros2_control_plugin_path
     ),
-    SetEnvironmentVariable(
-        "IGN_GUI_PLUGIN_PATH", 
-        "/workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/ign-gazebo-6/plugins/gui"
-    ),
-    SetEnvironmentVariable(
-        "QML2_IMPORT_PATH",
-        "/workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/ign-gazebo-6/plugins/gui",
-    ),
-
-]
+] + (
+    # Only needed for the Ignition GUI's own side panels; skipped cleanly when the
+    # dir can't be found (e.g. headless under xvfb).
+    [
+        SetEnvironmentVariable("IGN_GUI_PLUGIN_PATH", _gui_plugin_path),
+        SetEnvironmentVariable("QML2_IMPORT_PATH", _gui_plugin_path),
+    ]
+    if _gui_plugin_path
+    else []
+)
 
 declare_args = [
         DeclareLaunchArgument(
@@ -59,6 +73,26 @@ declare_args = [
         DeclareLaunchArgument("y", default_value="0.0", description="Spawn Y (m)."),
         DeclareLaunchArgument("z", default_value="0.2", description="Spawn Z (m)."),
         DeclareLaunchArgument("yaw", default_value="0.0", description="Spawn yaw (rad)."),
+        DeclareLaunchArgument(
+            "rviz",
+            default_value="false",
+            description="Also start RViz2 with the drivetrain view (viz.launch.py). "
+            "Default false keeps the sim launch behaviour unchanged.",
+        ),
+        DeclareLaunchArgument(
+            "foxglove",
+            default_value="false",
+            description="Also start the foxglove_bridge WebSocket server on :8765.",
+        ),
+        DeclareLaunchArgument(
+            "odesc_shadow",
+            default_value="false",
+            description=(
+                "Also run a namespaced ODESC controller manager against vCAN. It receives "
+                "the same cmd_vel as Gazebo, so system can exercise CAN commands while Gazebo "
+                "remains the physics plant. Requires tooling/can-up vcan0 first."
+            ),
+        ),
 ]
 
 
@@ -175,6 +209,37 @@ def _launch_description(ctx):
         arguments=["diff_drive_controller", "joint_state_broadcaster"]
     )
 
+    # Opt-in viewers. rviz/foxglove default false -> this include adds nothing
+    # unless asked, so the default sim launch graph is unchanged.
+    viz = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare("chassis_bringup"), "launch", "viz.launch.py"
+            ])
+        ),
+        launch_arguments={
+            "rviz": LaunchConfiguration("rviz"),
+            "foxglove": LaunchConfiguration("foxglove"),
+            "use_sim_time": "true",
+        }.items(),
+    )
+
+    # A second, namespaced controller manager mirrors the command into the
+    # ODESC/vCAN path. Gazebo remains authoritative for robot physics and TF.
+    odesc_shadow = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare("chassis_bringup"), "launch", "odesc_shadow.launch.py"
+            ])
+        ),
+        launch_arguments={
+            "description_pkg": description_pkg,
+            "xacro_file": xacro_file,
+            "can_interface": 'vcan0',
+        }.items(),
+        condition=IfCondition(LaunchConfiguration("odesc_shadow")),
+    )
+
     return set_env + [
             set_resource_path,
             gz_sim_launch,
@@ -183,6 +248,8 @@ def _launch_description(ctx):
             robot_state_publisher,
             spawn_entity,
             diff_drive_controller_spawner,
+            odesc_shadow,
+            viz,
         ]
 
 def generate_launch_description():

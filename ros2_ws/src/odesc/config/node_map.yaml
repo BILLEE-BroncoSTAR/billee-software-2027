@@ -1,0 +1,39 @@
+# node_map.yaml — canonical CAN node ID <-> drivetrain joint assignment.
+#
+# Single source of truth for "which ODESC node drives which wheel joint".
+# Consumed conceptually by:
+#   - ros2_ws/src/robot_description/urdf/ros2_control.urdf.xacro  (per-joint <param name="node_id">)
+#   - the BILLEE_NEO_ODESC_Hardware_Integration_Guide drivetrain map
+# Plain xacro cannot parse this file, so the URDF values are hand-transcribed to
+# match it — keep the two in sync. If you change a node ID, change it here first.
+#
+# NOTE on numbering: the left side is numbered rear->front and the right side
+# front->rear in robot_description's URDF, so l1 and r1 are NOT the same physical
+# position. Match by wheel position (the comment), not by the number.
+
+# gear_ratio: motor-shaft turns per wheel-joint turn, used by OdescSystemHardware
+# to convert between the ODESC's motor-shaft encoder numbers and the wheel-joint
+# position/velocity interfaces ros2_control expects.
+#
+# 48.0 — set for the ODESC V4.2 + NEO (REV v1.1) drivetrain per the team
+# (2026-09-06), superseding the earlier 64:1 placeholder. Still a single
+# overridable parameter, not a baked-in constant: override via the
+# <param name="gear_ratio"> in ros2_control.urdf.xacro, or from the launch file
+# (`ros2 launch chassis_bringup real.launch.py gear_ratio:=<n>`). The full 6-node
+# drive-a-known-distance bench test (test plan §5.4) is still what confirms it
+# against the physical gearbox.
+gear_ratio: 48.0
+
+nodes:
+  - joint: joint_wheel_l3   # Front Left
+    node_id: 0
+  - joint: joint_wheel_l2   # Mid Left
+    node_id: 1
+  - joint: joint_wheel_l1   # Rear Left
+    node_id: 2
+  - joint: joint_wheel_r1   # Front Right
+    node_id: 3
+  - joint: joint_wheel_r2   # Mid Right
+    node_id: 4
+  - joint: joint_wheel_r3   # Rear Right
+    node_id: 5

@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# can-up — bring a SocketCAN interface up (or down) for the BILLEE drivetrain.
+#
+#   tooling/can-up                 # bring up can0 @ 500 kbit/s (real ODESC bus)
+#   tooling/can-up can0            # same, explicit
+#   tooling/can-up can0 250000     # override bitrate
+#   tooling/can-up vcan0           # create + bring up a virtual CAN bus (testing)
+#   tooling/can-up down [iface]    # take the interface down (vcanN is also deleted)
+#   tooling/can-up status [iface]  # show state
+#
+# Bitrate default is 500000 to match BILLEE_NEO_ODESC_Hardware_Integration_Guide.md
+# §3.4 (odrv0.can.config.baud_rate = 500000). Confirm against the actual ODESC
+# firmware config before trusting it on real hardware.
+#
+# Uses sudo for the `ip` calls. Idempotent: re-running on an already-up interface
+# just reports state. Real `canN` interfaces must already exist in the kernel
+# (Tegra mttcan, or a plugged-in USB-CAN adapter); this script does not create
+# them, only configures them. `vcanN` interfaces are created on demand.
+set -euo pipefail
+
+BITRATE_DEFAULT=500000
+RESTART_MS=100
+
+arg1="${1:-can0}"
+arg2="${2:-}"
+
+_status() {
+  local ifc="$1"
+  if ip link show "$ifc" &>/dev/null; then
+    ip -details -brief link show "$ifc" || ip -details link show "$ifc"
+  else
+    echo "$ifc: does not exist"
+  fi
+}
+
+case "$arg1" in
+  status)
+    _status "${arg2:-can0}"
+    exit 0
+    ;;
+  down)
+    ifc="${arg2:-can0}"
+    echo ">> taking $ifc down"
+    sudo ip link set "$ifc" down || true
+    if [[ "$ifc" == vcan* ]] && ip link show "$ifc" &>/dev/null; then
+      sudo ip link delete "$ifc" type vcan
+      echo ">> deleted virtual interface $ifc"
+    fi
+    _status "$ifc"
+    exit 0
+    ;;
+esac
+
+ifc="$arg1"
+
+if [[ "$ifc" == vcan* ]]; then
+  # Virtual CAN bus for hardware-free protocol testing (candump/cansend, or
+  # real.launch.py can_interface:=vcan0).
+  sudo modprobe vcan
+  if ! ip link show "$ifc" &>/dev/null; then
+    sudo ip link add dev "$ifc" type vcan
+    echo ">> created virtual interface $ifc"
+  fi
+  sudo ip link set "$ifc" up
+  echo ">> $ifc is up (virtual, no bitrate)"
+  _status "$ifc"
+  exit 0
+fi
+
+# Real CAN interface.
+bitrate="${arg2:-$BITRATE_DEFAULT}"
+
+if ! ip link show "$ifc" &>/dev/null; then
+  echo "ERROR: $ifc does not exist in the kernel." >&2
+  echo "  - Tegra built-in CAN: check the transceiver wiring + pinmux/overlay." >&2
+  echo "  - USB-CAN adapter: plug it in; it usually enumerates as can0/can1." >&2
+  echo "  - For a hardware-free test bus use:  tooling/can-up vcan0" >&2
+  exit 1
+fi
+
+state="$(ip -brief link show "$ifc" | awk '{print $2}')"
+if [[ "$state" == "UP" ]]; then
+  echo ">> $ifc already UP; leaving it. (down first to re-set the bitrate)"
+  _status "$ifc"
+  exit 0
+fi
+
+echo ">> bringing $ifc up @ ${bitrate} bit/s (restart-ms ${RESTART_MS})"
+sudo ip link set "$ifc" up type can bitrate "$bitrate" restart-ms "$RESTART_MS"
+_status "$ifc"
+echo ">> tip: 'candump $ifc' should show ODESC heartbeat frames (cmd 0x01) once nodes are powered."

@@ -4,8 +4,17 @@ joy_node:
     deadzone: 0.05
     autorepeat_rate: 20.0
 
-joy_tank_drive:
+joy_tank_drive:                 # historical name; the scheme is arcade steer + throttle
   ros__parameters:
-    left_axis: 1
-    right_axis: 4
-    max_vel: 2.0
+    # Xbox and PlayStation pads share these indices through joy_node on Linux.
+    # Verify with:  ros2 topic echo /joy   while moving each control.
+    # (If you run game_controller_node instead: triggers are axes 4/5, RB is button 10.)
+    deadman_button: 5            # RB (Xbox) / R1 (PS) - hold to move; release = stop
+    steer_axis: 0               # left stick X  (push right -> turn right)
+    steer_scale: 1.5            # rad/s at full stick
+    invert_steer: false         # set true if your pad reports stick-right as +1
+    throttle_axis: 5           # RT / R2  (analog) - forward
+    reverse_axis: 2            # LT / L2  (analog) - reverse
+    speed_scale: 2.0           # m/s at full trigger
+    trigger_rest: 1.0          # /joy axis value with the trigger released
+    trigger_press: -1.0        # /joy axis value with the trigger fully pressed

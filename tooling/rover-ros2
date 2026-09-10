@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Build and run the NVIDIA Jetson (L4T) rover ROS 2 image without VS Code / Dev Containers.
+# Parallel to tooling/desktop-ros2, but for docker/Dockerfile.l4t-humble and the
+# nvidia container runtime (JetPack 7 does not reliably support `--gpus all`).
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+image="rover-ros2:latest"
+dockerfile="$repo_root/docker/Dockerfile.l4t-humble"
+
+usage() {
+  cat <<'EOF'
+Usage: tooling/rover-ros2 <build|run|shell> [arguments...]
+
+  build  Build rover-ros2:latest from docker/Dockerfile.l4t-humble.
+         Extra arguments are passed to `docker build` (e.g. --build-arg INSTALL_ZED=true).
+  run    Start the image with the same host, GPU (nvidia runtime), device, and
+         workspace settings as .devcontainer/l4t/devcontainer.json. Extra
+         arguments replace the image's default command.
+  shell  Open a Bash shell with those same settings, bypassing the entrypoint.
+
+Examples:
+  tooling/rover-ros2 build
+  tooling/rover-ros2 build --build-arg L4T_VERSION=r38.2.0
+  tooling/rover-ros2 run
+  tooling/rover-ros2 shell
+  tooling/rover-ros2 run pixi run --environment l4t build
+EOF
+}
+
+action="${1:-}"
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+
+case "$action" in
+  build)
+    exec docker build \
+      --file "$dockerfile" \
+      --tag "$image" \
+      "$@" \
+      "$repo_root"
+    ;;
+  run|shell)
+    docker_args=(
+      --rm
+      --interactive
+      --tty
+      --privileged
+      --runtime nvidia
+      --env NVIDIA_VISIBLE_DEVICES=all
+      --env NVIDIA_DRIVER_CAPABILITIES=all
+      --network host
+      --pid host
+      --ipc host
+      --hostname rover
+      --volume /dev:/dev
+      --volume /dev/shm:/dev/shm
+      --volume /tmp/.X11-unix:/tmp/.X11-unix
+      --mount "type=bind,source=$repo_root/ros2_ws,target=/home/ros_user/ros2_ws"
+      --env ROS_DISTRO=humble
+      --env "DISPLAY=${DISPLAY:-}"
+    )
+
+    if [[ "$action" == shell ]]; then
+      exec docker run "${docker_args[@]}" --entrypoint /bin/bash "$image" "$@"
+    fi
+
+    exec docker run "${docker_args[@]}" "$image" "$@"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
