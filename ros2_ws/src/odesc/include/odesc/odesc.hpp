@@ -7,23 +7,21 @@
 // This is the "real hardware" counterpart to the Gazebo ign_ros2_control plugin.
 // diff_drive_controller does not know or care which one is loaded — it only ever
 // sees wheel-joint position/velocity interfaces. The motor<->wheel gear-ratio
-// conversion lives entirely in read()/write() here.
+// conversion and transport details live in the selected DriveBackend.
 //
-// CAN command subset used (see include/odesc/constants.hpp for the IDs):
+// CAN command subset used (see include/odesc/can.hpp for protocol and transport):
 //   0x07 Set_Axis_Requested_State  — CLOSED_LOOP_CONTROL on activate, IDLE on stop
 //   0x09 Get_Encoder_Estimates     — cyclic RX: two LE float32 = pos/vel in motor turns
 //   0x0D Set_Input_Vel             — TX per cycle: commanded motor turns/s
 //
 #pragma once
 
-#include <array>
-#include <atomic>
 #include <cstdint>
-#include <mutex>
+#include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
+#include "odesc/drive_backend.hpp"
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
 #include "hardware_interface/system_interface.hpp"
@@ -67,35 +65,8 @@ public:
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
 private:
-  // Latest encoder estimate for one node, in motor-shaft units, as reported by
-  // Get_Encoder_Estimates (0x09). Written by the RX thread, read by read().
-  struct Estimate
-  {
-    double pos_turns{0.0};
-    double vel_turns_s{0.0};
-  };
-
-  // Build + send an 8-byte CAN data frame to <node_id> with command <cmd_id>.
-  // Returns false on a socket write error. len bytes of payload are sent (0..8).
-  bool send_frame(uint8_t node_id, uint8_t cmd_id, const uint8_t * payload, uint8_t len);
-
-  // Send Set_Axis_Requested_State (0x07) with the given axis state to every node.
-  void request_axis_state_all(uint32_t axis_state);
-
-  // Blocking SocketCAN RX loop; runs on rx_thread_ while rx_running_ is true.
-  void rx_loop();
-
-  // Mock feedback step: no CAN, no ODESCs. Runs the commanded wheel velocity
-  // through the same gear-ratio round-trip the real path uses and integrates
-  // position, so the whole read()->diff_drive_controller->/odom->TF->viewer
-  // pipeline can be exercised with no motor hardware present. Selected with
-  // can_interface:=mock (or :=none). See odesc/README.md "Mock mode".
-  void mock_step(const rclcpp::Duration & period);
-
   // ---- configuration (from the URDF <ros2_control> block) ----
-  std::string can_interface_{"can0"};
   double gear_ratio_{48.0};   // ODESC V4.2 + NEO REV v1.1, per the team 2026-09-06
-  bool mock_{false};          // set in on_init when can_interface is "mock"/"none"
   std::vector<std::string> joint_names_;
   std::vector<uint8_t> node_ids_;
 
@@ -103,15 +74,8 @@ private:
   std::vector<double> hw_positions_;
   std::vector<double> hw_velocities_;
   std::vector<double> hw_commands_;
-
-  // ---- SocketCAN ----
-  int can_fd_{-1};
-  std::thread rx_thread_;
-  std::atomic<bool> rx_running_{false};
-
-  // Latest estimate per CAN node ID (0x00-0x3F). Guarded by est_mutex_.
-  std::mutex est_mutex_;
-  std::array<Estimate, 64> est_{};
+  std::vector<WheelState> backend_states_;
+  std::unique_ptr<DriveBackend> backend_;
 };
 
 }  // namespace odesc

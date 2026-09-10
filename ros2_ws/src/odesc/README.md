@@ -48,9 +48,9 @@ deliberately then, not guessed now.
 ## CAN command subset used
 
 CANSimple, ODrive firmware v0.5.x. Arbitration ID = `(node_id << 5) | cmd_id`
-(11-bit standard frame). Command IDs come from
-[`include/odesc/constants.hpp`](include/odesc/constants.hpp) — do not redefine
-them elsewhere.
+(11-bit standard frame). Frame construction/parsing and SocketCAN transport come
+from [`include/odesc/can.hpp`](include/odesc/can.hpp) — do not redefine protocol
+values or payload encodings elsewhere.
 
 | cmd | name | direction | payload |
 |---|---|---|---|
@@ -58,8 +58,8 @@ them elsewhere.
 | `0x09` | `Get_Encoder_Estimates` | RX (cyclic) | two LE `float32`: pos [0:4], vel [4:8], in **motor-shaft** turns / turns·s⁻¹ |
 | `0x0D` | `Set_Input_Vel` | TX (per `write()`) | LE `float32` Input_Vel [0:4]; Input_Torque_FF [4:8] left `0` |
 
-Axis-state values (`8`, `1`) are **not** in `constants.hpp` (which only carries
-command IDs) — they are defined locally in `src/odesc.cpp`.
+Axis-state values (`8`, `1`) are represented by `odrive_can::AxisState` in the
+same shared CAN header.
 
 `Get_Encoder_Estimates` is consumed as a **cyclic** broadcast: configure each
 ODESC with `axis0.config.can.encoder_rate_ms > 0` (e.g. `10`) during firmware
@@ -153,23 +153,22 @@ match — keep the two in sync.
 
 ## Lifecycle
 
-- `on_init` – parse params, validate each joint has exactly one `velocity`
-  command interface and both `position`+`velocity` state interfaces.
-- `on_activate` – open the SocketCAN socket, start the RX thread, send
-  `Set_Axis_Requested_State → CLOSED_LOOP_CONTROL` to all six nodes.
-  *(mock mode: zero the state, no socket, no traffic.)*
-- `read` – latest cyclic `Get_Encoder_Estimates` per node → wheel-joint state.
-  *(mock mode: gear-ratio loopback of the command + position integration.)*
-- `write` – commanded wheel velocity → `Set_Input_Vel` per node.
-  *(mock mode: no-op; the command is consumed in `read`.)*
-- `on_deactivate` / `on_cleanup` / `on_shutdown` – `Set_Axis_Requested_State →
-  IDLE` on all nodes, stop the RX thread, close the socket.
+`OdescSystemHardware` owns ROS 2 Control lifecycle and joint interfaces. It
+delegates hardware behaviour to a ROS-independent `DriveBackend`:
+
+- `SocketCanDriveBackend` opens SocketCAN, receives cyclic encoder estimates,
+  sends velocity commands, and requests ODrive CLOSED_LOOP_CONTROL / IDLE.
+- `MockDriveBackend` performs the gear-ratio command loopback and integrates
+  wheel position without opening a socket.
+
+Adding another hardware implementation now means implementing the same backend
+interface rather than adding more mode checks to the ROS plugin.
 
 ## Platform note
 
-The SocketCAN code is Linux-only. On non-Linux (e.g. a Mac dev build of the
-workspace) the plugin still compiles and registers, but `on_activate()` fails
-cleanly with a clear message — use the `use_sim:=true` Gazebo backend there.
+This package is Linux-only: it directly uses the kernel SocketCAN API and is
+therefore built only when CMake targets Linux. Use the `use_sim:=true` Gazebo
+backend on other platforms.
 
 ## Selecting this backend
 

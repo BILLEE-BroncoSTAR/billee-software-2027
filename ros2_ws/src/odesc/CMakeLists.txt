@@ -20,17 +20,18 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-# The hardware interface talks raw Linux SocketCAN. On non-Linux (e.g. a Mac dev
-# build of the workspace) there is nothing to build here — the Gazebo backend
-# (use_sim:=true) does not depend on this package.
-if(UNIX AND NOT APPLE)
+# The hardware interface talks raw Linux SocketCAN. The Gazebo backend
+# (use_sim:=true) does not depend on this Linux-only package.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_package(hardware_interface REQUIRED)
   find_package(pluginlib REQUIRED)
   find_package(rclcpp REQUIRED)
   find_package(rclcpp_lifecycle REQUIRED)
 
   add_library(odesc SHARED
+    src/mock_drive_backend.cpp
     src/odesc.cpp
+    src/socketcan_drive_backend.cpp
   )
   target_compile_features(odesc PUBLIC cxx_std_17)
   target_include_directories(odesc PUBLIC
@@ -72,8 +73,8 @@ if(UNIX AND NOT APPLE)
   )
 else()
   message(WARNING
-    "odesc: SocketCAN hardware interface not built on this platform "
-    "(needs Linux). The Gazebo sim backend (use_sim:=true) is unaffected.")
+    "odesc: SocketCAN hardware interface is Linux-only. "
+    "The Gazebo sim backend (use_sim:=true) is unaffected.")
 endif()
 
 # node_map.yaml is the canonical node-id<->joint map; useful on every platform.

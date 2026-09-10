@@ -88,6 +88,7 @@ RUN apt-get update -y || true && \
   apt-get install --no-install-recommends \
   bash-completion \
   build-essential \
+  can-utils \
   cmake \
   dialog \
   less \
