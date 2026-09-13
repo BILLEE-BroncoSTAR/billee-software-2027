@@ -76,6 +76,8 @@ ros-humble-ign-ros2-control = ">=0.7.19,<0.8"
 ros-humble-foxglove-bridge = "*"
 # Keyboard teleop — the drive path where no /dev/input gamepad exists (Mac devcontainer, CI).
 ros-humble-teleop-twist-keyboard = "*"
+ros-humble-navigation2 = ">=1.1.20,<2"
+ros-humble-nav2-bringup = ">=1.1.20,<2"
 
 [activation]
 scripts = ["install/setup.sh"]
