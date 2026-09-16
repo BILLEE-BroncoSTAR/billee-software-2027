@@ -1,48 +1,71 @@
 <?xml version="1.0" ?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
 
+    <!-- Real-backend params, overridable from the launch file:
+             xacro robot.urdf.xacro use_sim:=false can_interface:=vcan0 gear_ratio:=48.0
+         can_interface: SocketCAN device. "mock"/"none" -> OdescSystemHardware mock
+           mode (no CAN, gear-ratio loopback feedback) for hardware-free bring-up.
+         gear_ratio: 48.0 for the ODESC V4.2 + NEO REV v1.1 drivetrain (team,
+           2026-09-06). Canonical copy: ros2_ws/src/odesc/config/node_map.yaml. -->
+    <xacro:arg name="can_interface" default="can0"/>
+    <xacro:arg name="gear_ratio" default="48.0"/>
+
     <ros2_control name="Robot" type="system">
         <hardware>
             <xacro:if value="${use_sim}">
                 <plugin>ign_ros2_control/IgnitionSystem</plugin>
             </xacro:if>
             <xacro:unless value="${use_sim}">
-                <!-- TODO: add real hw plugin-->
+                <!-- Real drivetrain: six ODESC/ODrive nodes over Linux SocketCAN.
+                     See ros2_ws/src/odesc/README.md. -->
+                <plugin>odesc/OdescSystemHardware</plugin>
+                <param name="can_interface">$(arg can_interface)</param>
+                <param name="gear_ratio">$(arg gear_ratio)</param>
             </xacro:unless>
         </hardware>
 
+        <!-- The per-joint <param name="node_id"> lines are emitted only for the
+             real backend (use_sim:=false), so the Gazebo expansion is unchanged.
+             Canonical map: odesc/config/node_map.yaml. NB the left side is
+             numbered rear->front and the right side front->rear. -->
         <joint name="joint_wheel_r1">
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
+            <xacro:unless value="${use_sim}"><param name="node_id">3</param></xacro:unless>   <!-- Front Right -->
         </joint>
         <joint name="joint_wheel_r2">
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
+            <xacro:unless value="${use_sim}"><param name="node_id">4</param></xacro:unless>   <!-- Mid Right -->
         </joint>
         <joint name="joint_wheel_r3">
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
+            <xacro:unless value="${use_sim}"><param name="node_id">5</param></xacro:unless>   <!-- Rear Right -->
         </joint>
         <joint name="joint_wheel_l1">
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
+            <xacro:unless value="${use_sim}"><param name="node_id">2</param></xacro:unless>   <!-- Rear Left -->
         </joint>
         <joint name="joint_wheel_l2">
             <command_interface name="velocity"/>
             <!--TODO: add min/max vel-->
             <state_interface name="position"/>
             <state_interface name="velocity"/>
+            <xacro:unless value="${use_sim}"><param name="node_id">1</param></xacro:unless>   <!-- Mid Left -->
         </joint>
         <joint name="joint_wheel_l3">
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
+            <xacro:unless value="${use_sim}"><param name="node_id">0</param></xacro:unless>   <!-- Front Left -->
         </joint>
     </ros2_control>
 
-            
+
 </robot>

@@ -1,40 +1,35 @@
 {
-  "name": "desktop-roshumble_dev-x862",
-   "build": {
-    "dockerfile": "../docker/Dockerfile.desktop.humble",
-    "context": "../"
+  "name": "rover-roshumble_l4t-aarch64",
+  "build": {
+    "dockerfile": "../../docker/Dockerfile.l4t-humble",
+    "context": "../../"
   },
-
-  "initializeCommand": "xhost +local:",
 
   "containerUser": "ros_user",
   "remoteUser": "ros_user",
 
-
   "runArgs": [
     "--privileged",
-    "--gpus", "all",
+    // JetPack 7 (Thor/Orin): use the nvidia runtime, NOT "--gpus all" (unreliable on JP7).
+    "--runtime", "nvidia",
     "-e=NVIDIA_VISIBLE_DEVICES=all",
-    "-e=NVIDIA_DRIVER_CAPABILITIES=all,graphics",
+    "-e=NVIDIA_DRIVER_CAPABILITIES=all",
     "--network=host",
     "--pid=host",
     "--ipc=host",
-    "--hostname=ros-dev",
-	  "--volume", "/tmp/.X11-unix:/tmp/.X11-unix",
-	  "--volume", "/dev:/dev",
-	  "--volume", "/dev/shm:/dev/shm"
+    "--hostname=rover",
+    "--volume", "/dev:/dev",
+    "--volume", "/dev/shm:/dev/shm",
+    // kept only for optional local debugging on a Jetson with a display attached
+    "--volume", "/tmp/.X11-unix:/tmp/.X11-unix"
   ],
 
-  "postStartCommand": "cd ros2_ws && pixi install",
+  "postStartCommand": "cd ros2_ws && pixi install --environment l4t",
 
   "containerEnv": {
     "ROS_DISTRO": "humble",
-    "DISPLAY": "${localEnv:DISPLAY}",
-    //must have these to forward graphics card into container COMMENT OUT IF YOU ARE NOT USING GPU
     "NVIDIA_DRIVER_CAPABILITIES": "all",
-     "__GLX_VENDOR_LIBRARY_NAME": "nvidia",
-    "__NV_PRIME_RENDER_OFFLOAD": "1"
-    //"LIBGL_ALWAYS_SOFTWARE": "1"
+    "DISPLAY": "${localEnv:DISPLAY}"
   },
 
   "customizations": {
@@ -62,5 +57,4 @@
       }
     }
   }
-
 }

@@ -88,6 +88,12 @@
             <visualize>0</visualize>
             <topic>/depth_cam</topic>
         </sensor>
+        <sensor name="imu_sensor" type="imu">
+            <always_on>1</always_on>
+            <update_rate>10</update_rate>
+            <visualize>1</visualize>
+            <topic>/depth_cam/imu</topic>
+        </sensor>
     </gazebo>
 
     <gazebo>
@@ -95,7 +101,9 @@
         <plugin name="ignition::gazebo::systems::Sensors" filename="libignition-gazebo-sensors-system.so">
             <render_engine>ogre2</render_engine>
         </plugin>
+        <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
     </gazebo>
+
 
     <gazebo>
         <plugin filename="libign_ros2_control-system.so" name="ign_ros2_control::IgnitionROS2ControlPlugin">

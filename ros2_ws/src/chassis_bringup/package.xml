@@ -21,9 +21,18 @@
 
   <exec_depend>controller_manager</exec_depend>
   <exec_depend>ros2_controllers</exec_depend>
+  <exec_depend>odesc</exec_depend>
   <exec_depend>gz_ros2_control</exec_depend>
   <exec_depend>ros_gz</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
+
+  <!-- viewers (viz.launch.py; opt-in from sim_gz.launch.py / real.launch.py) -->
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>foxglove_bridge</exec_depend>
+
+  <!-- ground_station.launch.py includes teleop.launch.py (joy_node + joy_tank_drive) -->
+  <exec_depend>teleop</exec_depend>
+  <exec_depend>joy</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

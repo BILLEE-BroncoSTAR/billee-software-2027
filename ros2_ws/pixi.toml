@@ -28,21 +28,23 @@ numpy = "*"
 empy = "*"
 lark = "*"
 
-# CPU-only environment for Apple-Silicon Docker Desktop containers.
-[feature.mac-cpu]
+# CPU-only aarch64 environment. Shared by:
+#   - `mac-cpu` : Apple-Silicon Docker Desktop containers
+#   - `l4t`     : NVIDIA Jetson (L4T / JetPack) rover, see .devcontainer/l4t/
+[feature.aarch64-cpu]
 platforms = ["linux-aarch64"]
 
-[feature.mac-cpu.tasks]
+[feature.aarch64-cpu.tasks]
 build = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release'"
 
-[feature.mac-cpu.dependencies]
+[feature.aarch64-cpu.dependencies]
 ros-humble-desktop = ">=0.10.0,<0.11"
 colcon-common-extensions = "*"
 flake8-docstrings = "*"
 pytest-cov = "*"
 ros-humble-turtlesim = ">=1.4.3,<2"
 
-[feature.mac-cpu.pypi-dependencies]
+[feature.aarch64-cpu.pypi-dependencies]
 argcomplete = "*"
 numpy = "*"
 empy = "*"
@@ -50,7 +52,8 @@ lark = "*"
 
 [environments]
 default = { features = ["linux-cuda"]}
-mac-cpu = { features = ["mac-cpu"]}
+mac-cpu = { features = ["aarch64-cpu"]}
+l4t = { features = ["aarch64-cpu"]}
 
 [dependencies]
 ros-humble-xacro = "*"
@@ -69,9 +72,24 @@ ros-humble-gz-ros2-control = ">=0.7.19,<0.8"
 ruff = ">=0.16.2,<0.17"
 ros-humble-ros2-control = ">=2.54.0,<3"
 ros-humble-ign-ros2-control = ">=0.7.19,<0.8"
+# Foxglove WebSocket bridge: rover publishes on :8765, ground station connects with Foxglove Studio.
+ros-humble-foxglove-bridge = "*"
+# Keyboard teleop — the drive path where no /dev/input gamepad exists (Mac devcontainer, CI).
+ros-humble-teleop-twist-keyboard = "*"
 
 [activation]
 scripts = ["install/setup.sh"]
+
+# Same ROS 2 domain on every machine (Jetson `l4t`, ground station `default`) so a
+# ground-station teleop node and the Jetson's diff_drive_controller share one DDS graph.
+# Standardise on one value; change it if it clashes on a shared LAN / at a competition.
+# Only applies through `pixi run` / `pixi shell` — a raw shell must export it itself.
+[activation.env]
+ROS_DOMAIN_ID = "42"
+# F' GDS web UI, opened by `ground_station.launch.py fprime_gds:=true`. Single place to
+# change the address; override per shell with `export FPRIME_GDS_URL=...` or per launch
+# with `fprime_gds_url:=...`.
+FPRIME_GDS_URL = "http://192.168.4.73:5000"
 
 [tasks]
 fmt = "ruff check src/ --fix"

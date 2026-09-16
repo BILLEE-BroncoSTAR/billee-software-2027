@@ -1,0 +1,30 @@
+# Persistent can0 bring-up for the BILLEE drivetrain.
+#
+# Install on the Jetson:
+#   sudo cp tooling/can0.service /etc/systemd/system/can0.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now can0.service
+#   systemctl status can0.service
+#
+# Bitrate 500000 matches BILLEE_NEO_ODESC_Hardware_Integration_Guide.md §3.4.
+# Change it here if the ODESC firmware is configured differently, then
+# `sudo systemctl restart can0.service`.
+#
+# This only configures an interface the kernel already exposes (Tegra mttcan or a
+# USB-CAN adapter). It is a no-op / fails cleanly if can0 is absent.
+
+[Unit]
+Description=Bring up can0 for the ODESC drivetrain
+After=network-pre.target
+Wants=network-pre.target
+BindsTo=sys-subsystem-net-devices-can0.device
+After=sys-subsystem-net-devices-can0.device
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/ip link set can0 up type can bitrate 500000 restart-ms 100
+ExecStop=/sbin/ip link set can0 down
+
+[Install]
+WantedBy=multi-user.target
