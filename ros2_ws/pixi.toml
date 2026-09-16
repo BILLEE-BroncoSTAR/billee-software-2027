@@ -78,6 +78,7 @@ ros-humble-foxglove-bridge = "*"
 ros-humble-teleop-twist-keyboard = "*"
 ros-humble-navigation2 = ">=1.1.20,<2"
 ros-humble-nav2-bringup = ">=1.1.20,<2"
+ros-humble-robot-localization = ">=3.5.4,<4"
 
 [activation]
 scripts = ["install/setup.sh"]

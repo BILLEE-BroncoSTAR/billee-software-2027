@@ -92,6 +92,7 @@ environments:
       - conda: https://prefix.dev/conda-forge/linux-64/gcc_linux-64-14.4.0-hc469d41_1.conda
       - conda: https://prefix.dev/conda-forge/linux-64/gdbm-1.18-h0a1914f_2.tar.bz2
       - conda: https://prefix.dev/conda-forge/linux-64/gdk-pixbuf-2.44.8-h68053f1_0.conda
+      - conda: https://prefix.dev/conda-forge/linux-64/geographiclib-cpp-2.7-hb700be7_0.conda
       - conda: https://prefix.dev/conda-forge/linux-64/gettext-0.25.1-h3f43e3d_1.conda
       - conda: https://prefix.dev/conda-forge/linux-64/gettext-tools-0.25.1-h3f43e3d_1.conda
       - conda: https://prefix.dev/conda-forge/linux-64/gflags-2.2.2-h5888daf_1005.conda
@@ -655,6 +656,7 @@ environments:
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-foxglove-bridge-3.3.0-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-generate-parameter-library-0.7.1-np2py312h2c89a96_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-generate-parameter-library-py-0.7.1-np2py312h2ed9cc7_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-geographic-msgs-1.0.6-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-geometry-msgs-4.9.1-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-geometry2-0.25.20-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-gmock-vendor-1.10.9006-np2py312h2ed9cc7_18.conda
@@ -786,6 +788,7 @@ environments:
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-rmw-fastrtps-shared-cpp-6.2.10-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-rmw-implementation-2.8.5-np2py312h2c89a96_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-rmw-implementation-cmake-6.1.2-np2py312h2ed9cc7_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-robot-localization-3.5.4-np2py312h3ba0a76_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-robot-state-publisher-3.0.3-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-ros-base-0.10.0-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-ros-core-0.10.0-np2py312h2ed9cc7_18.conda
@@ -1012,6 +1015,7 @@ environments:
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gcc_impl_linux-aarch64-14.4.0-h15aaa9e_4.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gcc_linux-aarch64-14.4.0-hab84b30_1.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gdk-pixbuf-2.44.8-hb26ce08_2.conda
+      - conda: https://prefix.dev/conda-forge/linux-aarch64/geographiclib-cpp-2.7-hfefdfc9_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gettext-0.25.1-h5ad3122_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gettext-tools-0.25.1-h5ad3122_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gflags-2.2.2-h5ad3122_1005.conda
@@ -1559,6 +1563,7 @@ environments:
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-foxglove-bridge-3.3.0-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-generate-parameter-library-0.7.1-np2py312h8b5252a_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-generate-parameter-library-py-0.7.1-np2py312h61f2ce4_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-geographic-msgs-1.0.6-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-geometry-msgs-4.9.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-geometry2-0.25.20-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-gmock-vendor-1.10.9006-np2py312h61f2ce4_18.conda
@@ -1690,6 +1695,7 @@ environments:
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-rmw-fastrtps-shared-cpp-6.2.10-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-rmw-implementation-2.8.5-np2py312h8b5252a_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-rmw-implementation-cmake-6.1.2-np2py312h61f2ce4_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-robot-localization-3.5.4-np2py312h78fd680_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-robot-state-publisher-3.0.3-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-ros-base-0.10.0-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-ros-core-0.10.0-np2py312h61f2ce4_18.conda
@@ -1916,6 +1922,7 @@ environments:
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gcc_impl_linux-aarch64-14.4.0-h15aaa9e_4.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gcc_linux-aarch64-14.4.0-hab84b30_1.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gdk-pixbuf-2.44.8-hb26ce08_0.conda
+      - conda: https://prefix.dev/conda-forge/linux-aarch64/geographiclib-cpp-2.7-hfefdfc9_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gettext-0.25.1-h5ad3122_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gettext-tools-0.25.1-h5ad3122_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gflags-2.2.2-h5ad3122_1005.conda
@@ -2462,6 +2469,7 @@ environments:
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-foxglove-bridge-3.3.0-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-generate-parameter-library-0.7.1-np2py312h8b5252a_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-generate-parameter-library-py-0.7.1-np2py312h61f2ce4_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-geographic-msgs-1.0.6-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-geometry-msgs-4.9.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-geometry2-0.25.20-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-gmock-vendor-1.10.9006-np2py312h61f2ce4_18.conda
@@ -2593,6 +2601,7 @@ environments:
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-rmw-fastrtps-shared-cpp-6.2.10-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-rmw-implementation-2.8.5-np2py312h8b5252a_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-rmw-implementation-cmake-6.1.2-np2py312h61f2ce4_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-robot-localization-3.5.4-np2py312h78fd680_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-robot-state-publisher-3.0.3-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-ros-base-0.10.0-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-ros-core-0.10.0-np2py312h61f2ce4_18.conda
@@ -3968,6 +3977,21 @@ packages:
     - gdk-pixbuf >=2.44.8,<3.0a0
   size: 579757
   timestamp: 1786715266831
+- conda: https://prefix.dev/conda-forge/linux-64/geographiclib-cpp-2.7-hb700be7_0.conda
+  sha256: 8d05d60178581a7a5f6cd3266cd5172f9cf18c89c8751ca9c76704f7b1b45916
+  md5: 4c9ffd9d8888d6e17ea4f2ebfb02ec73
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - libstdcxx >=14
+  license: MIT
+  license_family: MIT
+  purls: []
+  run_exports:
+    weak:
+    - geographiclib-cpp >=2.7,<2.8.0a0
+  size: 766298
+  timestamp: 1762551378982
 - conda: https://prefix.dev/conda-forge/linux-64/gettext-0.25.1-h3f43e3d_1.conda
   sha256: cbfa8c80771d1842c2687f6016c5e200b52d4ca8f2cc119f6377f64f899ba4ff
   md5: c42356557d7f2e37676e121515417e3b
@@ -11351,6 +11375,20 @@ packages:
     - gdk-pixbuf >=2.44.8,<3.0a0
   size: 584259
   timestamp: 1788492620164
+- conda: https://prefix.dev/conda-forge/linux-aarch64/geographiclib-cpp-2.7-hfefdfc9_0.conda
+  sha256: 6fe8f80c7fa545c24e3830982bc41a0b02bf101c7bc91955b6db6a22dcfcf30b
+  md5: ddbe1705c348ff1c7946c1416b5d3c84
+  depends:
+  - libgcc >=14
+  - libstdcxx >=14
+  license: MIT
+  license_family: MIT
+  purls: []
+  run_exports:
+    weak:
+    - geographiclib-cpp >=2.7,<2.8.0a0
+  size: 713193
+  timestamp: 1762553044644
 - conda: https://prefix.dev/conda-forge/linux-aarch64/gettext-0.25.1-h5ad3122_0.conda
   sha256: 510e7eba15e6ba71cd5a2ae403128d56b3bb990878c8110f3abc652f823b4af8
   md5: 1e99d353785a5302bce1a5a86d249b2b
@@ -21309,6 +21347,27 @@ packages:
   run_exports: {}
   size: 72239
   timestamp: 1778812628262
+- conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-geographic-msgs-1.0.6-np2py312h2ed9cc7_18.conda
+  sha256: 8fc688034d14be246038b1fdfe73e4ecbe0e2cb615c5e1e34123c3abb132c7f1
+  md5: e40d51c14530ce3e9eaffaea7adbfafb
+  depends:
+  - python
+  - ros-humble-geometry-msgs
+  - ros-humble-ros-workspace
+  - ros-humble-rosidl-default-runtime
+  - ros-humble-std-msgs
+  - ros-humble-unique-identifier-msgs
+  - ros2-distro-mutex 0.9.* humble_*
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - libstdcxx >=14
+  - ros2-distro-mutex >=0.9.0,<0.10.0a0
+  - numpy >=1.23,<3
+  - python_abi 3.12.* *_cp312
+  license: BSD-3-Clause
+  run_exports: {}
+  size: 311838
+  timestamp: 1778997118413
 - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-geometry-msgs-4.9.1-np2py312h2ed9cc7_18.conda
   sha256: 50e5fe1ef6c30187977a9e2bf0d7c0c7b2707fed727551bd6e5397d27acc3b29
   md5: bdd10a5abd5596d2f239505efe183fd6
@@ -24466,6 +24525,48 @@ packages:
   run_exports: {}
   size: 29331
   timestamp: 1778995878141
+- conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-robot-localization-3.5.4-np2py312h3ba0a76_18.conda
+  sha256: 4606577c95f2890973742609780f96536a2edd1a556f3a6727195529aa31f134
+  md5: 028fa660bcc35caddc96bdf1a2935fec
+  depends:
+  - eigen
+  - eigen-abi-devel
+  - geographiclib-cpp
+  - libboost-devel
+  - python
+  - ros-humble-angles
+  - ros-humble-diagnostic-msgs
+  - ros-humble-diagnostic-updater
+  - ros-humble-geographic-msgs
+  - ros-humble-geometry-msgs
+  - ros-humble-message-filters
+  - ros-humble-nav-msgs
+  - ros-humble-rclcpp
+  - ros-humble-rmw-implementation
+  - ros-humble-ros-workspace
+  - ros-humble-rosidl-default-runtime
+  - ros-humble-sensor-msgs
+  - ros-humble-std-msgs
+  - ros-humble-std-srvs
+  - ros-humble-tf2
+  - ros-humble-tf2-eigen
+  - ros-humble-tf2-geometry-msgs
+  - ros-humble-tf2-ros
+  - ros-humble-yaml-cpp-vendor
+  - ros2-distro-mutex 0.9.* humble_*
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - libstdcxx >=14
+  - geographiclib-cpp >=2.7,<2.8.0a0
+  - python_abi 3.12.* *_cp312
+  - ros2-distro-mutex >=0.9.0,<0.10.0a0
+  - eigen-abi >=3.4.0.100,<3.4.0.101.0a0
+  - numpy >=1.23,<3
+  - libboost >=1.88.0,<1.89.0a0
+  license: Apache-2.0
+  run_exports: {}
+  size: 987510
+  timestamp: 1778999193496
 - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-robot-state-publisher-3.0.3-np2py312h2ed9cc7_18.conda
   sha256: 9845f456476743172162e775e27b146f47908f8453f3094142177f8260720b62
   md5: f9e2187a0825d9138b982e5eda719ecb
@@ -30429,6 +30530,26 @@ packages:
   run_exports: {}
   size: 72351
   timestamp: 1778812930513
+- conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-geographic-msgs-1.0.6-np2py312h61f2ce4_18.conda
+  sha256: e0913cec70f027408cc43770d8d057dcb4d02a9478fea5e72071d4ad656e9aad
+  md5: 86af0dbb2998b01a2478ee692c141dc1
+  depends:
+  - python
+  - ros-humble-geometry-msgs
+  - ros-humble-ros-workspace
+  - ros-humble-rosidl-default-runtime
+  - ros-humble-std-msgs
+  - ros-humble-unique-identifier-msgs
+  - ros2-distro-mutex 0.9.* humble_*
+  - libgcc >=14
+  - libstdcxx >=14
+  - ros2-distro-mutex >=0.9.0,<0.10.0a0
+  - numpy >=1.23,<3
+  - python_abi 3.12.* *_cp312
+  license: BSD-3-Clause
+  run_exports: {}
+  size: 318947
+  timestamp: 1778824092448
 - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-geometry-msgs-4.9.1-np2py312h61f2ce4_18.conda
   sha256: 7a8773f81413c1af52805e40a12dd669e61a2ac06a4d09b2a219995603133f19
   md5: ad9dae6e0ca9ad8785fb27fc23b21672
@@ -33456,6 +33577,47 @@ packages:
   run_exports: {}
   size: 29213
   timestamp: 1778822763129
+- conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-robot-localization-3.5.4-np2py312h78fd680_18.conda
+  sha256: 07011203f9bd2fe877eda9e8e90b6fa0726f0d9d67f0b6e9e14970e6eb71b44f
+  md5: 4a675e8100caeb8f2732b23b6f752684
+  depends:
+  - eigen
+  - eigen-abi-devel
+  - geographiclib-cpp
+  - libboost-devel
+  - python
+  - ros-humble-angles
+  - ros-humble-diagnostic-msgs
+  - ros-humble-diagnostic-updater
+  - ros-humble-geographic-msgs
+  - ros-humble-geometry-msgs
+  - ros-humble-message-filters
+  - ros-humble-nav-msgs
+  - ros-humble-rclcpp
+  - ros-humble-rmw-implementation
+  - ros-humble-ros-workspace
+  - ros-humble-rosidl-default-runtime
+  - ros-humble-sensor-msgs
+  - ros-humble-std-msgs
+  - ros-humble-std-srvs
+  - ros-humble-tf2
+  - ros-humble-tf2-eigen
+  - ros-humble-tf2-geometry-msgs
+  - ros-humble-tf2-ros
+  - ros-humble-yaml-cpp-vendor
+  - ros2-distro-mutex 0.9.* humble_*
+  - libgcc >=14
+  - libstdcxx >=14
+  - ros2-distro-mutex >=0.9.0,<0.10.0a0
+  - libboost >=1.88.0,<1.89.0a0
+  - numpy >=1.23,<3
+  - python_abi 3.12.* *_cp312
+  - eigen-abi >=3.4.0.100,<3.4.0.101.0a0
+  - geographiclib-cpp >=2.7,<2.8.0a0
+  license: Apache-2.0
+  run_exports: {}
+  size: 983121
+  timestamp: 1778994877336
 - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-robot-state-publisher-3.0.3-np2py312h61f2ce4_18.conda
   sha256: f951ab3165e7cd25df41a57317df497d3cc6e1c1b5305a3eebdf64be5b1684ce
   md5: 948a9c1d67a43815d573312dfe5844dc
