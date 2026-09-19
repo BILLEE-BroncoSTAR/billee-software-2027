@@ -1,0 +1,39 @@
+synthetic_vio:
+  ros__parameters:
+    # Bridge Gazebo's model odometry into this topic. Do not use wheel odometry here:
+    # the EKF needs the wheel and synthetic-VIO inputs to have independent errors.
+    truth_topic: /gz/odom
+    vio_topic: /depth_cam/vio/odom
+    output_frame_id: odom
+    child_frame_id: base_link
+
+    # calibration is for initial covariance tuning; validation samples plausible
+    # model parameters per run; stress also introduces latency, outliers and dropouts.
+    profile: validation
+    # Use -1 for a new seed. The node logs the resolved seed for replay.
+    seed: 42
+
+    position_noise_std: 0.03          # m
+    yaw_noise_std: 0.02               # rad
+    position_drift_rw_std: 0.003      # m / sqrt(s)
+    yaw_drift_rw_std: 0.003           # rad / sqrt(s)
+    translation_scale_std: 0.005      # fraction, sampled once per run
+    yaw_scale_std: 0.005              # fraction, sampled once per run
+    reported_covariance_scale: 1.0
+
+    # No faults in calibration/validation unless you explicitly request them here.
+    dropout_probability: 0.0
+    outlier_probability: 0.0
+    outlier_position_std: 0.50        # m
+    outlier_yaw_std: 0.35             # rad
+    latency_ms: 0
+
+    validation_min_multiplier: 0.5
+    validation_max_multiplier: 2.0
+    stress_min_multiplier: 2.0
+    stress_max_multiplier: 5.0
+    stress_dropout_probability: 0.05
+    stress_outlier_probability: 0.01
+    stress_latency_ms: 150
+    # Deliberately optimistic covariance: verifies the EKF's rejection/consistency handling.
+    stress_reported_covariance_scale: 0.7
