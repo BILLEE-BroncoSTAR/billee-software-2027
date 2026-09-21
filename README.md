@@ -2,7 +2,6 @@
 
 ## General Usage
 
-It is generally reccomnded
 
 ### System Requirements
 
@@ -119,16 +118,6 @@ only place the **48:1** motor↔wheel gear ratio is applied) → `ros2_control`
 (`foxglove_bridge` :8765 for the remote ground station, `rviz2` for a local
 display). Canonical CAN node-ID ↔ wheel map: `ros2_ws/src/odesc/config/node_map.yaml`.
 
-### CAN frame layout (ODrive CANSimple, real backend)
-
-```mermaid
-flowchart LR
-    A["11-bit arbitration ID<br/>= (node_id &lt;&lt; 5) | cmd_id"] --> B{cmd_id}
-    B -->|"0x07 TX"| C["Set_Axis_Requested_State<br/>u32 LE: 8=CLOSED_LOOP on activate, 1=IDLE on stop"]
-    B -->|"0x0D TX / write()"| D["Set_Input_Vel<br/>f32 LE vel = wheel_rad_s × 48 / 2π ; torque_ff = 0"]
-    B -->|"0x09 RX / read()"| E["Get_Encoder_Estimates (cyclic)<br/>f32 LE pos,vel → wheel = motor × 2π / 48"]
-```
-
 
 ## Apple-Silicon Mac — headless ground station
 
@@ -145,26 +134,7 @@ pixi install --environment mac-cpu
 pixi run --environment mac-cpu build
 ```
 
-**What runs** (all headless, in the container):
-
-- **Headless Gazebo sim** — wrap launches in `xvfb-run -a`; the image ships `xvfb`
-  and a mesa `llvmpipe` software renderer. Slow, and camera sensors are marginal,
-  but the drivetrain + physics run.
-- The full **`ros2_control` stack** (`diff_drive_controller`, mock/sim backends,
-  `/odom`, `/tf`) and **`foxglove_bridge`** on `:8765` (forwarded to the macOS host).
-- **Keyboard teleop** — `teleop_twist_keyboard` (reads stdin), remapped to
-  `/diff_drive_controller/cmd_vel_unstamped`.
-
-**What does not** (by design — Docker Desktop on macOS):
-
-- **RViz** — no X server. Use Foxglove Studio (the macOS app) → `ws://localhost:8765`
-  and build the operator view there. Skip RViz in the launch with `rviz:=false`.
-- **USB gamepad** — `/dev/input/js*` is not passed into the container. Use keyboard
-  teleop, or Foxglove Studio's Teleop / Gamepad panel (publishes `Twist` through the
-  bridge).
-- **Direct DDS to a real rover** — no host networking. A Mac views a *remote* rover
-  only through the Foxglove bridge (`ws://<rover-ip>:8765`); it cannot join the
-  rover's DDS graph.
+## Running 
 
 Two ways to use it:
 
@@ -177,16 +147,9 @@ See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → "Mac (Apple Silicon)" for the com
 ## NVIDIA Jetson (L4T) rover devcontainer
 
 For the rover itself — an NVIDIA Jetson (Orin-family or Thor) flashed with
-**JetPack 7.2 / L4T r39.2.x** — use the `l4t` configuration in
+**JetPack 6.0 / L4T r36.3.x** — use the `l4t` configuration in
 `.devcontainer/l4t/devcontainer.json` (VS Code: **Dev Containers: Reopen in
 Container**, then select **rover-roshumble_l4t-aarch64**).
-
-It mirrors the default devcontainer's pixi/RoboStack structure but builds
-`docker/Dockerfile.l4t-humble` (base `nvcr.io/nvidia/l4t-jetpack:r39.2.1`) and
-forwards the GPU with the `nvidia` container runtime instead of `--gpus all`
-(unreliable on JetPack 7). ROS 2 Humble comes from the aarch64 `l4t` Pixi
-environment (shared `aarch64-cpu` feature). The ZED SDK is gated off
-(`--build-arg INSTALL_ZED=true` once a matching L4T r39 SDK ships).
 
 Host prep on the Jetson (one-time — **already done on the current BILLEE Orin Nano**):
 
@@ -200,12 +163,6 @@ sudo usermod -aG docker "$USER"   # then log out / back in
 docker run --rm --runtime nvidia ubuntu:24.04 nvidia-smi   # smoke test
 ```
 
-> On JetPack 7 use `--runtime nvidia`, not `--gpus all`.
-
-The native (no-container) path is also fully set up on this Jetson: Pixi is installed and
-the `l4t` environment is built — see [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md).
-
-Inside the container (first build throttled — Orin Nano has 8 GB RAM):
 
 ```sh
 cd ros2_ws

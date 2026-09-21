@@ -3,20 +3,11 @@
 # Structural mirror of docker/Dockerfile.desktop.humble: a CUDA-capable base ->
 # apt basics -> non-root `ros_user` -> (optional ZED SDK) -> pixi in /opt/pixi ->
 # `CMD ["pixi", "shell"]`. ROS 2 Humble itself comes from pixi / RoboStack (see
-# ros2_ws/pixi.toml, environment `l4t`), NOT from apt or the base image.
+# ros2_ws/pixi.toml, environment `l4t`)
 #
-# Default base is nvcr.io/nvidia/l4t-jetpack:r39.2.1 -> JetPack 7.2, Ubuntu 24.04,
-# CUDA 13.2.1, aarch64: an exact match for a JetPack 7.2 host. The image is keyed
-# to the JetPack/L4T version, not the board, so it runs on any Orin-family board
-# (AGX Orin / Orin NX / Orin Nano) or Thor that is flashed with JetPack 7.2.
-#
-# Re-target another board's JetPack with `--build-arg L4T_VERSION=rXX.Y.Z` (or a
-# per-board devcontainer `build.args`). Fallbacks if the jetpack image will not
-# pull or is too large: `--build-arg IMAGE_NAME=nvcr.io/nvidia/l4t-base:r39.2.1`
-# or `--build-arg IMAGE_NAME=ubuntu:24.04` (CUDA is still injected at runtime by
-# `--runtime nvidia`; the RoboStack ROS stack is CPU regardless).
+# Running on jetpack v6.x
 
-ARG L4T_VERSION=r39.2.1
+ARG L4T_VERSION=r36.3.0
 ARG IMAGE_NAME=nvcr.io/nvidia/l4t-jetpack:${L4T_VERSION}
 
 FROM ${IMAGE_NAME}
@@ -30,10 +21,6 @@ ARG USER_GID=1000
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# ZED SDK: no L4T r39 / JetPack 7.2 build exists yet (Stereolabs supports up to
-# JetPack 7.1 / L4T 38.4). Left OFF by default; flip with `--build-arg
-# INSTALL_ZED=true` once a matching SDK ships.
-ARG INSTALL_ZED=false
 ARG ZED_SDK_MAJOR=5
 ARG ZED_SDK_MINOR=4
 ARG L4T_MAJOR=39
@@ -76,9 +63,7 @@ RUN userdel -r ubuntu 2>/dev/null || true; \
   echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
   chmod 0440 /etc/sudoers.d/${USERNAME}
 
-# optional ZED SDK for Jetson (silent .run installer), gated behind INSTALL_ZED
-RUN if [ "$INSTALL_ZED" = "true" ]; then \
-    apt-get update || true && apt-get install -y --no-install-recommends \
+RUN apt-get update || true && apt-get install -y --no-install-recommends \
       libusb-1.0-0-dev zlib1g-dev libgeographic-dev && \
     rm -rf /var/lib/apt/lists/* && \
     wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run \
@@ -87,9 +72,6 @@ RUN if [ "$INSTALL_ZED" = "true" ]; then \
     ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda && \
     rm -rf ZED_SDK_Linux_JP.run /usr/local/zed/resources/* && \
     chown -R ${USERNAME}:${USERNAME} /usr/local/zed ; \
-  else \
-    echo "Skipping ZED SDK (INSTALL_ZED=${INSTALL_ZED})" ; \
-  fi
 
 # pixi -> provides ROS 2 Humble + colcon via the `l4t` environment in ros2_ws/pixi.toml
 ENV PIXI_HOME=/opt/pixi
@@ -104,11 +86,10 @@ RUN apt-get update && apt-get install -y \
 
 USER ${USERNAME}
 
-# Initialize ROS 2 toolchain from the Pixi Environment
-RUN echo 'source /workspaces/URC-2027/ros2_ws/.pixi/envs/default/setup.bash' >> ~/.bashrc
-# Source the local workspace overlay to enable autocomplete
-RUN echo "source /workspaces/URC-2027/ros2_ws/install/setup.bash" >> ~/.bashrc
-# Override GNU Readline defaults to display ambiguous autocomplete matches on first tab (instead of second)
-RUN echo "bind 'set show-all-if-ambiguous on'" >> ~/.bashrc
+# Copy the terminal config (autocomplete) script into the container
+COPY docker/terminal_config.sh /tmp/terminal_config.sh
+
+# Append the terminal config (autocomplete) script to .bashrc
+RUN cat /tmp/terminal_config.sh >> ~/.bashrc
 
 CMD ["pixi", "shell"]

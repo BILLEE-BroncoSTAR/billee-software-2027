@@ -136,6 +136,27 @@ xvfb-run -a pixi run --environment l4t ros2 launch chassis_bringup sim_gz.launch
   odesc_shadow:=true can_interface:=vcan0
 ```
 
+### vCAN with the Linux devcontainer
+
+`vcan` is a **host-kernel** module. When running ROS in either Linux devcontainer,
+create the virtual bus once on the Linux host, then launch ROS in the container:
+
+```bash
+# Linux host (outside the container)
+cd /path/to/URC-2027
+./tooling/can-up vcan0
+
+# Devcontainer
+pixi run --environment l4t ros2 launch chassis_bringup sim_gz.launch.py \
+  odesc_shadow:=true can_interface:=vcan0
+```
+
+The Linux devcontainer configurations use `--network=host`, so `vcan0` is already
+visible inside the container. Confirm it with `ip link show vcan0`. Do not create a
+second interface inside the container. With a custom Docker invocation, add
+`--network=host` (Linux only); otherwise create the interface in that container's
+network namespace instead.
+
 The built-in vCAN emulator converts `Set_Input_Vel` frames into cyclic
 `Get_Encoder_Estimates` feedback for nodes 0–5. Watch the real frames with
 `candump -L vcan0` (install `can-utils` if needed). Tear down the virtual device
