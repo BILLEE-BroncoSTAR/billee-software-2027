@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# sim-up - bringup the gazebo sim of the rover with odesc vcan simulation and joystick control
+# Example Usage:
+#   ./sim-up true true - bringup the gazebo simulator with controller and foxglove bridge
+
+start_foxglove="${1:-true}"
+use_controller="${2:-true}"
+
+cd /workspaces/URC-2027/ros2_ws
+pixi run --environment default ros2 launch chassis_bringup sim_gz.launch.py  odesc_shadow:=true can_interface:=vcan0 joy_control:=$use_controller foxglove:=$start_foxglove

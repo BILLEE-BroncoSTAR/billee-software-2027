@@ -85,6 +85,11 @@ declare_args = [
             description="Also start the foxglove_bridge WebSocket server on :8765.",
         ),
         DeclareLaunchArgument(
+            "joy_control",
+            default_value="true",
+            description="start the joystick control nodes alongside the sim",
+        ),
+        DeclareLaunchArgument(
             "odesc_shadow",
             default_value="false",
             description=(
@@ -240,6 +245,24 @@ def _launch_description(ctx):
         condition=IfCondition(LaunchConfiguration("odesc_shadow")),
     )
 
+    use_joy = LaunchConfiguration('joy_control')
+    joy_params = os.path.join(get_package_share_directory('chassis_bringup'), 'config', 'tele_params.yaml')
+    teleop_nodes = [
+        Node(
+            package='joy',
+            executable='joy_node',
+            parameters=[joy_params]
+        ),
+
+        Node(
+            package='teleop',
+            executable='joy_tank_drive',
+            name='joy_tank_drive',
+            parameters=[joy_params],
+            remappings=[('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')]
+        )
+    ] if use_joy else []
+
     return set_env + [
             set_resource_path,
             gz_sim_launch,
@@ -250,6 +273,7 @@ def _launch_description(ctx):
             diff_drive_controller_spawner,
             odesc_shadow,
             viz,
+            *teleop_nodes
         ]
 
 def generate_launch_description():
