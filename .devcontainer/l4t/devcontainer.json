@@ -1,0 +1,60 @@
+{
+  "name": "rover-roshumble_l4t-aarch64",
+  "build": {
+    "dockerfile": "../../docker/Dockerfile.l4t-humble",
+    "context": "../../"
+  },
+
+  "containerUser": "ros_user",
+  "remoteUser": "ros_user",
+
+  "runArgs": [
+    "--privileged",
+    // JetPack 7 (Thor/Orin): use the nvidia runtime, NOT "--gpus all" (unreliable on JP7).
+    "--runtime", "nvidia",
+    "-e=NVIDIA_VISIBLE_DEVICES=all",
+    "-e=NVIDIA_DRIVER_CAPABILITIES=all",
+    "--network=host",
+    "--pid=host",
+    "--ipc=host",
+    "--hostname=rover",
+    "--volume", "/dev:/dev",
+    "--volume", "/dev/shm:/dev/shm",
+    // kept only for optional local debugging on a Jetson with a display attached
+    "--volume", "/tmp/.X11-unix:/tmp/.X11-unix"
+  ],
+
+  "postStartCommand": "cd ros2_ws && pixi install --environment l4t",
+
+  "containerEnv": {
+    "ROS_DISTRO": "humble",
+    "NVIDIA_DRIVER_CAPABILITIES": "all",
+    "DISPLAY": "${localEnv:DISPLAY}"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "renan-r-santos.pixi-code",
+        "Ranch-Hand-Robotics.urdf-editor",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "smilerobotics.urdf",
+        "waderyan.gitblame"
+      ],
+      "settings": {
+        "python-envs.defaultEnvManager": "ms-python.python:system",
+        // host networking + --pid=host makes VS Code's port scanner see every
+        // listening socket on the host (incl. its own forwarding helper), which
+        // runs away spawning hundreds of 3073x forwards. Disable auto-forward.
+        "remote.autoForwardPorts": false,
+        "remote.autoForwardPortsFallback": 0,
+        "remote.restoreForwardedPorts": false,
+        "remote.otherPortsAttributes": {
+          "onAutoForward": "ignore"
+        }
+      }
+    }
+  }
+}

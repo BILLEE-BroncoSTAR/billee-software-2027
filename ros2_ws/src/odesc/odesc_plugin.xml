@@ -1,0 +1,13 @@
+<library path="odesc">
+  <class
+    name="odesc/OdescSystemHardware"
+    type="odesc::OdescSystemHardware"
+    base_class_type="hardware_interface::SystemInterface">
+    <description>
+      ros2_control SystemInterface for the BILLEE drivetrain: six ODrive/ODESC
+      motor controllers on a shared CAN bus (one per wheel joint), driven over a
+      raw Linux SocketCAN socket. Real-hardware counterpart to the Gazebo
+      ign_ros2_control backend, selected via use_sim:=false.
+    </description>
+  </class>
+</library>

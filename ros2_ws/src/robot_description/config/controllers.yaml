@@ -1,0 +1,33 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 30
+    use_sim_time: true
+
+    diff_drive_controller:
+      type: diff_drive_controller/DiffDriveController
+
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+diff_drive_controller:
+  ros__parameters:
+    left_wheel_names:
+      - joint_wheel_l1
+      - joint_wheel_l2
+      - joint_wheel_l3
+    right_wheel_names:
+      - joint_wheel_r1
+      - joint_wheel_r2
+      - joint_wheel_r3
+
+    wheel_separation: 0.67   # track width
+    wheel_radius: 0.11 
+
+    base_frame_id: base_link
+    odom_frame_id: odom
+    enable_odom_tf: true
+
+    publish_rate: 50.0
+    use_stamped_vel: false
+    cmd_vel_timeout: 0.25

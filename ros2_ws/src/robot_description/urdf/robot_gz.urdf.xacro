@@ -1,0 +1,114 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+    <xacro:include filename="macros.xacro" />
+
+    <gazebo reference="base_footprint">
+        <xacro:dark_grey/>
+    </gazebo>
+    <gazebo reference="base_link">
+        <xacro:white/>
+    </gazebo>
+    <gazebo reference="suspension_1_right_1">
+        <xacro:dark_grey/>
+    </gazebo>
+    <gazebo reference="suspension_1_left_1">
+        <xacro:dark_grey/>
+    </gazebo>
+    <gazebo reference="suspension_2_right_1">
+        <xacro:dark_grey/>
+    </gazebo>
+    <gazebo reference="suspension_2_left_1">
+        <xacro:dark_grey/>
+    </gazebo>
+    <gazebo reference="wheel_r_3">
+        <xacro:black/>
+    </gazebo>
+    <gazebo reference="wheel_r_2">
+        <xacro:black/>
+    </gazebo>
+    <gazebo reference="wheel_r_1">
+        <xacro:black/>
+    </gazebo>
+    <gazebo reference="wheel_1">
+        <xacro:black/>
+    </gazebo>
+    <gazebo reference="wheel_2">
+        <xacro:black/>
+    </gazebo>
+    <gazebo reference="wheel_3">
+        <xacro:black/>
+    </gazebo>
+    <gazebo reference="camera_link">
+        <xacro:black/>
+        <sensor name="zed2i" type="rgbd_camera">
+            <ignition_frame_id>camera_link</ignition_frame_id>
+            <camera name="zed2i">
+            <horizontal_fov>${zed_horizontal_fov}</horizontal_fov>
+            <lens>
+                <intrinsics>
+                <fx>${zed_fx}</fx>
+                <fy>${zed_fy}</fy>
+                <cx>${zed_cx}</cx>
+                <cy>${zed_cy}</cy>
+                <s>0</s>
+                </intrinsics>
+            </lens>
+            <distortion>
+                <k1>0.104207</k1>
+                <k2>-0.255558</k2>
+                <k3>0.128694</k3>
+                <p1>0.000512</p1>
+                <p2>0.000319</p2>
+                <center>0.5 0.5</center>
+            </distortion>
+            <image>
+                <width>${zed_width}</width>
+                <height>${zed_height}</height>
+                <format>L8</format>
+            </image>
+            <clip>
+                <near>0.01</near>
+                <far>300</far>
+            </clip>
+            <depth_camera>
+                <clip>
+                <near>0.1</near>
+                <far>10</far>
+                </clip>
+            </depth_camera>
+            <noise>
+                <type>gaussian</type>
+                <mean>0</mean>
+                <stddev>0.003</stddev>
+            </noise>
+            </camera>
+            <always_on>1</always_on>
+            <update_rate>10</update_rate>
+            <visualize>0</visualize>
+            <topic>/depth_cam</topic>
+        </sensor>
+        <sensor name="imu_sensor" type="imu">
+            <always_on>1</always_on>
+            <update_rate>10</update_rate>
+            <visualize>1</visualize>
+            <topic>/depth_cam/imu</topic>
+        </sensor>
+    </gazebo>
+
+    <gazebo>
+        <!-- Render and publish camera / GPU sensor data for this spawned model. -->
+        <plugin name="ignition::gazebo::systems::Sensors" filename="libignition-gazebo-sensors-system.so">
+            <render_engine>ogre2</render_engine>
+        </plugin>
+        <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    </gazebo>
+
+
+    <gazebo>
+        <plugin filename="libign_ros2_control-system.so" name="ign_ros2_control::IgnitionROS2ControlPlugin">
+            <parameters>$(find robot_description)/config/controllers.yaml</parameters>
+        </plugin>
+    </gazebo>
+
+</robot>

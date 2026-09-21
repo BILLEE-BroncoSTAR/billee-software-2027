@@ -1,0 +1,12 @@
+{
+    // The container runs with --network=host and --pid=host, so VS Code's port
+    // scanner sees every listening socket on the host, including the sockets its
+    // own port-forwarding helper creates. That feedback loop is what spawns the
+    // runaway 3073x -> 3073x+1 forwards. Turn the whole subsystem off.
+    "remote.autoForwardPorts": false,
+    "remote.autoForwardPortsFallback": 0,
+    "remote.restoreForwardedPorts": false,
+    "remote.otherPortsAttributes": {
+        "onAutoForward": "ignore"
+    }
+}

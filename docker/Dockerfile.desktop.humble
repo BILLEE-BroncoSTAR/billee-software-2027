@@ -35,7 +35,6 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV NVIDIA_DRIVER_CAPABILITIES \
     ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}compute,video,utility
 
-# Disable apt-get warnings
 RUN apt-get update || true && apt-get install -y --no-install-recommends \
   apt-utils \
   curl \
@@ -44,7 +43,6 @@ RUN apt-get update || true && apt-get install -y --no-install-recommends \
 
 ENV ZED_SDK_URL=${CUSTOM_ZED_SDK_URL:-"https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}.${ZED_SDK_PATCH}/cu${CUDA_MAJOR}/ubuntu${UBUNTU_MAJOR}"}
 
-# Check that this SDK exists
 RUN echo "SDK link: $ZED_SDK_URL"
 RUN if [ "$(curl -L -I "${ZED_SDK_URL}" -o /dev/null -s -w '%{http_code}\n' | head -n 1)" = "200" ]; then \
         echo "The URL points to something."; \
@@ -77,67 +75,60 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &
   zstd && \
   rm -rf /var/lib/apt/lists/*
 
-# Install the ZED SDK
 RUN echo "CUDA Version $CUDA_VERSION" > /usr/local/cuda/version.txt
 
-# Setup the ZED SDK
+#make amd gpu compatible with 22.04
+RUN apt-get update && apt-get install -y software-properties-common \
+    && add-apt-repository -y ppa:kisak/kisak-mesa \
+    && apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update -y || true && \
   apt-get install --no-install-recommends \
   bash-completion \
-  build-essential \
-  cmake \
-  dialog \
-  less \
+  can-utils \
   libgomp1 \
   libpng-dev \
-  lsb-release \
-  python3 \
-  python3-pip \
-  sudo \
   tmux \
-  udev \
-  wget \
-  zstd \
   -y && \
   python3 -m pip install --upgrade pip; python3 -m pip install \
   numpy \
   opencv-python-headless && \
   wget -q -O ZED_SDK_Linux_Ubuntu.run ${ZED_SDK_URL}
 
+RUN groupadd --gid ${USER_GID} ${USERNAME} && \
+    useradd --uid ${USER_UID} --gid ${USER_GID} -m -s /bin/bash ${USERNAME} && \
+    mkdir -p /home/${USERNAME}/ros2_ws/src && \
+    chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/ros2_ws && \
+    usermod -aG sudo ${USERNAME} && \
+    echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
+    chmod 0440 /etc/sudoers.d/${USERNAME}
+
+
 #this step will fail if the wget was invalid (e.g. the download link returned a 404 then the head should show html)
 RUN chmod +x ZED_SDK_Linux_Ubuntu.run && \
-  bash ./ZED_SDK_Linux_Ubuntu.run -- silent skip_tools skip_cuda && \
+  bash ./ZED_SDK_Linux_Ubuntu.run -- silent skip_cuda && \
   ln -sf /lib/x86_64-linux-gnu/libusb-1.0.so.0 /usr/lib/x86_64-linux-gnu/libusb-1.0.so && \
   rm ZED_SDK_Linux_Ubuntu.run && \
-  rm -rf /var/lib/apt/lists/*
+  rm -rf /var/lib/apt/lists/* && \
+  sudo chown -R ${USERNAME}:${USERNAME} /usr/local/zed
 
-#####################################################################
-# Install pixi directly into this image (same env CUDA lives in)   #
-#####################################################################
+
 ENV PIXI_HOME=/opt/pixi
 ENV PATH=${PIXI_HOME}/bin:${PATH}
 
 RUN curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
 
-#####################################################################
-# Set up the ros2_ws via pixi                                       #
-#####################################################################
-WORKDIR /root/ros2_ws
+#ENTRYPOINT ["/sbin/ros_entrypoint.sh"]
 
-# Runs colcon build inside the resolved pixi env, with CUDA visible
-# (see the "build" task in pixi.toml). Because this all happens in the
-# CUDA devel image itself, /usr/local/cuda is present for the CMake
-# args that reference it.
+# Switch user to configure the non-root shell for autocomplete
+USER ${USERNAME}
 
-COPY ros2_ws/pixi.toml /root/ros2_ws/pixi.toml
-COPY ros2_ws/pixi.lock /root/ros2_ws/pixi.lock
-RUN pixi install
-RUN pixi run build
-COPY ros2_ws .
+# Copy the terminal config (autocomplete) script into the container
+COPY docker/terminal_config.sh /tmp/terminal_config.sh
 
-# Setup environment variables
-COPY docker/ros_entrypoint.sh /sbin/ros_entrypoint.sh
-RUN sudo chmod 755 /sbin/ros_entrypoint.sh
+# Append the terminal config (autocomplete) script to .bashrc
+RUN cat /tmp/terminal_config.sh >> ~/.bashrc
 
-ENTRYPOINT ["/sbin/ros_entrypoint.sh"]
-CMD ["bash"]
+CMD ["pixi", "shell"]

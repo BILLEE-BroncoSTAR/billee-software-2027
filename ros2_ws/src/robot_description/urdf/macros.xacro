@@ -1,0 +1,52 @@
+<?xml version="1.0" ?>
+<robot name="robot" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+    <xacro:macro name="white">
+    <visual>
+        <material>
+        <ambient>1 1 1 1</ambient>
+        <diffuse>1 1 1 1</diffuse>
+        <specular>0.1 0.1 0.1 1</specular>
+        </material>
+    </visual>
+    </xacro:macro>
+
+    <xacro:macro name="black">
+        <visual>
+            <material>
+                <ambient>0.02 0.02 0.02 1</ambient>
+                <diffuse>0.02 0.02 0.02 1</diffuse>
+                <specular>0.4 0.4 0.4 1</specular>
+            </material>
+        </visual>
+    </xacro:macro>
+    <xacro:macro name="orange">
+        <visual>
+            <material>
+                <ambient>1 0.2 0 1</ambient>
+                <diffuse>1 0.2 0 1</diffuse>
+                <specular>0.05 0.05 0.05 1</specular>
+            </material>
+        </visual>
+    </xacro:macro>
+    <xacro:macro name="dark_grey">
+        <visual>
+            <material>
+            <ambient>0.2 0.2 0.2 1</ambient>
+            <diffuse>0.2 0.2 0.2 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+            </material>
+        </visual>
+    </xacro:macro>
+
+    <xacro:property name="zed_width" value="1280" />
+    <xacro:property name="zed_height" value="720" />
+    <xacro:property name="zed_horizontal_fov_deg" value="120" />
+    <xacro:property name="zed_horizontal_fov" value="${zed_horizontal_fov_deg * pi / 180.0}" />
+    <xacro:property name="zed_fx" value="${zed_width / (2 * tan(zed_horizontal_fov / 2))}" />
+    <xacro:property name="zed_fy" value="${zed_fx}" />
+    <xacro:property name="zed_cx" value="${zed_width / 2.0}" />
+    <xacro:property name="zed_cy" value="${zed_height / 2.0}" />
+
+
+</robot>
