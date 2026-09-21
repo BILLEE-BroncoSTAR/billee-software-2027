@@ -28,6 +28,7 @@
   "postStartCommand": "cd ros2_ws && pixi install",
 
   "containerEnv": {
+    "ROVER_WS": "${containerWorkspaceFolder}/ros2_ws",
     "ROS_DISTRO": "humble",
     "DISPLAY": "${localEnv:DISPLAY}",
     //must have these to forward graphics card into container COMMENT OUT IF YOU ARE NOT USING GPU
