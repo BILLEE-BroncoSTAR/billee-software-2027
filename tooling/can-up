@@ -56,8 +56,16 @@ ifc="$arg1"
 if [[ "$ifc" == vcan* ]]; then
   # Virtual CAN bus for hardware-free protocol testing (candump/cansend, or
   # real.launch.py can_interface:=vcan0).
-  sudo modprobe vcan
   if ! ip link show "$ifc" &>/dev/null; then
+    # The module belongs to the host kernel. In a host-networked container the
+    # interface may already have been created by the host, whose modules are
+    # intentionally not installed in the container filesystem.
+    if ! sudo modprobe vcan; then
+      echo "ERROR: could not load the vcan kernel module." >&2
+      echo "  - In a container, run 'tooling/can-up $ifc' on the Linux host first." >&2
+      echo "  - On the host, install/load the modules matching: $(uname -r)" >&2
+      exit 1
+    fi
     sudo ip link add dev "$ifc" type vcan
     echo ">> created virtual interface $ifc"
   fi
