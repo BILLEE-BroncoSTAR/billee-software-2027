@@ -1,32 +1,29 @@
-# Use the configured workspace, or ~/ros2_ws for standalone containers.
+# Load the environment prepared by container startup.
 _rover_ws="${ROVER_WS:-$HOME/ros2_ws}"
-_rover_prefix="$_rover_ws/.pixi/envs/${PIXI_ENVIRONMENT_NAME:-default}"
+_rover_env="${PIXI_ENVIRONMENT_NAME:-${ROVER_PIXI_ENVIRONMENT:-default}}"
 
 if [ -d "$_rover_ws" ]; then
-    # Load the Pixi ROS environment when installed.
-    if [ -f "$_rover_prefix/setup.bash" ]; then
-        source "$_rover_prefix/setup.bash"
-    fi
-
-    # Load the workspace overlay after a successful build.
-    if [ -f "$_rover_ws/install/setup.bash" ]; then
-        source "$_rover_ws/install/setup.bash"
-    fi
-
-    # Use this environment's executables and completion helper.
-    if [ -d "$_rover_prefix/bin" ]; then
-        export PATH="$_rover_prefix/bin:$PATH"
-    fi
-
-    if [ -f "$_rover_prefix/share/colcon_argcomplete/hook/colcon-argcomplete.bash" ]; then
-        source "$_rover_prefix/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
-    fi
-
     cd "$_rover_ws"
+    _rover_prefix="$(pwd -P)/.pixi/envs/$_rover_env"
+
+    if [ -r "$_rover_prefix/.rover-ready" ] &&
+       [ "$(cat "$_rover_prefix/.rover-ready")" = "$_rover_prefix" ]; then
+
+        source "$_rover_prefix/setup.bash"
+
+        if [ -f "$_rover_ws/install/setup.bash" ]; then
+            source "$_rover_ws/install/setup.bash"
+        fi
+
+        export PATH="$_rover_prefix/bin:$PATH"
+        source "$_rover_prefix/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
+    else
+        echo "Pixi setup is not ready. Check the container startup log."
+    fi
 fi
 
 bind 'set show-all-if-ambiguous on'
-unset _rover_ws _rover_prefix
+unset _rover_ws _rover_env _rover_prefix
 
 # Dynamic welcome message based on the active Pixi environment
 if [ -n "$PIXI_ENVIRONMENT_NAME" ]; then

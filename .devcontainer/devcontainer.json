@@ -25,7 +25,8 @@
 	  "--volume", "/dev/shm:/dev/shm"
   ],
 
-  "postStartCommand": "cd ros2_ws && pixi install",
+  "postStartCommand": ["bash", "${containerWorkspaceFolder}/ros2_ws/setup_pixi.sh", "default"],
+  "waitFor": "postStartCommand",
 
   "containerEnv": {
     "ROVER_WS": "${containerWorkspaceFolder}/ros2_ws",
