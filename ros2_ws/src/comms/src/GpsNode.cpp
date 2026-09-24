@@ -11,11 +11,11 @@
 #include "Gps.hpp"
 
 #define VALID_HEADER 0xb562
-#define POS_ID 0x0102
+#define POS_ID 0x0136
 #define COV_ID 0x2936
 #define HEADER_SZ 4*8
-#define POS_SIZE 64 
-#define COV_SIZE 60 
+#define POS_SIZE 28
+#define COV_SIZE 64 
 
 
 using namespace std::chrono_literals;
@@ -128,7 +128,8 @@ class Gps : public rclcpp::Node{
                 // way to configure the receiver to output messages at regular intervals so 
                 // the timestamps are the exact same 
                 if (pendingPos->iTow == pendingCov->iTow){
-                    //TODO: construct and publish
+                    auto gpsMsg = constructGpsMsg();
+                    gpsPublisher_->publish(gpsMsg);
                     hasPos = hasCov = false;
                 }
             }
@@ -139,6 +140,36 @@ class Gps : public rclcpp::Node{
                 (hasCov && (currentTs - covTs).seconds() > tolSec)
             )
                 hasPos = hasCov = false;
+        }
+
+        sensor_msgs::msg::NavSatFix constructGpsMsg(){
+            auto gpsMsg = sensor_msgs::msg::NavSatFix();
+        
+            // conversions, see pg 122 of: https://content.u-blox.com/sites/default/files/documents/u-blox-F9-HPS-1.40_InterfaceDescription_UBXDOC-963802114-13138.pdf?utm_content=UBXDOC-963802114-13138
+            gpsMsg.longitude = pendingPos->longitude * 1e-7;
+            gpsMsg.latitude = pendingPos->latitude * 1e-7;
+            gpsMsg.altitude = pendingPos->height * 1e-3;
+
+
+            // conversions, see pg 113 of: https://content.u-blox.com/sites/default/files/documents/u-blox-F9-HPS-1.40_InterfaceDescription_UBXDOC-963802114-13138.pdf?utm_content=UBXDOC-963802114-13138
+            if(pendingCov->posCovValid){
+                // cov matrix components are ENU in row major order
+                gpsMsg.position_covariance[0] = pendingCov->posCovEE;
+                gpsMsg.position_covariance[1] = pendingCov->posCovNE;
+                gpsMsg.position_covariance[2] = -pendingCov->posCovED;
+                gpsMsg.position_covariance[3] = pendingCov->posCovNE;
+                gpsMsg.position_covariance[4] = pendingCov->posCovNN;
+                gpsMsg.position_covariance[5] = -pendingCov->posCovND;
+                gpsMsg.position_covariance[6] = -pendingCov->posCovED;
+                gpsMsg.position_covariance[7] = -pendingCov->posCovND;
+                gpsMsg.position_covariance[8] = -pendingCov->posCovDD;
+
+                gpsMsg.position_covariance_type = gpsMsg.COVARIANCE_TYPE_KNOWN;
+            }
+            else
+                gpsMsg.position_covariance_type = gpsMsg.COVARIANCE_TYPE_UNKNOWN;
+
+            return gpsMsg;
         }
 
 };
