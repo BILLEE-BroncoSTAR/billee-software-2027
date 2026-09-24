@@ -41,6 +41,7 @@ class Gps : public rclcpp::Node{
         ~Gps(){
             delete pendingPos;
             delete pendingCov;
+            delete device;
         }
 
     private:
@@ -99,7 +100,6 @@ class Gps : public rclcpp::Node{
 
         void pollMsgs(){
             char buf[BUF_LEN];
-
             int16_t msgType = readMsg(buf, BUF_LEN);
 
             if(msgType != -1){
