@@ -1,0 +1,327 @@
+<?xml version="1.0" ?>
+<robot name="arm_model" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:include filename="$(find arm_description)/urdf/materials.xacro" />
+<xacro:arg name="controllers_yaml" default="" />
+<!--xacro:include filename="$(find arm_description)/urdf/arm_model.trans" /-->
+<!--xacro:include filename="$(find arm_description)/urdf/arm_model.gazebo" /-->
+<link name="base_link">
+  <inertial>
+    <origin xyz="-2.7080784655318005e-16 5.153839971860783e-15 0.004136802049565343" rpy="0 0 0"/>
+    <mass value="0.5419518835414427"/>
+    <inertia ixx="0.00091" iyy="0.00027" izz="0.001167" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="link_1_2_1">
+  <inertial>
+    <origin xyz="-1.479118549574756e-14 0.08134270362128795 0.0690799408284275" rpy="0 0 0"/>
+    <mass value="4.757704779656536"/>
+    <inertia ixx="0.009037" iyy="0.006353" izz="0.007509" ixy="0.0" iyz="-0.001921" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0 -0.0 -0.01635" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_1_2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0 -0.0 -0.01635" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_1_2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="link_2_3_1">
+  <inertial>
+    <origin xyz="-3.446896306753785e-06 -0.043669905768610996 0.3184481008001334" rpy="0 0 0"/>
+    <mass value="9.395984925546623"/>
+    <inertia ixx="0.446386" iyy="0.446247" izz="0.010806" ixy="1e-06" iyz="0.009231" ixz="6e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0 -0.03985 -0.091975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_2_3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0 -0.03985 -0.091975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_2_3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="link_3_4_1">
+  <inertial>
+    <origin xyz="-0.2074795427008168 -0.03406338226916051 5.142208137076665e-08" rpy="0 0 0"/>
+    <mass value="6.512996018816775"/>
+    <inertia ixx="0.008247" iyy="0.308164" izz="0.30966" ixy="-0.001266" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0 0.04565 -0.624975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_3_4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0 0.04565 -0.624975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_3_4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="link_finger_1_1">
+  <inertial>
+    <origin xyz="-0.00495986465075704 0.030307992986428278 0.025291287240302274" rpy="0 0 0"/>
+    <mass value="0.11283837193238071"/>
+    <inertia ixx="8e-05" iyy="7e-05" izz="3.3e-05" ixy="1.1e-05" iyz="-2.8e-05" ixz="2.1e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.708667 0.076078 -0.648894" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_finger_1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.708667 0.076078 -0.648894" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_finger_1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="link_finger_2_1">
+  <inertial>
+    <origin xyz="-0.00495986382405833 -0.03705735516510887 -0.012358183998697037" rpy="0 0 0"/>
+    <mass value="0.11283837197844168"/>
+    <inertia ixx="8e-05" iyy="1.8e-05" izz="8.5e-05" ixy="-2.3e-05" iyz="-2e-06" ixz="-1e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.708667 0.10365 -0.642975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_finger_2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.708667 0.10365 -0.642975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_finger_2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="link_finger_3_1">
+  <inertial>
+    <origin xyz="-0.004959864650756818 0.02923072135253657 -0.025913103520703862" rpy="0 0 0"/>
+    <mass value="0.11283837193238071"/>
+    <inertia ixx="8e-05" iyy="6.7e-05" izz="3.7e-05" ixy="1.2e-05" iyz="3e-05" ixz="-2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.708667 0.084738 -0.596056" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_finger_3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.708667 0.084738 -0.596056" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_finger_3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="link_5_endeff_1">
+  <inertial>
+    <origin xyz="-0.09099428908136209 3.2387508258624464e-08 3.823071392794475e-08" rpy="0 0 0"/>
+    <mass value="1.7115453307416668"/>
+    <inertia ixx="0.001339" iyy="0.003687" izz="0.003687" ixy="-0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.551575 0.08065 -0.624975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_5_endeff_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.551575 0.08065 -0.624975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_5_endeff_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="link_4_5_1">
+  <inertial>
+    <origin xyz="-0.0028773326220321582 -0.02900000000001071 -1.2212453270876722e-15" rpy="0 0 0"/>
+    <mass value="0.24645301797117772"/>
+    <inertia ixx="0.000198" iyy="0.000114" izz="0.000204" ixy="0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.527575 0.05165 -0.624975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_4_5_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.527575 0.05165 -0.624975" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://arm_description/meshes/link_4_5_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="joint_axis_1" type="continuous">
+  <origin xyz="0.0 0.0 0.01635" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="link_1_2_1"/>
+  <axis xyz="0.0 0.0 -1.0"/>
+  <dynamics damping="1.0" friction="0.0"/>
+</joint>
+
+<joint name="joint_axis_2" type="continuous">
+  <origin xyz="0.0 0.03985 0.075625" rpy="0 0 0"/>
+  <parent link="link_1_2_1"/>
+  <child link="link_2_3_1"/>
+  <axis xyz="0.0 1.0 0.0"/>
+  <dynamics damping="1.0" friction="0.0"/>
+</joint>
+
+<joint name="joint_axis_3" type="continuous">
+  <origin xyz="0.0 -0.0855 0.533" rpy="0 0 0"/>
+  <parent link="link_2_3_1"/>
+  <child link="link_3_4_1"/>
+  <axis xyz="-0.0 -1.0 -0.0"/>
+  <dynamics damping="1.0" friction="0.0"/>
+</joint>
+
+<joint name="joint_finger_1" type="continuous">
+  <origin xyz="-0.157092 0.004572 0.023919" rpy="0 0 0"/>
+  <parent link="link_5_endeff_1"/>
+  <child link="link_finger_1_1"/>
+  <axis xyz="0.0 -0.866025 0.5"/>
+  <dynamics damping="1.0" friction="0.0"/>
+</joint>
+
+<joint name="joint_finger_2" type="continuous">
+  <origin xyz="-0.157092 -0.023 0.018" rpy="0 0 0"/>
+  <parent link="link_5_endeff_1"/>
+  <child link="link_finger_2_1"/>
+  <axis xyz="-0.0 -0.0 -1.0"/>
+  <dynamics damping="1.0" friction="0.0"/>
+</joint>
+
+<joint name="joint_finger_3" type="continuous">
+  <origin xyz="-0.157092 -0.004088 -0.028919" rpy="0 0 0"/>
+  <parent link="link_5_endeff_1"/>
+  <child link="link_finger_3_1"/>
+  <axis xyz="0.0 0.866025 0.5"/>
+  <dynamics damping="1.0" friction="0.0"/>
+</joint>
+
+<joint name="joint_axis_5" type="continuous">
+  <origin xyz="-0.024 -0.029 0.0" rpy="0 0 0"/>
+  <parent link="link_4_5_1"/>
+  <child link="link_5_endeff_1"/>
+  <axis xyz="1.0 0.0 0.0"/>
+  <dynamics damping="1.0" friction="0.0"/>
+</joint>
+
+<joint name="joint_axis_4" type="continuous">
+  <origin xyz="-0.527575 -0.006 0.0" rpy="0 0 0"/>
+  <parent link="link_3_4_1"/>
+  <child link="link_4_5_1"/>
+  <axis xyz="-0.0 1.0 0.0"/>
+  <dynamics damping="1.0" friction="0.0"/>
+</joint>
+
+<ros2_control name="ArmSystem" type="system">
+  <hardware>
+    <!-- add hardware plugin here-->
+    <!-- Gazebo Sim hardware interface -->
+    <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+  </hardware>
+
+  <!-- List the joints ros2_control will command -->
+  <joint name="joint_axis_1">
+    <command_interface name="position"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="joint_axis_2">
+    <command_interface name="position"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="joint_axis_3">
+    <command_interface name="position"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="joint_axis_4">
+    <command_interface name="position"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="joint_axis_5">
+    <command_interface name="velocity"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+
+
+  <joint name="joint_finger_1">
+    <command_interface name="position"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="joint_finger_2">
+    <command_interface name="position"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+
+  <joint name="joint_finger_3">
+    <command_interface name="position"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+</ros2_control>
+
+<gazebo>
+  <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+    <robot_param>robot_description</robot_param>
+    <robot_param_node>robot_state_publisher</robot_param_node>
+    <parameters>$(arg controllers_yaml)</parameters>
+  </plugin>
+</gazebo>
+
+</robot>
