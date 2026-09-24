@@ -58,16 +58,10 @@ class SerialDevice{
             return true;
         }
 
-        int readMsg(){
-            char msg[256];
-            size_t numBytes = read(fd, msg, 256);
+        size_t readMsg(char* msg, size_t len){
+            size_t numBytes = read(fd, msg, len);
 
-            if(numBytes == 0)
-                return -1;
-            else{
-                msg[255] = '\0';
-                return atoi(msg);
-            }
+            return numBytes;
             
         }
 };
