@@ -24,12 +24,15 @@
     "--volume", "/tmp/.X11-unix:/tmp/.X11-unix"
   ],
 
-  "postStartCommand": "cd ros2_ws && pixi install --environment l4t",
+  "postStartCommand": ["bash", "${containerWorkspaceFolder}/ros2_ws/setup_pixi.sh", "l4t"],
+  "waitFor": "postStartCommand",
 
   "containerEnv": {
     "ROS_DISTRO": "humble",
     "NVIDIA_DRIVER_CAPABILITIES": "all",
-    "DISPLAY": "${localEnv:DISPLAY}"
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "ROVER_WS": "${containerWorkspaceFolder}/ros2_ws",
+    "ROVER_PIXI_ENVIRONMENT": "l4t"
   },
 
   "customizations": {

@@ -25,9 +25,11 @@
 	  "--volume", "/dev/shm:/dev/shm"
   ],
 
-  "postStartCommand": "cd ros2_ws && pixi install",
+  "postStartCommand": ["bash", "${containerWorkspaceFolder}/ros2_ws/setup_pixi.sh", "default"],
+  "waitFor": "postStartCommand",
 
   "containerEnv": {
+    "ROVER_WS": "${containerWorkspaceFolder}/ros2_ws",
     "ROS_DISTRO": "humble",
     "DISPLAY": "${localEnv:DISPLAY}",
     //must have these to forward graphics card into container COMMENT OUT IF YOU ARE NOT USING GPU

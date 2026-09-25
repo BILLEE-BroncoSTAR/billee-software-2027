@@ -122,13 +122,16 @@ RUN curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_H
 
 #ENTRYPOINT ["/sbin/ros_entrypoint.sh"]
 
-# Switch user to configure the non-root shell for autocomplete
+# Configure autocomplete for both users
+USER root
+
+COPY docker/terminal_config.sh /etc/rover/terminal_config.sh
+
+RUN chmod 0644 /etc/rover/terminal_config.sh && \
+    printf '\nsource /etc/rover/terminal_config.sh\n' >> /root/.bashrc && \
+    printf '\nsource /etc/rover/terminal_config.sh\n' >> /home/${USERNAME}/.bashrc
+
 USER ${USERNAME}
 
-# Copy the terminal config (autocomplete) script into the container
-COPY docker/terminal_config.sh /tmp/terminal_config.sh
-
-# Append the terminal config (autocomplete) script to .bashrc
-RUN cat /tmp/terminal_config.sh >> ~/.bashrc
 
 CMD ["pixi", "shell"]

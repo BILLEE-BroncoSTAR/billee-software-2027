@@ -1,15 +1,29 @@
-# Initial shell configuration, which should be run as the user after dependencies have been loaded
+# Load the environment prepared by container startup.
+_rover_ws="${ROVER_WS:-$HOME/ros2_ws}"
+_rover_env="${PIXI_ENVIRONMENT_NAME:-${ROVER_PIXI_ENVIRONMENT:-default}}"
 
-# Initialize ROS 2 toolchain from the Pixi Environment
-source /workspaces/URC-2027/ros2_ws/.pixi/envs/default/setup.bash
-# Initialize colcon autocomplete from the Pixi environment
-source /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/colcon_argcomplete/hook/colcon-argcomplete.bash
-# Source the local workspace overlay to enable autocomplete
-source /workspaces/URC-2027/ros2_ws/install/setup.bash
-# Override GNU Readline defaults to display ambiguous autocomplete matches on first tab (instead of second)
+if [ -d "$_rover_ws" ]; then
+    cd "$_rover_ws"
+    _rover_prefix="$(pwd -P)/.pixi/envs/$_rover_env"
+
+    if [ -r "$_rover_prefix/.rover-ready" ] &&
+       [ "$(cat "$_rover_prefix/.rover-ready")" = "$_rover_prefix" ]; then
+
+        source "$_rover_prefix/setup.bash"
+
+        if [ -f "$_rover_ws/install/setup.bash" ]; then
+            source "$_rover_ws/install/setup.bash"
+        fi
+
+        export PATH="$_rover_prefix/bin:$PATH"
+        source "$_rover_prefix/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
+    else
+        echo "Pixi setup is not ready. Check the container startup log."
+    fi
+fi
+
 bind 'set show-all-if-ambiguous on'
-# Navigate to ros2_ws
-cd ros2_ws
+unset _rover_ws _rover_env _rover_prefix
 
 # Dynamic welcome message based on the active Pixi environment
 if [ -n "$PIXI_ENVIRONMENT_NAME" ]; then
