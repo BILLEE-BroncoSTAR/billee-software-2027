@@ -63,3 +63,5 @@ ros2_ws/build
 .cache
 
 cpp_pubsub
+# Platform recorded by `make setup <platform>` (machine-specific)
+ros2_ws/.billee-platform

@@ -1,25 +1,39 @@
 #!/usr/bin/env bash
-# Build and run the desktop ROS 2 image without VS Code / Dev Containers.
+# Build and run this machine's ROS 2 dev image without VS Code / Dev Containers.
+#
+# The image, GPU flags and mount point follow the platform recorded by
+# `make setup <platform>` (see tooling/billee-env.sh), and match the corresponding
+# .devcontainer/*/devcontainer.json so Pixi environments work in both. Override for
+# one command with BILLEE_PLATFORM=<mac|l4t|x86>.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-image="zed-ros2-desktop:latest"
+source "$repo_root/tooling/billee-env.sh"
 
 usage() {
   cat <<'EOF'
-Usage: scripts/desktop-ros2 <build|run|shell> [arguments...]
+Usage: tooling/desktop-ros2 <build|run|shell> [arguments...]
 
-  build  Build zed-ros2-desktop:latest from docker/Dockerfile.desktop.humble.
+  build  Build this platform's image. Extra arguments go to `docker build`
+         (e.g. --build-arg L4T_VERSION=r38.2.0).
   run    Start the image with the same host, GPU, device, X11, and workspace
-         settings as .devcontainer/devcontainer.json. Extra arguments replace
-         the image's default command.
-  shell  Open a Bash shell with those same settings, bypassing the entrypoint.
+         settings as the platform's devcontainer, after making sure the Pixi
+         environment is installed. Extra arguments replace the default command
+         (`pixi shell -e <env>`).
+  shell  Same, but open a plain Bash shell.
+
+  Platform  Dockerfile                          Image                  Workspace in container
+  x86       docker/Dockerfile.desktop.humble      billee-desktop:latest  /workspaces/<repo>/ros2_ws
+  mac       docker/Dockerfile.desktop.mac.humble  billee-mac-cpu:latest  /root/ros2_ws (+ /root/tooling)
+  l4t       docker/Dockerfile.l4t-humble          rover-ros2:latest      /workspaces/<repo>/ros2_ws
+
+  linux-aarch64 has no container: `make setup linux-aarch64` builds natively.
 
 Examples:
-  scripts/desktop-ros2 build
-  scripts/desktop-ros2 run
-  scripts/desktop-ros2 shell
-  scripts/desktop-ros2 run pixi run build
+  tooling/desktop-ros2 build
+  tooling/desktop-ros2 shell
+  tooling/desktop-ros2 run pixi run -e l4t build
+  BILLEE_PLATFORM=l4t tooling/desktop-ros2 build
 EOF
 }
 
@@ -28,39 +42,120 @@ if [[ $# -gt 0 ]]; then
   shift
 fi
 
+repo_mount="/workspaces/$(basename "$repo_root")"
+# Host-integration flags shared by the Linux-host devcontainers.
+linux_host_args=(
+  --privileged
+  --network host
+  --pid host
+  --ipc host
+  --volume /dev:/dev
+  --volume /dev/shm:/dev/shm
+  --volume /tmp/.X11-unix:/tmp/.X11-unix
+  --env "DISPLAY=${DISPLAY:-}"
+)
+
+case "$BILLEE_PLATFORM" in
+  x86)
+    dockerfile="docker/Dockerfile.desktop.humble"
+    image="billee-desktop:latest"
+    container_ws="$repo_mount/ros2_ws"
+    platform_args=(
+      "${linux_host_args[@]}"
+      --hostname ros-dev
+      --gpus all
+      --env NVIDIA_VISIBLE_DEVICES=all
+      --env NVIDIA_DRIVER_CAPABILITIES=all,graphics
+      --env __GLX_VENDOR_LIBRARY_NAME=nvidia
+      --env __NV_PRIME_RENDER_OFFLOAD=1
+      --mount "type=bind,source=$repo_root,target=$repo_mount"
+    )
+    ;;
+  mac)
+    dockerfile="docker/Dockerfile.desktop.mac.humble"
+    image="billee-mac-cpu:latest"
+    container_ws="/root/ros2_ws"
+    # Docker Desktop has no host networking or /dev passthrough: publish the
+    # Foxglove bridge port instead, and render on the CPU.
+    platform_args=(
+      --publish 8765:8765
+      --env LIBGL_ALWAYS_SOFTWARE=1
+      --env GALLIUM_DRIVER=llvmpipe
+      --mount "type=bind,source=$repo_root/ros2_ws,target=$container_ws"
+      --mount "type=bind,source=$repo_root/tooling,target=/root/tooling,readonly"
+    )
+    ;;
+  l4t)
+    dockerfile="docker/Dockerfile.l4t-humble"
+    image="rover-ros2:latest"
+    container_ws="$repo_mount/ros2_ws"
+    # JetPack 7 (Thor/Orin): use the nvidia runtime, NOT "--gpus all" (unreliable on JP7).
+    platform_args=(
+      "${linux_host_args[@]}"
+      --hostname rover
+      --runtime nvidia
+      --env NVIDIA_VISIBLE_DEVICES=all
+      --env NVIDIA_DRIVER_CAPABILITIES=all
+      --mount "type=bind,source=$repo_root,target=$repo_mount"
+    )
+    ;;
+  linux-aarch64)
+    echo "desktop-ros2: linux-aarch64 runs natively, not in a container." >&2
+    echo "  Build:  make setup linux-aarch64" >&2
+    echo "  Run:    cd ros2_ws && pixi run -e $BILLEE_PIXI_ENV ros2 launch ...   (or tooling/sim-up)" >&2
+    exit 2
+    ;;
+  *)
+    echo "desktop-ros2: unknown platform '$BILLEE_PLATFORM' - run 'make setup <platform>'" >&2
+    exit 2
+    ;;
+esac
+
 case "$action" in
   build)
     exec docker build \
-      --file "$repo_root/scripts/Dockerfile.desktop.humble" \
+      --file "$repo_root/$dockerfile" \
       --tag "$image" \
       "$@" \
       "$repo_root"
     ;;
   run|shell)
-    docker_args=(
-      --rm
-      --interactive
-      --tty
-      --privileged
-      --gpus all
-      --network host
-      --pid host
-      --ipc host
-      --volume /tmp/.X11-unix:/tmp/.X11-unix
-      --volume /dev:/dev
-      --volume /dev/shm:/dev/shm
-      --mount "type=bind,source=$repo_root/ros2_ws,target=/root/ros2_ws"
-      --env ROS_DISTRO=humble
-      --env "DISPLAY=${DISPLAY:-}"
-      --env "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"
-      --env "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}"
-    )
-
-    if [[ "$action" == shell ]]; then
-      exec docker run "${docker_args[@]}" --entrypoint /bin/bash "$image" "$@"
+    # Let the container open X11 windows (RViz, Gazebo) - the devcontainers'
+    # initializeCommand does the same.
+    if [[ "$BILLEE_PLATFORM" != mac && -n "${DISPLAY:-}" ]] && command -v xhost >/dev/null; then
+      xhost +local: >/dev/null || true
     fi
 
-    exec docker run "${docker_args[@]}" "$image" "$@"
+    tty_args=(--interactive)
+    if [[ -t 0 && -t 1 ]]; then
+      tty_args+=(--tty)
+    fi
+
+    if [[ "$action" == shell ]]; then
+      cmd=(bash)
+    elif [[ $# -gt 0 ]]; then
+      cmd=("$@")
+    else
+      cmd=(pixi shell --environment "$BILLEE_PIXI_ENV")
+    fi
+
+    # One container per platform: a second `run`/`shell` (e.g. keyboard teleop while
+    # `make sim` runs) joins it instead of starting another - on the Mac that would
+    # clash on the published :8765 and sit on a different network.
+    name="billee-$BILLEE_PLATFORM"
+    if [[ -n "$(docker ps --quiet --filter "name=^${name}\$")" ]]; then
+      exec docker exec "${tty_args[@]}" --workdir "$container_ws" "$name" "${cmd[@]}"
+    fi
+
+    # Same job as the devcontainers' postStartCommand: the bind mount hides any env
+    # baked into the image, so (re)install it - a no-op when it's already current.
+    exec docker run --rm --name "$name" "${tty_args[@]}" \
+      "${platform_args[@]}" \
+      --env ROS_DISTRO=humble \
+      --env "BILLEE_PLATFORM=$BILLEE_PLATFORM" \
+      --workdir "$container_ws" \
+      "$image" \
+      bash -c 'pixi install --environment "$0" && exec "$@"' "$BILLEE_PIXI_ENV" "${cmd[@]}"
     ;;
   -h|--help|help)
     usage

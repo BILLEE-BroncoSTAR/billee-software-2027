@@ -59,6 +59,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the terminal config (autocomplete) script into the container
+COPY tooling/billee-env.sh /usr/local/lib/billee/billee-env.sh
 COPY docker/terminal_config.sh /tmp/terminal_config.sh
 
 # Append the terminal config (autocomplete) script to .bashrc

@@ -10,6 +10,8 @@
 
   "workspaceMount": "source=${localWorkspaceFolder}/ros2_ws,target=/root/ros2_ws,type=bind",
   "workspaceFolder": "/root/ros2_ws",
+  // tooling/ (sim-up, billee-env.sh) beside the workspace, like the full-repo mounts on Linux.
+  "mounts": ["source=${localWorkspaceFolder}/tooling,target=/root/tooling,type=bind,readonly"],
   "postStartCommand": "if ! grep -Fq \"'exec' /root/ros2_ws/.pixi/envs/mac-cpu/bin/python\" .pixi/envs/mac-cpu/bin/ros2 2>/dev/null; then pixi clean --environment mac-cpu || true; pixi install --environment mac-cpu; fi",
 
   // Foxglove Studio on the macOS host connects to the container's foxglove_bridge here.

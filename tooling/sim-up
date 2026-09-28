@@ -1,11 +1,56 @@
 #!/usr/bin/env bash
 
-# sim-up - bringup the gazebo sim of the rover with odesc vcan simulation and joystick control
+# sim-up - bringup the gazebo sim of the rover with the viewer that suits this platform
 # Example Usage:
-#   ./sim-up true true - bringup the gazebo simulator with controller and foxglove bridge
+#   ./sim-up             - sim + gamepad teleop + foxglove bridge (:8765), RViz when there's a display
+#   ./sim-up true false  - same, without the gamepad nodes
+#
+# Args: [foxglove=true] [joystick=true]. Environment overrides:
+#   BILLEE_PLATFORM=<mac|linux-aarch64|l4t|x86>  Pixi env (default: from `make setup`, see tooling/billee-env.sh)
+#   RVIZ=true|false        default: true on Linux with a display, false on mac / headless
+#   SHADOW=true|false      ODESC shadow on vcan0; default: true when vcan0 exists
+#                          (create it on the host with `tooling/can-up vcan0`)
+#   HEADLESS=1             force `xvfb-run -a` (automatic when there is no display)
+set -euo pipefail
 
 start_foxglove="${1:-true}"
 use_controller="${2:-true}"
 
-cd /workspaces/URC-2027/ros2_ws
-pixi run --environment default ros2 launch chassis_bringup sim_gz.launch.py  odesc_shadow:=true can_interface:=vcan0 joy_control:=$use_controller foxglove:=$start_foxglove
+source "$(dirname "${BASH_SOURCE[0]}")/billee-env.sh"
+if [[ -z "$BILLEE_WS" ]]; then
+  echo "sim-up: can't find ros2_ws" >&2
+  exit 1
+fi
+
+has_display=false
+if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" && "${HEADLESS:-0}" != 1 && "$BILLEE_PLATFORM" != mac ]]; then
+  has_display=true
+fi
+
+wrapper=()
+if [[ "$has_display" == false ]]; then
+  if command -v xvfb-run >/dev/null; then
+    wrapper=(xvfb-run -a)
+  else
+    echo "sim-up: no display and no xvfb-run; Gazebo may fail to start" >&2
+  fi
+fi
+
+# Mac: Foxglove on the host is the viewer. Linux with a display: RViz.
+rviz="${RVIZ:-$has_display}"
+
+shadow="${SHADOW:-}"
+if [[ -z "$shadow" ]]; then
+  if ip link show vcan0 &>/dev/null; then shadow=true; else shadow=false; fi
+fi
+
+echo "sim-up: platform $BILLEE_PLATFORM, Pixi env $BILLEE_PIXI_ENV," \
+  "rviz=$rviz foxglove=$start_foxglove odesc_shadow=$shadow"
+if [[ "$start_foxglove" == true ]]; then
+  echo "sim-up: Foxglove Studio -> ws://localhost:8765 (or ws://<this-machine-ip>:8765)"
+fi
+cd "$BILLEE_WS"
+exec "${wrapper[@]}" pixi run --environment "$BILLEE_PIXI_ENV" \
+  ros2 launch chassis_bringup sim_gz.launch.py \
+  odesc_shadow:="$shadow" joy_control:="$use_controller" \
+  foxglove:="$start_foxglove" rviz:="$rviz"
