@@ -34,6 +34,12 @@ declare_args = [
         "Normally the ground station runs RViz.",
     ),
     DeclareLaunchArgument(
+        "localization",
+        default_value="true",
+        description="Start the robot_localization EKF, which owns the odom -> base_link "
+        "transform. Off means nothing publishes it and the TF tree is broken.",
+    ),
+    DeclareLaunchArgument(
         "joy_control",
         default_value="",
         description="Start gamepad teleop (joy_node + joy_drive) alongside, publishing "
@@ -58,7 +64,11 @@ declare_args = [
 
 def _setup(context):
     mode = LaunchConfiguration("mode").perform(context)
-    common = {"foxglove": "true", "rviz": LaunchConfiguration("rviz")}
+    common = {
+        "foxglove": "true",
+        "rviz": LaunchConfiguration("rviz"),
+        "localization": LaunchConfiguration("localization"),
+    }
 
     # The operator's pad lives on the ground station, so the rover environment ships
     # no `joy` package at all (ros2_ws/pixi.toml, feature.rover). Starting teleop on

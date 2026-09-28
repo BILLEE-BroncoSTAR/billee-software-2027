@@ -85,6 +85,13 @@ declare_args = [
             description="Also start the foxglove_bridge WebSocket server on :8765.",
         ),
         DeclareLaunchArgument(
+            "localization",
+            default_value="true",
+            description="Start the robot_localization EKF, which owns the odom -> "
+            "base_link transform (diff_drive_controller has enable_odom_tf: false). "
+            "With this false nothing publishes it and the TF tree is broken.",
+        ),
+        DeclareLaunchArgument(
             "joy_control",
             default_value="true",
             description="start the joystick control nodes alongside the sim",
@@ -271,6 +278,16 @@ def _launch_description(ctx):
         condition=IfCondition(LaunchConfiguration("joy_control")),
     )
 
+    localization = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [FindPackageShare("navigation"), "launch", "pose_estim.launch.py"]
+            )
+        ),
+        launch_arguments={"use_sim": "true"}.items(),
+        condition=IfCondition(LaunchConfiguration("localization")),
+    )
+
     return set_env + [
             set_resource_path,
             gz_sim_launch,
@@ -279,6 +296,7 @@ def _launch_description(ctx):
             robot_state_publisher,
             spawn_entity,
             diff_drive_controller_spawner,
+            localization,
             teleop,
             odesc_shadow,
             viz,

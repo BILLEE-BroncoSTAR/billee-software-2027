@@ -7,6 +7,7 @@ terminal by terminal. The `make` targets are only shortcuts for some of these co
 (see [Shortcuts](#shortcuts-make-and-tooling)).
 
 - [Deployment split: rover vs ground station](#deployment-split-rover-vs-ground-station)
+- [Pose estimation and the TF tree](#pose-estimation-and-the-tf-tree)
 - [Open a ROS 2 terminal](#open-a-ros-2-terminal) (per platform, no `make`)
 - [The contract every mode shares](#the-contract-every-mode-shares)
 - [Chassis modes](#chassis-modes--what-drives-the-wheels): C1 sim · C2 sim + ODESC shadow · C3 real · C4 mock · C5 vCAN bench
@@ -55,6 +56,79 @@ a LAN, so the ground station sees the rover's topics directly: teleop published 
 station reaches the rover's `diff_drive_controller`, and the station's local Foxglove
 bridge exposes the rover's data. Over a link where DDS does not work, connect Foxglove
 Studio straight to `ws://<rover-ip>:8765` instead.
+
+---
+
+## Pose estimation and the TF tree
+
+Every viewer and every navigation stack needs to know where the rover is. That answer
+lives in TF, as a chain of coordinate frames:
+
+```
+odom ─────────────► base_link ─────────► wheel_1 … wheel_r_3
+     "how far the rover has        "where each wheel sits
+      driven since startup"         on the chassis"
+```
+
+`robot_state_publisher` publishes `base_link` → wheels from the URDF. **The
+`odom` → `base_link` link is published by the EKF**, `ekf_filter_node` from
+`robot_localization`, started by `navigation/launch/pose_estim.launch.py`.
+
+`diff_drive_controller` could publish it too, but is deliberately told not to:
+
+```yaml
+# robot_description/config/controllers.yaml
+enable_odom_tf: false   # must disable to use robot_localization package
+```
+
+Exactly one node may own a transform. If both published `odom` → `base_link` they would
+fight. **The consequence: start the drivetrain without the EKF and nothing publishes it
+at all.** The symptom is not an error — it is RViz showing the robot stuck at the
+origin, Foxglove failing to place it, Nav2 unable to plan, and `tf2_echo odom base_link`
+answering `Invalid frame ID "odom" ... frame does not exist`, all while `/odom` topics
+look perfectly healthy. `localization:=false` reproduces it exactly.
+
+### Sensor fusion is additive
+
+The filter is configured in [`navigation/config/ekf.yaml`](../ros2_ws/src/navigation/config/ekf.yaml)
+— **one file for sim and real**, because the simulated VIO publishes on the same topic a
+real ZED would.
+
+A Kalman filter always runs its predict step and only applies an update when a
+measurement actually arrives. So every input below is optional except wheel odometry: a
+topic nobody publishes is simply never fused, and the estimate falls back to whatever
+else is available. Bring a sensor online later and the estimate improves with no config
+change, because its entry is already there waiting.
+
+| Input | Topic | What it contributes | Status |
+|---|---|---|---|
+| `odom0` wheel odometry | `/diff_drive_controller/odom` | `vx`, `vyaw` | **required** — always present, sim and real |
+| `odom1` VIO | `/depth_cam/vio/odom` | `x`, `y`, `yaw` — bounds wheel drift | sim: synthetic VIO. Real: remap the ZED driver here |
+| `imu0` IMU | `/imu/data` | `vyaw` — the axis wheel odometry is worst at | placeholder, nothing publishes it yet |
+
+Wheel odometry contributes **velocities only**, not pose: its pose is just those same
+velocities already integrated, so fusing both would feed identical information in twice
+and make the filter overconfident in a drifting estimate.
+
+Indices must stay dense — `robot_localization` scans `odom0`, `odom1`, … and stops at
+the first gap. To stop fusing a source, stop publishing it; do not delete its block.
+
+**GPS is deliberately not an input.** `comms/GpsNode` publishes `NavSatFix` on `/gps`,
+which is global, absolute and subject to jumps. Fusing it into a `world_frame: odom`
+filter would make `odom` → `base_link` jump, breaking every consumer that assumes odom
+is smooth — Nav2 included. The supported pattern is a second filter: this EKF keeps
+`odom` → `base_link` continuous, while `navsat_transform_node` plus a `world_frame: map`
+EKF publishes `map` → `odom` and is allowed to jump. That is future work.
+
+### Checking it
+
+```bash
+ros2 run tf2_ros tf2_echo odom base_link     # must print a Translation, not "does not exist"
+ros2 topic echo /odometry/filtered --once    # the EKF's own estimate
+ros2 run tf2_tools view_frames               # writes a PDF of the whole tree
+```
+
+Driving forward should make both the transform and `/odometry/filtered` advance together.
 
 ---
 
@@ -583,6 +657,8 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 |---|---|---|
 | `mode` | `sim` | `sim` → `sim_gz.launch.py`, `real` → `real.launch.py` |
 | `rviz` | `false` | also open RViz here |
+| `localization` | `true` | start the EKF that publishes `odom`→`base_link` ([Pose estimation](#pose-estimation-and-the-tf-tree)) |
+| `joy_control` | *(follows `mode`)* | gamepad teleop: defaults `true` for `sim`, `false` for `real` (the rover has no pad and no `joy` package). Pass `true`/`false` to force |
 | `can_interface` | `can0` | `mode:=real` only: `can0`, `vcan0`, or `mock`/`none` |
 | `gear_ratio` | `48.0` | `mode:=real` only: motor turns per wheel turn |
 
@@ -594,7 +670,9 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 | `rviz` | `false` | also open RViz |
 | `foxglove` | `false` | also start the Foxglove bridge |
 | `odesc_shadow` | `false` | also run the ODESC driver + emulator on `vcan0` |
-| `joy_control` | `true` | joystick nodes (currently always started — known bug) |
+| `localization` | `true` | start the EKF that publishes `odom`→`base_link` ([Pose estimation](#pose-estimation-and-the-tf-tree)) |
+| `joy_control` | `true` | joystick nodes (`teleop.launch.py`) |
+| `joy_source` | `device` | `device` = local pad via `joy_node`; `browser` = Foxglove Joystick panel ([T4b](#t4b--real-gamepad-through-the-browser)) |
 | `description_pkg`, `xacro_file` | `robot_description`, `urdf/robot.urdf.xacro` | robot model source |
 | `world_file` | `empty.sdf` | accepted but ignored (always `empty.sdf`) |
 
@@ -606,6 +684,8 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 | `gear_ratio` | `48.0` | motor turns per wheel turn |
 | `rviz` | `false` | also open RViz |
 | `foxglove` | `false` | also start the Foxglove bridge |
+| `localization` | `true` | start the EKF that publishes `odom`→`base_link` ([Pose estimation](#pose-estimation-and-the-tf-tree)) |
+| `joy_control` | `false` | gamepad teleop. **Off by default** — this is the real-rover path and the rover environment has no `joy` package; the pad is on the ground station |
 | `description_pkg`, `xacro_file`, `controllers_file` | `robot_description`, `urdf/robot.urdf.xacro`, `config/controllers.yaml` | model and controller config |
 
 **`ground_station.launch.py`** — operator station: viewers + teleop.
@@ -616,6 +696,7 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 | `rviz` | `true` | open RViz |
 | `foxglove` | `true` | local Foxglove bridge on :8765 |
 | `joystick` | `true` | gamepad teleop (`teleop.launch.py`) |
+| `joy_source` | `device` | `device` = local pad via `joy_node`; `browser` = Foxglove Joystick panel — the only pad path on a Mac ([T4b](#t4b--real-gamepad-through-the-browser)) |
 | `fprime_gds` | `false` | open the F' GDS web UI |
 | `fprime_gds_url` | `$FPRIME_GDS_URL` | address to open |
 
@@ -631,7 +712,22 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 **`odesc_shadow.launch.py`** — normally included by `sim_gz.launch.py odesc_shadow:=true`;
 `can_interface` (default `vcan0`), `description_pkg`, `xacro_file`.
 
-**`teleop/launch/teleop.launch.py`** — no arguments; parameters in `teleop/config/joystick.yaml`.
+**`teleop/launch/teleop.launch.py`** — `joy_source` (`device` | `browser`, default `device`).
+`device` starts `joy_node` and reads `teleop/config/joystick.yaml`; `browser` skips
+`joy_node` (the pad arrives over the Foxglove bridge) and reads
+`teleop/config/joystick_browser.yaml`. The control scheme is the `scheme:` parameter
+inside whichever file is used, not a launch argument — see
+[Choosing the control scheme](#choosing-the-control-scheme-arcade-or-tank).
+
+**`navigation/launch/pose_estim.launch.py`** — the EKF, and the synthetic VIO in sim.
+
+| Argument | Default | Meaning |
+|---|---|---|
+| `use_sim` | `true` | sets `use_sim_time` and enables the synthetic VIO; `false` on the real rover |
+| `use_vio` | `true` | start the synthetic VIO alongside the filter in sim. `false` leaves the EKF on wheel odometry alone — useful for seeing how far it drifts without a pose source |
+| `sim_vio_profile` | `validation` | synthetic VIO noise profile |
+| `sim_vio_seed` | `42` | synthetic VIO random seed (reproducible runs) |
+| `sim_vio_truth_topic` | `/gz/odom` | Gazebo ground truth the synthetic VIO degrades into a VIO stream |
 
 ---
 

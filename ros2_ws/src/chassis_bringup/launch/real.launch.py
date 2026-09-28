@@ -81,6 +81,15 @@ declare_args = [
         description="Also start the foxglove_bridge WebSocket server on :8765.",
     ),
     DeclareLaunchArgument(
+        "localization",
+        default_value="true",
+        description="Start the robot_localization EKF (navigation/pose_estim.launch.py), "
+        "which owns the odom -> base_link transform. diff_drive_controller has "
+        "enable_odom_tf: false, so with this false NOTHING publishes that transform and "
+        "the TF tree is broken - RViz, Foxglove and Nav2 all lose the robot. Only turn "
+        "it off if something else is providing odom -> base_link.",
+    ),
+    DeclareLaunchArgument(
         "joy_control",
         default_value="false",
         description="Start gamepad teleop (joy_node + joy_drive) on this machine. Off "
@@ -179,7 +188,24 @@ def _launch_setup(context):
         }.items(),
     )
 
-    return [robot_state_publisher, controller_manager, controller_spawner, teleop, viz]
+    localization = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [FindPackageShare("navigation"), "launch", "pose_estim.launch.py"]
+            )
+        ),
+        launch_arguments={"use_sim": "false"}.items(),
+        condition=IfCondition(LaunchConfiguration("localization")),
+    )
+
+    return [
+        robot_state_publisher,
+        controller_manager,
+        controller_spawner,
+        localization,
+        teleop,
+        viz,
+    ]
 
 
 def generate_launch_description():

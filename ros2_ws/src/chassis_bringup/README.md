@@ -8,7 +8,7 @@
 |---|---|---|
 | `rover.launch.py` | **Rover entry point.** Includes `sim_gz` or `real` and always starts the Foxglove bridge on :8765. | `mode` (`sim` \| `real`), `rviz` (`false`), `can_interface` (`can0`), `gear_ratio` (`48.0`) — last two `mode:=real` only |
 | `ground_station.launch.py` | **Ground-station entry point.** `viz` + teleop (`joy_node` → `joy_drive`), optionally opens the F' GDS web UI. | `use_sim_time` (`true`), `rviz` (`true`), `foxglove` (`true`), `joystick` (`true`), `fprime_gds` (`false`), `fprime_gds_url` (`$FPRIME_GDS_URL`) |
-| `sim_gz.launch.py` | Gazebo Fortress backend: Gazebo + `ign_ros2_control`, bridges, spawn, controllers, joystick teleop. Detailed below. | `x`/`y`/`z`/`yaw`, `rviz` (`false`), `foxglove` (`false`), `joy_control` (`true`), `odesc_shadow` (`false`) |
+| `sim_gz.launch.py` | Gazebo Fortress backend: Gazebo + `ign_ros2_control`, bridges, spawn, controllers, the localization EKF, joystick teleop. Detailed below. | `x`/`y`/`z`/`yaw`, `rviz` (`false`), `foxglove` (`false`), `localization` (`true`), `joy_control` (`true`), `joy_source` (`device`), `odesc_shadow` (`false`) |
 | `real.launch.py` | Real-hardware backend: standalone `ros2_control_node` + `odesc/OdescSystemHardware` (URDF `use_sim:=false`). Writes a temp `controllers.yaml` with `use_sim_time: false`. | `can_interface` (`can0`; `vcan0`, or `mock`/`none` for loopback), `gear_ratio` (`48.0`), `rviz`, `foxglove` (`false`) |
 | `odesc_shadow.launch.py` | Sim add-on (`sim_gz ... odesc_shadow:=true`): a second, `/odesc_shadow`-namespaced controller manager on the ODESC plugin + `odesc_vcan_emulator.py`, fed the same `cmd_vel` as Gazebo. Exercises CAN framing while Gazebo stays the physics/TF source. | `can_interface` (`vcan0`) — needs `tooling/can-up vcan0` |
 | `viz.launch.py` | RViz2 (`rviz/drivetrain.rviz`) and/or `foxglove_bridge` (:8765, `0.0.0.0`). Included by all of the above. | `rviz` (`true`), `foxglove` (`true`), `use_sim_time` (`false`), `rviz_config` |
@@ -39,7 +39,9 @@ Gazebo resource, model, system-plugin, GUI-plugin, and QML import environment va
 
 The launch separates model state, simulator creation, and transport bridging into independent processes. That makes the Xacro model authoritative for both ROS transforms and Gazebo physics, while YAML files hold topic mapping choices. The controller spawner requests `diff_drive_controller` and `joint_state_broadcaster` together, relying on the plugin embedded in the spawned robot model to create the controller manager.
 
-There are no package-specific unit or launch tests. Validate with a full simulator launch and ROS CLI checks. Two current implementation details are worth preserving: `world_file` is declared but ignored because `gz_args` is hard-coded to `empty.sdf`, and `joy_control` is evaluated as a Python truthiness check on a `LaunchConfiguration` object, so `joy_control:=false` does not currently disable teleop.
+There are no package-specific unit or launch tests. Validate with a full simulator launch and ROS CLI checks. One implementation detail is worth preserving: `world_file` is declared but ignored because `gz_args` is hard-coded to `empty.sdf`.
+
+Note for anyone editing these launch files: a bare `LaunchConfiguration` object is **always truthy**, so `if LaunchConfiguration("foo"):` silently ignores `foo:=false`. Resolve it with `.perform(context)` inside an `OpaqueFunction`, or gate the action with `condition=IfCondition(...)`. This bug has been introduced twice in this repo (`joy_control` here, `use_sim` in `navigation/pose_estim.launch.py`); both are fixed.
 
 The Ignition GUI plugin / QML directory is discovered at launch time from the active environment prefix (`$CONDA_PREFIX`, else `sys.prefix`) by globbing `lib/ign-gazebo-*/plugins/gui`, so the launch works from any checkout location and any Pixi environment; the two GUI variables are skipped when no directory is found (e.g. headless under `xvfb-run`).
 
@@ -162,7 +164,8 @@ With a gamepad, hold the right bumper (RB, deadman), then right trigger = forwar
 - **Gazebo GUI side panels missing:** the GUI plugin directory is discovered from the active environment prefix. Launch through `pixi run -e <env>` (or inside `pixi shell -e <env>`) so `$CONDA_PREFIX` points at the right env.
 - **Gazebo fails to open a window / GL errors on a CPU-only machine:** run under `xvfb-run -a` and view in Foxglove; the Mac container also sets `LIBGL_ALWAYS_SOFTWARE=1` / `GALLIUM_DRIVER=llvmpipe`.
 - **Rover doesn't move:** commands must reach `/diff_drive_controller/cmd_vel_unstamped` (the teleop nodes remap `/cmd_vel` to it) and `ros2 control list_controllers` must show `diff_drive_controller` active. With a gamepad, the deadman button must be held.
-- **`joy_control:=false` still starts teleop:** known launch-file bug (see §3). Without a gamepad the `joy_node` just logs that it can't open the device; it is harmless.
+- **Nothing shows up in RViz / Foxglove, robot stuck at the origin:** no `odom` → `base_link` transform. `diff_drive_controller` has `enable_odom_tf: false`, so the localization EKF owns it — check `ekf_filter_node` is running and that you did not pass `localization:=false`. Confirm with `ros2 run tf2_ros tf2_echo odom base_link`.
+- **`package 'joy' not found` and the whole launch aborts:** gamepad teleop was started on the rover, whose environment has no `joy` package. `mode:=real` defaults `joy_control` to `false`; do not force it true on the Jetson — drive from a ground station instead.
 - **`world_file:=...` has no effect:** this is a known launch-file limitation; change the `gz_args` construction to use `world_path`.
 - **`odesc_shadow:=true` fails to open the CAN socket:** `vcan0` doesn't exist; run `tooling/can-up vcan0` on the host first.
 

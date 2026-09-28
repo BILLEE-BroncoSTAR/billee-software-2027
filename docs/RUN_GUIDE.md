@@ -341,13 +341,25 @@ unaffected by it.
 - **Backend / node map / `can_interface`**: see [CAN backend](#can-backend-can_interface)
   above. Short version — sim vs real is picked by the launch file, the node→wheel map is
   in the URDF (not an arg), and `can_interface:=` only chooses `can0` / `vcan0` / `mock`.
-- **Teleop** (`teleop/config/joystick.yaml`, `joy_teleop.cpp`) — arcade, Xbox + PlayStation:
+- **Localization / TF** — `odom`→`base_link` is published by the `robot_localization`
+  EKF (`navigation/pose_estim.launch.py`), **not** by `diff_drive_controller`, which has
+  `enable_odom_tf: false` so the two do not both publish it. Both `sim_gz.launch.py` and
+  `real.launch.py` start it by default (`localization:=true`). With it off, nothing
+  publishes that transform: RViz/Foxglove cannot place the robot and `tf2_echo odom
+  base_link` says the frame does not exist, even though `/odom` topics look fine.
+  Sensor inputs are additive — wheel odometry is required, VIO and IMU are fused only
+  when they publish. See [Pose estimation](RUN_MODES.md#pose-estimation-and-the-tf-tree).
+- **Teleop** (`teleop/config/joystick.yaml`, `joy_teleop.cpp`) — `scheme: arcade`
+  (default) or `scheme: tank`, one node either way. Arcade, Xbox + PlayStation:
   `deadman_button 5` (RB/R1), `steer_axis 0` (left stick X), `throttle_axis 5` (RT/R2),
   `reverse_axis 2` (LT/L2), `steer_scale 1.5`, `speed_scale 2.0`.
   `linear.x = (fwd−rev)·speed_scale`, `angular.z = steer·steer_scale`; all-zero unless the
   deadman is held. Every index/sign is a param — retune in the yaml, no rebuild.
-  The sim starts its own copy of these nodes with the same `teleop/config/joystick.yaml`
-  (same values — keep the two in sync).
+  The sim reads that same file, so the two cannot drift. On a Mac the pad arrives over
+  the Foxglove bridge instead — `joy_source:=browser`, which uses
+  `teleop/config/joystick_browser.yaml`.
+  **The rover does not run teleop**: the `l4t` environment has no `joy` package, so
+  `mode:=real` defaults `joy_control` to `false`. Drive from a ground station.
 - **`xvfb-run`** is only for Gazebo on a base station with no display (Mac container,
   headless Linux). The rover never runs Gazebo, so its image has no X server. Never needed
   for RViz — RViz runs on **[ground]** with a real display.
@@ -363,6 +375,9 @@ unaffected by it.
 |---|---|
 | `colcon build` killed / machine hangs (rover) | RAM pressure (8 GB). Keep `--parallel-workers 2 --executor sequential`; `/swapfile2` (8 GB) is active. |
 | Gazebo window never appears ([ground] over SSH) | Expected — no display. Use `xvfb-run -a`; view in RViz/Foxglove. |
+| Robot stuck at the origin in RViz/Foxglove; `tf2_echo odom base_link` says the frame does not exist | The localization EKF is not running. `diff_drive_controller` has `enable_odom_tf: false`, so `ekf_filter_node` owns that transform. Check it is up (`ros2 node list`) and that `localization:=false` was not passed. |
+| `[ERROR] [launch]: package 'joy' not found`, nothing starts | Gamepad teleop was started on the rover, whose environment has no `joy`. Don't force `joy_control:=true` on the Jetson — drive from a ground station. |
+| `Critical Error, NaNs were detected in the output state of the filter` | Malformed EKF covariance. `process_noise_covariance` is a flattened 15×15 (225 values), not a 15-element diagonal; a short one goes NaN immediately and the transform is silently rejected. |
 | RViz empty tree / no topics ([ground]) | Not on the rover's DDS graph. Same LAN + `ROS_DOMAIN_ID` (`echo $ROS_DOMAIN_ID` → `42` on both); DDS UDP ports open. Test: `pixi run --environment default ros2 topic list`. See [Cross-machine ROS 2](#cross-machine-ros-2). |
 | RViz "package 'chassis_bringup' not found" / missing meshes | `[ground]` workspace not built: `pixi run --environment default build`. |
 | Gamepad on [ground] but the Gazebo rover doesn't move | `[ground]` not on the rover's DDS graph — `ros2 topic list` from `[ground]` must show `/diff_drive_controller/cmd_vel_unstamped`. Check same `ROS_DOMAIN_ID` (`42`), same LAN, firewall. Then `ros2 topic echo /joy` shows pad input, and the deadman (RB/R1) is held. |

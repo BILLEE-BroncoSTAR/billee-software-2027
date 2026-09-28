@@ -31,6 +31,8 @@
   <exec_depend>foxglove_bridge</exec_depend>
 
   <!-- ground_station.launch.py includes teleop.launch.py (joy_node + joy_drive) -->
+  <!-- sim_gz/real.launch.py include navigation's pose_estim.launch.py (the EKF) -->
+  <exec_depend>navigation</exec_depend>
   <exec_depend>teleop</exec_depend>
   <exec_depend>joy</exec_depend>
 

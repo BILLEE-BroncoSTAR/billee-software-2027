@@ -1,0 +1,114 @@
+# robot_localization EKF — fuses whatever pose/velocity sources are running into a
+# single odom -> base_link transform.
+#
+# ONE config for sim and real. The sim's synthetic VIO publishes on the same topic a
+# real ZED would, so the filter cannot tell them apart and does not need to. Launch
+# with use_sim:=true/false, which only sets use_sim_time.
+#
+# GRACEFUL DEGRADATION — the point of this file.
+# A Kalman filter always runs its predict step; an input only contributes when a
+# message actually arrives. Every source below is therefore OPTIONAL except odom0:
+# a topic that nobody publishes is simply never fused, and the estimate falls back
+# to whatever else is available. Add a sensor later and the estimate improves with
+# no config change, because its entry is already here waiting for data.
+#
+# The one hard requirement is odom0 (wheel odometry). The filter needs at least one
+# measurement to initialise, and wheel odometry is the only source guaranteed to
+# exist on every platform, sim or real.
+#
+# Indices must stay dense: robot_localization scans odom0, odom1, ... and stops at
+# the first gap. To stop fusing a source, stop publishing it (or do not launch it) -
+# do NOT delete its block, or everything after it is silently ignored.
+
+ekf_filter_node:
+    ros__parameters:
+        frequency: 30.0
+        sensor_timeout: 0.2          # predict through gaps this long before coasting
+        two_d_mode: true             # ground rover: pin z, roll and pitch.
+                                     # Without an IMU those axes are unobservable, and
+                                     # letting them float makes the estimate wander.
+        publish_acceleration: false
+        publish_tf: true             # this node owns odom -> base_link.
+                                     # diff_drive_controller has enable_odom_tf: false
+                                     # precisely so the two do not both publish it.
+        predict_to_current_time: true
+
+        map_frame: map
+        odom_frame: odom
+        base_link_frame: base_link
+        world_frame: odom            # continuous estimate, no absolute jumps.
+                                     # GPS does NOT belong in this filter - see the
+                                     # note at the bottom of this file.
+
+        # --- odom0: wheel odometry (REQUIRED, always present) -------------------
+        # diff_drive_controller integrates the wheel encoders. Fuse its VELOCITIES
+        # only, not its pose: pose is just those velocities already integrated, so
+        # fusing both feeds the same information in twice and makes the filter
+        # overconfident in a drifting estimate.
+        odom0: /diff_drive_controller/odom
+        odom0_config: [false, false, false,   # x,    y,    z
+                       false, false, false,   # roll, pitch, yaw
+                       true,  false, false,   # vx,   vy,   vz
+                       false, false, true,    # vroll, vpitch, vyaw
+                       false, false, false]   # ax,   ay,   az
+        odom0_differential: false
+        odom0_relative: false
+        odom0_queue_size: 5
+
+        # --- odom1: visual-inertial odometry (OPTIONAL) -------------------------
+        # Synthetic VIO in the sim (perception/zed2i), the real ZED node on hardware;
+        # remap the real driver's odometry onto this topic and nothing else changes.
+        # Absolute pose here is what stops wheel-odometry drift growing without bound.
+        # _differential: the filter fuses pose CHANGES rather than absolute pose, so
+        # VIO and wheel odometry cannot fight over where the origin is.
+        odom1: /depth_cam/vio/odom
+        odom1_config: [true,  true,  false,   # x,    y,    z
+                       false, false, true,    # roll, pitch, yaw
+                       false, false, false,
+                       false, false, false,
+                       false, false, false]
+        odom1_differential: true
+        odom1_relative: false
+        odom1_queue_size: 5
+
+        # --- imu0: IMU (OPTIONAL) ----------------------------------------------
+        # Nothing publishes this yet. The Gazebo IMU system plugin is loaded in
+        # robot_gz.urdf.xacro but no sensor is declared on a link and the ros_gz
+        # bridge does not carry it, so on both sim and real this is a placeholder
+        # that costs nothing until something starts publishing.
+        # Yaw rate is the valuable part for a skid-steer rover: wheel odometry
+        # estimates rotation from wheel slip, which is exactly where it is worst.
+        imu0: /imu/data
+        imu0_config: [false, false, false,    # x,    y,    z
+                      false, false, false,    # roll, pitch, yaw  (two_d_mode pins r/p;
+                                              #   absolute yaw needs a magnetometer)
+                      false, false, false,
+                      false, false, true,     # vroll, vpitch, vyaw  <- yaw rate
+                      false, false, false]    # ax, ay, az
+        imu0_differential: false
+        imu0_relative: false
+        imu0_queue_size: 10
+        imu0_remove_gravitational_acceleration: true
+
+        # --- process noise ------------------------------------------------------
+        # How fast the filter loses confidence between measurements.
+        # Deliberately NOT set here. process_noise_covariance is a FLATTENED 15x15
+        # matrix (225 values), not a 15-element diagonal. Supplying the wrong length
+        # leaves the covariance singular and the filter goes NaN on the first update:
+        #   "Critical Error, NaNs were detected in the output state of the filter"
+        # followed by TF_NAN_INPUT rejecting odom -> base_link, so the transform
+        # silently never appears. robot_localization's built-in defaults are fine for
+        # a ground rover. To tune, copy the full 225-value matrix from the upstream
+        # ekf.yaml template and edit its diagonal - do not hand-write a short one.
+
+# --- GPS is deliberately NOT an input here ----------------------------------------
+# comms/GpsNode publishes sensor_msgs/NavSatFix on /gps. That is global, absolute and
+# subject to discrete jumps, and fusing it into a world_frame: odom filter would make
+# odom -> base_link jump - which breaks every consumer that assumes odom is smooth and
+# continuous, Nav2 included.
+#
+# The supported pattern is a second filter:
+#   this EKF          world_frame: odom  ->  publishes odom -> base_link  (smooth)
+#   navsat_transform_node                ->  turns NavSatFix into a map-frame pose
+#   a second EKF      world_frame: map   ->  publishes map -> odom        (may jump)
+# Add that when GPS is actually wired up; it does not change this file.

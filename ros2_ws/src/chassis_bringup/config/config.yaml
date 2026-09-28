@@ -3,3 +3,14 @@
   ros_type_name: "rosgraph_msgs/msg/Clock"
   gz_type_name: "gz.msgs.Clock"
   direction: GZ_TO_ROS
+
+# Gazebo's OdometryPublisher plugin (robot_gz.urdf.xacro) emits ground-truth odometry
+# on the Gazebo side only. The synthetic VIO subscribes to it in ROS and turns it into
+# a noisy VIO stream for the EKF, so without this bridge entry that whole chain is
+# silent and the filter runs on wheel odometry alone.
+# Ground truth is for generating VIO, NOT for fusing directly - see navigation/config/ekf.yaml.
+- ros_topic_name: "/gz/odom"
+  gz_topic_name: "/gz/odom"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS

@@ -254,7 +254,13 @@ billee-software-2027/
         ├── robot_description/ URDF/xacro, meshes, ros2_control + controllers.yaml
         ├── odesc/            ros2_control hardware plugin for the ODESC/ODrive CAN drives,
         │                     mock backend, vCAN emulator, CAN node map
-        └── teleop/           joy_drive: gamepad -> arcade-drive Twist (RB deadman, triggers, stick)
+        ├── navigation/       robot_localization EKF: fuses wheel odometry, VIO and IMU into
+        │                     the odom -> base_link transform. Nav2 config lives here too
+        ├── perception/zed2i/ synthetic VIO: degrades Gazebo ground truth into a realistic
+        │                     noisy/drifting pose stream so the EKF sees ZED-like error in sim
+        ├── comms/            serial device driver + GPS (NavSatFix). Work in progress -
+        │                     the node is not built yet, see the package README
+        └── teleop/           joy_drive: gamepad -> Twist, arcade or tank (RB deadman)
 ```
 
 Each package has its own README with its nodes, topics and parameters.
@@ -268,9 +274,11 @@ Each package has its own README with its nodes, topics and parameters.
 | Containers | Ubuntu 22.04 + CUDA 13.2 + ZED SDK (x86), Ubuntu 22.04 + mesa llvmpipe + xvfb (Mac), JetPack L4T r36.3 + ZED SDK (Jetson) |
 | Build | `colcon` + `ament_cmake` / `ament_python`, `ruff` for Python (`pixi run fmt`) |
 | Control | `ros2_control`: `diff_drive_controller` + `joint_state_broadcaster`, swappable hardware plugin |
+| Localization | `robot_localization` EKF (`odom` -> `base_link`); inputs are additive — wheel odometry required, VIO and IMU optional |
+| Navigation | Nav2 (`navigation2`, `nav2_bringup`) — present in every environment, not yet wired into the bringup |
 | Drives | `odesc/OdescSystemHardware`: SocketCAN, ODrive CANSimple, 6× ODESC V4.2 + NEO, 48:1, 500 kbit/s |
 | Simulation | Gazebo Fortress (Ignition 6) via `ros_gz` + `ign_ros2_control` |
-| Teleop | `joy` + `teleop/joy_drive`, `teleop_twist_keyboard` |
+| Teleop | `joy` + `teleop/joy_drive` (arcade or tank via `scheme:`), `teleop_twist_keyboard`, or a browser pad over the Foxglove bridge |
 | Visualization | RViz2, Foxglove Studio via `foxglove_bridge` (:8765), F' GDS web UI |
 
 ## Drivetrain architecture
