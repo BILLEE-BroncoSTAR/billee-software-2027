@@ -1,9 +1,9 @@
 # Machine-specific setup for the BILLEE workspace.
 #
-#   make setup mac             Apple-Silicon Mac (Docker Desktop) -> mac-cpu image
-#   make setup linux-aarch64   ARM64 Linux, no NVIDIA GPU -> native Pixi linux-aarch64 env
 #   make setup l4t             NVIDIA Jetson rover (JetPack / L4T) -> rover image + l4t env
 #   make setup x86             x86-64 Linux + NVIDIA GPU (ground station) -> desktop image + default env
+#   make setup linux-aarch64   ARM64 Linux, no NVIDIA GPU -> native Pixi linux-aarch64 env
+#   make setup mac             Apple-Silicon Mac (Docker Desktop) -> mac-cpu image
 #
 # After setup, `make build` rebuilds and `make shell` opens a ROS 2 shell for the
 # recorded platform - natively, or through tooling/desktop-ros2 when it lives in a container.
@@ -19,7 +19,7 @@ SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 
-PLATFORMS := mac linux-aarch64 l4t x86
+PLATFORMS := l4t x86 linux-aarch64 mac
 PLATFORM := $(firstword $(filter $(PLATFORMS),$(MAKECMDGOALS)))
 
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
@@ -46,8 +46,8 @@ L4T_FIRST_BUILD := colcon build --symlink-install --parallel-workers 2 \
 	--executor sequential --event-handlers console_direct+ --base-paths src \
 	--cmake-args -DCMAKE_BUILD_TYPE=Release
 
-.PHONY: help print-banner setup setup-usage $(PLATFORMS) setup-mac setup-linux-aarch64 \
-	setup-l4t setup-x86 build shell sim apt-deps pixi
+.PHONY: help print-banner setup setup-usage $(PLATFORMS) setup-l4t setup-x86 \
+	setup-linux-aarch64 setup-mac build shell sim apt-deps pixi
 
 help: ## Show available commands
 	@$(MAKE) --no-print-directory print-banner
@@ -71,7 +71,7 @@ print-banner: ## Print the project splash screen
 	@echo "        Powered by ROS2 Humble"
 	@echo ""
 
-setup: $(if $(PLATFORM),setup-$(PLATFORM),setup-usage) ## Set up this machine: make setup <mac|linux-aarch64|l4t|x86>
+setup: $(if $(PLATFORM),setup-$(PLATFORM),setup-usage) ## Set up this machine: make setup <l4t|x86|linux-aarch64|mac>
 
 setup-usage:
 	@echo "usage: make setup <$(subst $() ,|,$(PLATFORMS))>" >&2; exit 2
@@ -131,52 +131,6 @@ define require_docker
 	  echo "Can't reach the Docker daemon. Is it running, and are you in the 'docker' group?" >&2; exit 1; }
 endef
 
-# ---------------------------------------------------------------------------- mac
-
-setup-mac: ## Apple-Silicon Mac: build the mac-cpu image, then open the Mac devcontainer
-	$(call record_platform,mac)
-ifeq ($(IN_CONTAINER),1)
-	$(call pixi_build,mac-cpu)
-else
-	@[ "$(HOST_ARCH)" = arm64 ] || [ "$(HOST_ARCH)" = aarch64 ] || { \
-	  echo "The mac-cpu environment is linux-aarch64 only; this machine is $(HOST_ARCH)." >&2; exit 1; }
-	$(require_docker)
-	BILLEE_PLATFORM=mac "$(CONTAINER)" build
-	@echo
-	@echo "Built billee-mac-cpu:latest (Pixi mac-cpu env + colcon build baked in)."
-	@echo
-	@echo "Drive the simulated rover in Foxglove:"
-	@echo "  1. Start the sim (headless Gazebo + Foxglove bridge on port 8765):"
-	@echo "       make sim"
-	@echo "     or in VS Code (Dev Containers: Reopen in Container -> desktop-roshumble-mac-cpu),"
-	@echo "     in a container terminal:  ../tooling/sim-up"
-	@echo "  2. Open Foxglove Studio on the Mac -> Open connection -> Foxglove WebSocket"
-	@echo "     -> ws://localhost:8765"
-	@echo "  3. Layouts -> Import from file -> ros2_ws/src/chassis_bringup/foxglove/drivetrain.json"
-	@echo "  4. Drive: add a Teleop panel publishing to /diff_drive_controller/cmd_vel_unstamped,"
-	@echo "     or in a second terminal: make shell, then"
-	@echo "       ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel_unstamped"
-	@echo "  Full walkthrough: README.md -> Setup -> Apple-Silicon Mac"
-endif
-	@$(MAKE) --no-print-directory print-banner
-
-# ------------------------------------------------------------------ linux-aarch64
-
-setup-linux-aarch64: ## ARM64 Linux, no NVIDIA GPU: install Pixi + build the linux-aarch64 env natively
-	$(require_linux_aarch64)
-	$(call record_platform,linux-aarch64)
-ifneq ($(IN_CONTAINER),1)
-	@$(MAKE) --no-print-directory apt-deps pixi APT_PACKAGES="$(APT_PACKAGES) xvfb"
-endif
-	$(call pixi_build,linux-aarch64)
-	@echo
-	@echo "Built the linux-aarch64 environment natively in ros2_ws/.pixi."
-	@echo "Next:   make sim    (Gazebo + RViz window + Foxglove on :8765)"
-	@echo "        make shell  (ROS 2 shell for everything else)"
-	@echo "        ROS 2 terminal without make: cd ros2_ws && pixi shell -e linux-aarch64"
-	@echo "Python: set the VS Code interpreter to ros2_ws/.pixi/envs/linux-aarch64/bin/python3"
-	@$(MAKE) --no-print-directory print-banner
-
 # ---------------------------------------------------------------------------- l4t
 
 setup-l4t: ## NVIDIA Jetson rover: build the rover image + l4t env inside it
@@ -220,6 +174,55 @@ else
 	@echo
 	@echo "Built billee-desktop:latest and the default environment."
 	@echo "Next: make shell   (or VS Code -> desktop-roshumble_dev-x862)"
+endif
+	@$(MAKE) --no-print-directory print-banner
+
+# ------------------------------------------------------------------ linux-aarch64
+
+setup-linux-aarch64: ## ARM64 Linux, no NVIDIA GPU: install Pixi + build the linux-aarch64 env natively
+	$(require_linux_aarch64)
+	$(call record_platform,linux-aarch64)
+ifneq ($(IN_CONTAINER),1)
+	@$(MAKE) --no-print-directory apt-deps pixi APT_PACKAGES="$(APT_PACKAGES) xvfb"
+endif
+	$(call pixi_build,linux-aarch64)
+	@echo
+	@echo "Built the linux-aarch64 environment natively in ros2_ws/.pixi."
+	@echo "Next:   make sim    (Gazebo + RViz window + Foxglove on :8765)"
+	@echo "        make shell  (ROS 2 shell for everything else)"
+	@echo "        ROS 2 terminal without make: cd ros2_ws && pixi shell -e linux-aarch64"
+	@echo "Python: set the VS Code interpreter to ros2_ws/.pixi/envs/linux-aarch64/bin/python3"
+	@$(MAKE) --no-print-directory print-banner
+
+# ---------------------------------------------------------------------------- mac
+
+setup-mac: ## Apple-Silicon Mac: build the mac-cpu image, then open the Mac devcontainer
+	$(call record_platform,mac)
+ifeq ($(IN_CONTAINER),1)
+	$(call pixi_build,mac-cpu)
+else
+	@[ "$(HOST_ARCH)" = arm64 ] || [ "$(HOST_ARCH)" = aarch64 ] || { \
+	  echo "The mac-cpu environment is linux-aarch64 only; this machine is $(HOST_ARCH)." >&2; exit 1; }
+	$(require_docker)
+	BILLEE_PLATFORM=mac "$(CONTAINER)" build
+	@# The image's baked-in ros2_ws/install is hidden by the bind mount at run time
+	@# (see desktop-ros2), so build into the host-mounted ros2_ws too.
+	BILLEE_PLATFORM=mac "$(CONTAINER)" run pixi run --environment mac-cpu build
+	@echo
+	@echo "Built billee-mac-cpu:latest and the mac-cpu workspace in ros2_ws/install."
+	@echo
+	@echo "Drive the simulated rover in Foxglove:"
+	@echo "  1. Start the sim (headless Gazebo + Foxglove bridge on port 8765):"
+	@echo "       make sim"
+	@echo "     or in VS Code (Dev Containers: Reopen in Container -> desktop-roshumble-mac-cpu),"
+	@echo "     in a container terminal:  ../tooling/sim-up"
+	@echo "  2. Open Foxglove Studio on the Mac -> Open connection -> Foxglove WebSocket"
+	@echo "     -> ws://localhost:8765"
+	@echo "  3. Layouts -> Import from file -> ros2_ws/src/chassis_bringup/foxglove/drivetrain.json"
+	@echo "  4. Drive: add a Teleop panel publishing to /diff_drive_controller/cmd_vel_unstamped,"
+	@echo "     or in a second terminal: make shell, then"
+	@echo "       ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel_unstamped"
+	@echo "  Full walkthrough: README.md -> Setup -> Apple-Silicon Mac"
 endif
 	@$(MAKE) --no-print-directory print-banner
 

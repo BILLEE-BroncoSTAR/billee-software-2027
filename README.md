@@ -9,7 +9,7 @@ the rover (NVIDIA Jetson), on x86 and ARM64 Linux machines, and on Apple-Silicon
 ```sh
 git clone https://github.com/BILLEE-BroncoSTAR/billee-software-2027.git
 cd billee-software-2027
-make setup <mac | linux-aarch64 | l4t | x86>   # once per machine - see Setup below
+make setup <l4t | x86 | linux-aarch64 | mac>   # once per machine - see Setup below
 make sim                                       # simulated rover + this machine's viewer
 ```
 
@@ -31,12 +31,68 @@ Pick your machine. Each section is the whole process, top to bottom.
 
 | Platform | Machine | Runs | Viewer |
 |---|---|---|---|
-| [`mac`](#apple-silicon-mac-mac) | Apple-Silicon Mac | Docker container (`mac-cpu` env) | Foxglove Studio |
-| [`linux-aarch64`](#arm64-linux-linux-aarch64) | ARM64 Linux, no NVIDIA GPU (e.g. a Linux VM on a Mac) | natively (`linux-aarch64` env) | RViz (+ Foxglove) |
-| [`x86`](#x86-64-linux--nvidia-x86) | x86-64 Linux + NVIDIA GPU (ground station) | Docker container (`default` env) | RViz (+ Foxglove) |
 | [`l4t`](#nvidia-jetson-rover-l4t) | NVIDIA Jetson rover | Docker container (`l4t` env) | Foxglove / RViz on the ground station |
+| [`x86`](#x86-64-linux--nvidia-x86) | x86-64 Linux + NVIDIA GPU (ground station) | Docker container (`default` env) | RViz (+ Foxglove) |
+| [`linux-aarch64`](#arm64-linux-linux-aarch64) | ARM64 Linux, no NVIDIA GPU (e.g. a Linux VM on a Mac) | natively (`linux-aarch64` env) | RViz (+ Foxglove) |
+| [`mac`](#apple-silicon-mac-mac) | Apple-Silicon Mac | Docker container (`mac-cpu` env) | Foxglove Studio |
 
 Need `make` first? `xcode-select --install` (Mac) or `sudo apt install -y make` (Linux).
+
+### NVIDIA Jetson rover (`l4t`)
+
+The rover itself: a Jetson (Orin-family or Thor) on **JetPack 6.0 / L4T r36.3.x**.
+
+**Needs:** the one-time host prep below (**already done on the current BILLEE Orin Nano**).
+
+1. **Set up:** checks the Docker `nvidia` runtime, installs `can-utils kmod`, builds
+   `rover-ros2:latest`, then the `l4t` env inside it (first build uses 2 workers,
+   sequential, to fit in RAM):
+   ```sh
+   make setup l4t
+   ```
+2. **Run:** `tooling/can-up` (brings `can0` up), then `make shell` and
+   `ros2 launch chassis_bringup rover.launch.py mode:=real`. The rover is headless:
+   view from the ground station with Foxglove (`ws://<rover-ip>:8765`) or RViz over DDS.
+3. **VS Code (optional):** **Reopen in Container → rover-roshumble_l4t-aarch64**;
+   interpreter `ros2_ws/.pixi/envs/l4t/bin/python3`.
+
+### x86-64 Linux + NVIDIA (`x86`)
+
+The ground-station setup: GPU-accelerated Gazebo, RViz, the gamepad and F' GDS.
+
+**Needs:** Ubuntu 24+, NVIDIA driver for CUDA 13.2, Docker Engine + NVIDIA Container
+Toolkit, optionally VS Code + Remote Development extensions.
+
+1. **Set up** (builds `billee-desktop:latest` with CUDA + ZED SDK, then the `default`
+   env inside it):
+   ```sh
+   make setup x86
+   ```
+2. **Run:** `make sim` (Gazebo + **RViz**), or `make shell` and e.g.
+   `ros2 launch chassis_bringup ground_station.launch.py` to operate the real rover.
+3. **VS Code (optional):** **Reopen in Container → desktop-roshumble_dev-x862** shares
+   the same image and environment. Python interpreter `ros2_ws/.pixi/envs/default/bin/python3`.
+
+### ARM64 Linux (`linux-aarch64`)
+
+Runs natively (no Docker), so the gamepad, `vcan0` and RViz/Gazebo windows just work.
+Everything renders on the CPU, so the sim is slower than on an NVIDIA machine.
+
+**Needs:** a recent 64-bit ARM Linux with `curl` and `sudo`.
+
+1. **Set up:** apt-installs `can-utils kmod xvfb` (only what's missing), installs Pixi
+   to `~/.pixi`, then installs and builds the `linux-aarch64` environment in `ros2_ws/.pixi`:
+   ```sh
+   make setup linux-aarch64
+   ```
+2. **Run:** `make sim` opens Gazebo and **RViz** and also serves Foxglove on :8765.
+   Plug in a gamepad to drive (hold RB; RT forward, LT reverse, left stick steers). For the ODESC
+   shadow, run `tooling/can-up vcan0` first and `make sim` picks it up.
+3. **Without make:** `cd ros2_ws && pixi shell -e linux-aarch64` gives a ROS 2 terminal for
+   every command in [docs/RUN_MODES.md](docs/RUN_MODES.md).
+4. **VS Code Python:** interpreter `ros2_ws/.pixi/envs/linux-aarch64/bin/python3`.
+
+In a VM, use bridged networking if it should talk DDS to the rover or another machine.
 
 ### Apple-Silicon Mac (`mac`)
 
@@ -85,62 +141,6 @@ the Mac's sim in Foxglove at `ws://<mac-ip>:8765` when it was started with `make
 `ws://<rover-ip>:8765` instead. For the fastest loop without Gazebo, use the mock
 drivetrain: `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock`.
 
-### ARM64 Linux (`linux-aarch64`)
-
-Runs natively (no Docker), so the gamepad, `vcan0` and RViz/Gazebo windows just work.
-Everything renders on the CPU, so the sim is slower than on an NVIDIA machine.
-
-**Needs:** a recent 64-bit ARM Linux with `curl` and `sudo`.
-
-1. **Set up:** apt-installs `can-utils kmod xvfb` (only what's missing), installs Pixi
-   to `~/.pixi`, then installs and builds the `linux-aarch64` environment in `ros2_ws/.pixi`:
-   ```sh
-   make setup linux-aarch64
-   ```
-2. **Run:** `make sim` opens Gazebo and **RViz** and also serves Foxglove on :8765.
-   Plug in a gamepad to drive (hold RB; RT forward, LT reverse, left stick steers). For the ODESC
-   shadow, run `tooling/can-up vcan0` first and `make sim` picks it up.
-3. **Without make:** `cd ros2_ws && pixi shell -e linux-aarch64` gives a ROS 2 terminal for
-   every command in [docs/RUN_MODES.md](docs/RUN_MODES.md).
-4. **VS Code Python:** interpreter `ros2_ws/.pixi/envs/linux-aarch64/bin/python3`.
-
-In a VM, use bridged networking if it should talk DDS to the rover or another machine.
-
-### x86-64 Linux + NVIDIA (`x86`)
-
-The ground-station setup: GPU-accelerated Gazebo, RViz, the gamepad and F' GDS.
-
-**Needs:** Ubuntu 24+, NVIDIA driver for CUDA 13.2, Docker Engine + NVIDIA Container
-Toolkit, optionally VS Code + Remote Development extensions.
-
-1. **Set up** (builds `billee-desktop:latest` with CUDA + ZED SDK, then the `default`
-   env inside it):
-   ```sh
-   make setup x86
-   ```
-2. **Run:** `make sim` (Gazebo + **RViz**), or `make shell` and e.g.
-   `ros2 launch chassis_bringup ground_station.launch.py` to operate the real rover.
-3. **VS Code (optional):** **Reopen in Container → desktop-roshumble_dev-x862** shares
-   the same image and environment. Python interpreter `ros2_ws/.pixi/envs/default/bin/python3`.
-
-### NVIDIA Jetson rover (`l4t`)
-
-The rover itself: a Jetson (Orin-family or Thor) on **JetPack 6.0 / L4T r36.3.x**.
-
-**Needs:** the one-time host prep below (**already done on the current BILLEE Orin Nano**).
-
-1. **Set up:** checks the Docker `nvidia` runtime, installs `can-utils kmod`, builds
-   `rover-ros2:latest`, then the `l4t` env inside it (first build uses 2 workers,
-   sequential, to fit in RAM):
-   ```sh
-   make setup l4t
-   ```
-2. **Run:** `tooling/can-up` (brings `can0` up), then `make shell` and
-   `ros2 launch chassis_bringup rover.launch.py mode:=real`. The rover is headless:
-   view from the ground station with Foxglove (`ws://<rover-ip>:8765`) or RViz over DDS.
-3. **VS Code (optional):** **Reopen in Container → rover-roshumble_l4t-aarch64**;
-   interpreter `ros2_ws/.pixi/envs/l4t/bin/python3`.
-
 
 ### How setup works
 
@@ -153,10 +153,10 @@ The rover itself: a Jetson (Orin-family or Thor) on **JetPack 6.0 / L4T r36.3.x*
 
   | Platform | Pixi environment | Packages |
   |---|---|---|
-  | `mac` | `mac-cpu` | linux-aarch64, CPU-only (runs in the Mac's Linux container) |
-  | `linux-aarch64` | `linux-aarch64` | same set as `mac-cpu`, locked to identical versions (shared solve-group) |
   | `l4t` | `l4t` | same package list, locked separately so the rover only changes when tested on it |
   | `x86` | `default` | linux-64 + CUDA 13 |
+  | `linux-aarch64` | `linux-aarch64` | same set as `mac-cpu`, locked to identical versions (shared solve-group) |
+  | `mac` | `mac-cpu` | linux-aarch64, CPU-only (runs in the Mac's Linux container) |
 
   Switching a checkout to another environment is safe: `make setup`/`make build` notice a
   build made with a different environment and rebuild from scratch.

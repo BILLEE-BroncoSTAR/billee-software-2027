@@ -76,8 +76,12 @@ case "$BILLEE_PLATFORM" in
     image="billee-mac-cpu:latest"
     container_ws="/root/ros2_ws"
     # Docker Desktop has no host networking or /dev passthrough: publish the
-    # Foxglove bridge port instead, and render on the CPU.
+    # Foxglove bridge port instead, and render on the CPU. Unlike the Linux
+    # platforms (--pid host), this container's entrypoint is PID 1, which
+    # breaks xvfb-run's SIGUSR1 readiness handshake and hangs sim-up forever;
+    # --init (tini) fixes PID-1 signal handling.
     platform_args=(
+      --init
       --publish 8765:8765
       --env LIBGL_ALWAYS_SOFTWARE=1
       --env GALLIUM_DRIVER=llvmpipe

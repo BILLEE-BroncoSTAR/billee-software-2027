@@ -78,7 +78,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &
 RUN echo "CUDA Version $CUDA_VERSION" > /usr/local/cuda/version.txt
 
 #make amd gpu compatible with 22.04
-RUN apt-get update && apt-get install -y software-properties-common \
+RUN apt-get update && apt-get install -y software-properties-common gnupg \
     && add-apt-repository -y ppa:kisak/kisak-mesa \
     && apt-get update \
     && apt-get upgrade -y \

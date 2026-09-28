@@ -8,6 +8,11 @@
   "containerUser": "root",
   "remoteUser": "root",
 
+  // The container's entrypoint is PID 1 here (no --pid host like the Linux
+  // devcontainers), which breaks xvfb-run's SIGUSR1 readiness handshake and
+  // hangs sim-up forever; --init (tini) fixes PID-1 signal handling.
+  "runArgs": ["--init"],
+
   "workspaceMount": "source=${localWorkspaceFolder}/ros2_ws,target=/root/ros2_ws,type=bind",
   "workspaceFolder": "/root/ros2_ws",
   // tooling/ (sim-up, billee-env.sh) beside the workspace, like the full-repo mounts on Linux.
