@@ -34,6 +34,12 @@ declare_args = [
         "Normally the ground station runs RViz.",
     ),
     DeclareLaunchArgument(
+        "joy_control",
+        default_value="true",
+        description="Start joy_node and joy_tank_drive, with commands "
+        "sent to /diff_drive_controller/cmd_vel_unstamped.",
+    ),
+    DeclareLaunchArgument(
         "can_interface",
         default_value="can0",
         description="mode:=real only. 'mock'/'none' = no CAN (loopback feedback); "
@@ -53,13 +59,17 @@ def _setup(context):
 
     if mode == "sim":
         target = "sim_gz.launch.py"
-        args = common
+        args = {
+            **common,
+            "joy_control": LaunchConfiguration("joy_control"),
+        }
     elif mode == "real":
         target = "real.launch.py"
         args = {
             **common,
             "can_interface": LaunchConfiguration("can_interface"),
             "gear_ratio": LaunchConfiguration("gear_ratio"),
+            "joy_control": LaunchConfiguration("joy_control"),
         }
     else:  # DeclareLaunchArgument(choices=...) already guards this
         raise RuntimeError(f"rover.launch.py: unknown mode {mode!r} (use sim|real)")

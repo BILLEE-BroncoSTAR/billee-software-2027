@@ -81,7 +81,10 @@ ros-humble-nav2-bringup = ">=1.1.20,<2"
 ros-humble-robot-localization = ">=3.5.4,<4"
 
 [activation]
-scripts = ["install/setup.sh"]
+# Pixi has already activated the selected environment (default, mac-cpu, or
+# l4t).  Source only this workspace's overlay so we do not re-source the
+# underlay captured when another architecture built install/setup.sh.
+scripts = ["install/local_setup.sh"]
 
 # Same ROS 2 domain on every machine (Jetson `l4t`, ground station `default`) so a
 # ground-station teleop node and the Jetson's diff_drive_controller share one DDS graph.

@@ -245,23 +245,18 @@ def _launch_description(ctx):
         condition=IfCondition(LaunchConfiguration("odesc_shadow")),
     )
 
-    use_joy = LaunchConfiguration('joy_control')
-    joy_params = os.path.join(get_package_share_directory('chassis_bringup'), 'config', 'tele_params.yaml')
-    teleop_nodes = [
-        Node(
-            package='joy',
-            executable='joy_node',
-            parameters=[joy_params]
+    # Start joystick teleoperation through its own package launch file.  Launch
+    # substitutions are only resolved at runtime, so a Python ``if
+    # LaunchConfiguration(...)`` would always be truthy; use a launch condition
+    # instead so joy_control:=false reliably suppresses both nodes.
+    teleop = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare("teleop"), "launch", "teleop.launch.py"
+            ])
         ),
-
-        Node(
-            package='teleop',
-            executable='joy_tank_drive',
-            name='joy_tank_drive',
-            parameters=[joy_params],
-            remappings=[('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')]
-        )
-    ] if use_joy else []
+        condition=IfCondition(LaunchConfiguration("joy_control")),
+    )
 
     return set_env + [
             set_resource_path,
@@ -271,9 +266,9 @@ def _launch_description(ctx):
             robot_state_publisher,
             spawn_entity,
             diff_drive_controller_spawner,
+            teleop,
             odesc_shadow,
             viz,
-            *teleop_nodes
         ]
 
 def generate_launch_description():

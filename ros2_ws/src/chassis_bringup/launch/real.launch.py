@@ -32,6 +32,7 @@ import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -78,6 +79,11 @@ declare_args = [
         "foxglove",
         default_value="false",
         description="Also start the foxglove_bridge WebSocket server on :8765.",
+    ),
+    DeclareLaunchArgument(
+        "joy_control",
+        default_value="true",
+        description="Start joy_node and joy_tank_drive for local real-rover control.",
     ),
 ]
 
@@ -148,6 +154,15 @@ def _launch_setup(context):
         arguments=["diff_drive_controller", "joint_state_broadcaster"],
     )
 
+    teleop = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [FindPackageShare("teleop"), "launch", "teleop.launch.py"]
+            )
+        ),
+        condition=IfCondition(LaunchConfiguration("joy_control")),
+    )
+
     viz = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -161,7 +176,7 @@ def _launch_setup(context):
         }.items(),
     )
 
-    return [robot_state_publisher, controller_manager, controller_spawner, viz]
+    return [robot_state_publisher, controller_manager, controller_spawner, teleop, viz]
 
 
 def generate_launch_description():
