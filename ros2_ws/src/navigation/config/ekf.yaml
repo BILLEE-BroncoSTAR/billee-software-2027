@@ -59,16 +59,25 @@ ekf_filter_node:
         # Synthetic VIO in the sim (perception/zed2i), the real ZED node on hardware;
         # remap the real driver's odometry onto this topic and nothing else changes.
         # Absolute pose here is what stops wheel-odometry drift growing without bound.
-        # _differential: the filter fuses pose CHANGES rather than absolute pose, so
-        # VIO and wheel odometry cannot fight over where the origin is.
+        #
+        # _differential must stay FALSE. In differential mode the filter differentiates
+        # the pose and fuses it as a VELOCITY, which is exactly what odom0 already
+        # provides - so VIO would contribute almost nothing and drift would go
+        # uncorrected. Measured: with _differential: true, a VIO stream reporting 2.4 m
+        # of travel moved the estimate 0.014 m. There is no source to fight with here,
+        # because odom0 deliberately fuses no pose at all.
+        #
+        # _relative: true means measurements are taken relative to the first one
+        # received, so a VIO that starts at its own origin (a real ZED does) does not
+        # yank the estimate on its first message.
         odom1: /depth_cam/vio/odom
         odom1_config: [true,  true,  false,   # x,    y,    z
                        false, false, true,    # roll, pitch, yaw
                        false, false, false,
                        false, false, false,
                        false, false, false]
-        odom1_differential: true
-        odom1_relative: false
+        odom1_differential: false
+        odom1_relative: true
         odom1_queue_size: 5
 
         # --- imu0: IMU (OPTIONAL) ----------------------------------------------
