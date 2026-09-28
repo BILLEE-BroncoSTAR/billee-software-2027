@@ -7,10 +7,7 @@
 #
 # Running on jetpack v6.x
 
-ARG L4T_VERSION=r36.3.0
-ARG IMAGE_NAME=nvcr.io/nvidia/l4t-jetpack:${L4T_VERSION}
-
-FROM ${IMAGE_NAME}
+FROM nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_4c0c55dddd2bbcc3e8d5f9753bee634c
 
 ARG PIXI_VERSION=0.76.1
 
@@ -69,27 +66,13 @@ RUN apt-get update || true && apt-get install -y --no-install-recommends \
     wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run \
       "https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}/l4t${L4T_MAJOR}.${L4T_MINOR}/jetsons" && \
     chmod +x ZED_SDK_Linux_JP.run && \
-    ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda && \
-    rm -rf ZED_SDK_Linux_JP.run /usr/local/zed/resources/* && \
-    chown -R ${USERNAME}:${USERNAME} /usr/local/zed ; \
+    ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda || true && \
+    rm -rf ZED_SDK_Linux_JP.run /usr/local/zed/resources/*
 
 # pixi -> provides ROS 2 Humble + colcon via the `l4t` environment in ros2_ws/pixi.toml
 ENV PIXI_HOME=/opt/pixi
 ENV PATH=${PIXI_HOME}/bin:${PATH}
 RUN curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
 
-# Install autocomplete dependencies as root
 USER root
-RUN apt-get update && apt-get install -y \
-    bash-completion \
-    && rm -rf /var/lib/apt/lists/*
 
-USER ${USERNAME}
-
-# Copy the terminal config (autocomplete) script into the container
-COPY docker/terminal_config.sh /tmp/terminal_config.sh
-
-# Append the terminal config (autocomplete) script to .bashrc
-RUN cat /tmp/terminal_config.sh >> ~/.bashrc
-
-CMD ["pixi", "shell"]
