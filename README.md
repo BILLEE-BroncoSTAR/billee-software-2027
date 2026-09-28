@@ -32,7 +32,7 @@ Pick your machine. Each section is the whole process, top to bottom.
 | Platform | Machine | Runs | Viewer |
 |---|---|---|---|
 | [`mac`](#apple-silicon-mac-mac) | Apple-Silicon Mac | Docker container (`mac-cpu` env) | Foxglove Studio |
-| [`linux-aarch64`](#arm64-linux-linux-aarch64) | ARM64 Linux, no NVIDIA GPU (e.g. a Linux VM on a Mac) | natively (`mac-cpu` env) | RViz (+ Foxglove) |
+| [`linux-aarch64`](#arm64-linux-linux-aarch64) | ARM64 Linux, no NVIDIA GPU (e.g. a Linux VM on a Mac) | natively (`linux-aarch64` env) | RViz (+ Foxglove) |
 | [`x86`](#x86-64-linux--nvidia-x86) | x86-64 Linux + NVIDIA GPU (ground station) | Docker container (`default` env) | RViz (+ Foxglove) |
 | [`l4t`](#nvidia-jetson-rover-l4t) | NVIDIA Jetson rover | Docker container (`l4t` env) | Foxglove / RViz on the ground station |
 
@@ -93,14 +93,16 @@ Everything renders on the CPU, so the sim is slower than on an NVIDIA machine.
 **Needs:** a recent 64-bit ARM Linux with `curl` and `sudo`.
 
 1. **Set up:** apt-installs `can-utils kmod xvfb` (only what's missing), installs Pixi
-   to `~/.pixi`, then installs and builds the `mac-cpu` environment in `ros2_ws/.pixi`:
+   to `~/.pixi`, then installs and builds the `linux-aarch64` environment in `ros2_ws/.pixi`:
    ```sh
    make setup linux-aarch64
    ```
 2. **Run:** `make sim` opens Gazebo and **RViz** and also serves Foxglove on :8765.
    Plug in a gamepad to drive (hold RB; RT forward, LT reverse, left stick steers). For the ODESC
    shadow, run `tooling/can-up vcan0` first and `make sim` picks it up.
-3. **VS Code Python:** interpreter `ros2_ws/.pixi/envs/mac-cpu/bin/python3`.
+3. **Without make:** `cd ros2_ws && pixi shell -e linux-aarch64` gives a ROS 2 terminal for
+   every command in [docs/RUN_MODES.md](docs/RUN_MODES.md).
+4. **VS Code Python:** interpreter `ros2_ws/.pixi/envs/linux-aarch64/bin/python3`.
 
 In a VM, use bridged networking if it should talk DDS to the rover or another machine.
 
@@ -147,8 +149,17 @@ The rover itself: a Jetson (Orin-family or Thor) on **JetPack 6.0 / L4T r36.3.x*
   container shell config all read it through `tooling/billee-env.sh`, so nothing has to be
   edited per machine. Without the file they detect it (x86-64 → `x86`, Jetson → `l4t`,
   other ARM64 → `linux-aarch64`); `BILLEE_PLATFORM=<platform>` overrides one command.
-- Pixi environments: `default` (x86 + CUDA), `mac-cpu` (used by `mac` and
-  `linux-aarch64`) and `l4t`. `mac-cpu` and `l4t` share one package set.
+- Each platform has its own Pixi environment, named after it except where noted:
+
+  | Platform | Pixi environment | Packages |
+  |---|---|---|
+  | `mac` | `mac-cpu` | linux-aarch64, CPU-only (runs in the Mac's Linux container) |
+  | `linux-aarch64` | `linux-aarch64` | same set as `mac-cpu`, locked to identical versions (shared solve-group) |
+  | `l4t` | `l4t` | same package list, locked separately so the rover only changes when tested on it |
+  | `x86` | `default` | linux-64 + CUDA 13 |
+
+  Switching a checkout to another environment is safe: `make setup`/`make build` notice a
+  build made with a different environment and rebuild from scratch.
 - Containers mount the workspace at the same path as their VS Code devcontainer, so the
   Pixi env and `install/` work from both. `tooling/desktop-ros2 build|run|shell` is the
   no-VS-Code way in (`tooling/rover-ros2` = the same, pinned to `l4t`).
@@ -218,7 +229,7 @@ Each package has its own README with its nodes, topics and parameters.
 | Layer | Technology |
 |---|---|
 | Middleware | ROS 2 Humble (from [RoboStack](https://robostack.github.io/) via Pixi, not apt), Fast DDS, `ROS_DOMAIN_ID=42` |
-| Environments | [Pixi](https://pixi.sh) 0.76.1 — `default` (linux-64 + CUDA 13), `mac-cpu` / `l4t` (linux-aarch64, CPU) |
+| Environments | [Pixi](https://pixi.sh) 0.76.1 — `default` (linux-64 + CUDA 13), `mac-cpu` / `linux-aarch64` / `l4t` (linux-aarch64, CPU) |
 | Containers | Ubuntu 22.04 + CUDA 13.2 + ZED SDK (x86), Ubuntu 22.04 + mesa llvmpipe + xvfb (Mac), JetPack L4T r36.3 + ZED SDK (Jetson) |
 | Build | `colcon` + `ament_cmake` / `ament_python`, `ruff` for Python (`pixi run fmt`) |
 | Control | `ros2_control`: `diff_drive_controller` + `joint_state_broadcaster`, swappable hardware plugin |

@@ -29,8 +29,9 @@ empy = "*"
 lark = "*"
 
 # CPU-only aarch64 environment. Shared by:
-#   - `mac-cpu` : Apple-Silicon Docker Desktop containers
-#   - `l4t`     : NVIDIA Jetson (L4T / JetPack) rover, see .devcontainer/l4t/
+#   - `mac-cpu`       : Apple-Silicon Docker Desktop containers, see .devcontainer/mac/
+#   - `linux-aarch64` : ARM64 Linux run natively (e.g. a Linux VM on an Apple-Silicon Mac)
+#   - `l4t`           : NVIDIA Jetson (L4T / JetPack) rover, see .devcontainer/l4t/
 [feature.aarch64-cpu]
 platforms = ["linux-aarch64"]
 
@@ -52,7 +53,11 @@ lark = "*"
 
 [environments]
 default = { features = ["linux-cuda"]}
-mac-cpu = { features = ["aarch64-cpu"]}
+# mac-cpu and linux-aarch64 share a solve-group, so the Mac container and a native
+# ARM64 Linux machine lock identical package versions. l4t (the rover) is solved on
+# its own so it only changes when it is deliberately updated and tested on the Jetson.
+mac-cpu = { features = ["aarch64-cpu"], solve-group = "aarch64-desktop" }
+linux-aarch64 = { features = ["aarch64-cpu"], solve-group = "aarch64-desktop" }
 l4t = { features = ["aarch64-cpu"]}
 
 [dependencies]

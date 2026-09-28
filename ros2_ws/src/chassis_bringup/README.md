@@ -94,7 +94,8 @@ There is no `/cmd_vel` or `/odom` bridge edge by design: `diff_drive_controller`
   | Machine | `-e` / `--environment` |
   |---|---|
   | x86-64 + NVIDIA (default devcontainer) | `default` (may be omitted) |
-  | Apple-Silicon Mac container, or native ARM64 Linux | `mac-cpu` |
+  | Apple-Silicon Mac container | `mac-cpu` |
+  | Native ARM64 Linux | `linux-aarch64` |
   | Jetson rover | `l4t` |
 
   `pixi run` activates the environment, sources `install/setup.sh` and sets `ROS_DOMAIN_ID=42`; a plain shell must do both itself.

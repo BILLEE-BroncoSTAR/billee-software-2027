@@ -3,7 +3,7 @@
 # Source it (don't execute it). Sets:
 #   BILLEE_WS         absolute path to ros2_ws
 #   BILLEE_PLATFORM   mac | linux-aarch64 | l4t | x86
-#   BILLEE_PIXI_ENV   mac-cpu | l4t | default
+#   BILLEE_PIXI_ENV   mac-cpu | linux-aarch64 | l4t | default
 #
 # The platform comes from, first match wins:
 #   1. $BILLEE_PLATFORM, if already set (per-command override)
@@ -51,7 +51,8 @@ fi
 BILLEE_PLATFORM="${BILLEE_PLATFORM:-$(_billee_detect_platform)}"
 
 case "$BILLEE_PLATFORM" in
-  mac | linux-aarch64) BILLEE_PIXI_ENV=mac-cpu ;;
+  mac) BILLEE_PIXI_ENV=mac-cpu ;;
+  linux-aarch64) BILLEE_PIXI_ENV=linux-aarch64 ;;
   l4t) BILLEE_PIXI_ENV=l4t ;;
   *) BILLEE_PIXI_ENV=default ;;
 esac

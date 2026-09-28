@@ -1,7 +1,7 @@
 # Machine-specific setup for the BILLEE workspace.
 #
 #   make setup mac             Apple-Silicon Mac (Docker Desktop) -> mac-cpu image
-#   make setup linux-aarch64   ARM64 Linux, no NVIDIA GPU -> native Pixi mac-cpu env
+#   make setup linux-aarch64   ARM64 Linux, no NVIDIA GPU -> native Pixi linux-aarch64 env
 #   make setup l4t             NVIDIA Jetson rover (JetPack / L4T) -> rover image + l4t env
 #   make setup x86             x86-64 Linux + NVIDIA GPU (ground station) -> desktop image + default env
 #
@@ -86,9 +86,20 @@ define record_platform
 	@echo "Recorded platform '$(1)' in ros2_ws/.billee-platform"
 endef
 
+# Shell snippet: if ros2_ws/build was configured with a different Pixi env than $(1)
+# (e.g. after switching mac-cpu -> linux-aarch64), remove build/ install/ log/ -
+# CMake caches and installed scripts embed the env path, so they can't be reused.
+define clean_stale_build
+cd "$(WS)" && if [ -d build ] && grep -rqs --include=CMakeCache.txt ".pixi/envs/" build \
+  && ! grep -rqs --include=CMakeCache.txt ".pixi/envs/$(1)/" build; then \
+  echo "ros2_ws/build was made with another Pixi environment - removing build/ install/ log/"; \
+  rm -rf build install log; fi
+endef
+
 # pixi install + colcon build of environment $(1) in ros2_ws.
 define pixi_build
 	cd "$(WS)" && "$(PIXI)" install --environment $(1)
+	@$(call clean_stale_build,$(1))
 	cd "$(WS)" && "$(PIXI)" run --environment $(1) build
 endef
 
@@ -151,18 +162,19 @@ endif
 
 # ------------------------------------------------------------------ linux-aarch64
 
-setup-linux-aarch64: ## ARM64 Linux, no NVIDIA GPU: install Pixi + build mac-cpu natively
+setup-linux-aarch64: ## ARM64 Linux, no NVIDIA GPU: install Pixi + build the linux-aarch64 env natively
 	$(require_linux_aarch64)
 	$(call record_platform,linux-aarch64)
 ifneq ($(IN_CONTAINER),1)
 	@$(MAKE) --no-print-directory apt-deps pixi APT_PACKAGES="$(APT_PACKAGES) xvfb"
 endif
-	$(call pixi_build,mac-cpu)
+	$(call pixi_build,linux-aarch64)
 	@echo
-	@echo "Built the mac-cpu environment natively in ros2_ws/.pixi."
+	@echo "Built the linux-aarch64 environment natively in ros2_ws/.pixi."
 	@echo "Next:   make sim    (Gazebo + RViz window + Foxglove on :8765)"
 	@echo "        make shell  (ROS 2 shell for everything else)"
-	@echo "Python: set the VS Code interpreter to ros2_ws/.pixi/envs/mac-cpu/bin/python3"
+	@echo "        ROS 2 terminal without make: cd ros2_ws && pixi shell -e linux-aarch64"
+	@echo "Python: set the VS Code interpreter to ros2_ws/.pixi/envs/linux-aarch64/bin/python3"
 	@$(MAKE) --no-print-directory print-banner
 
 # ---------------------------------------------------------------------------- l4t
@@ -214,6 +226,10 @@ endif
 # ------------------------------------------------------------------- day to day
 
 build: ## Rebuild ros2_ws for this machine (run make setup first)
+	@source "$(REPO_ROOT)/tooling/billee-env.sh"; \
+	if [ "$(IN_CONTAINER)" = 1 ] || [ "$$BILLEE_PLATFORM" = linux-aarch64 ]; then \
+	  $(call clean_stale_build,$$BILLEE_PIXI_ENV); \
+	fi
 	$(call in_platform_env,run --environment "$$BILLEE_PIXI_ENV" build)
 
 shell: ## Open a shell with ROS 2 + the workspace sourced, for this machine
