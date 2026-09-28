@@ -6,12 +6,55 @@ modes (who commands it), and a **viewer**; the [recipes](#recipes) combine them
 terminal by terminal. The `make` targets are only shortcuts for some of these commands
 (see [Shortcuts](#shortcuts-make-and-tooling)).
 
+- [Deployment split: rover vs ground station](#deployment-split-rover-vs-ground-station)
 - [Open a ROS 2 terminal](#open-a-ros-2-terminal) (per platform, no `make`)
 - [The contract every mode shares](#the-contract-every-mode-shares)
 - [Chassis modes](#chassis-modes--what-drives-the-wheels): C1 sim · C2 sim + ODESC shadow · C3 real · C4 mock · C5 vCAN bench
-- [Teleop modes](#teleop-modes--who-commands-the-rover): T1 gamepad · T2 ground station · T3 keyboard · T4 Foxglove · T5 scripted
+- [Teleop modes](#teleop-modes--who-commands-the-rover): T1 gamepad · T2 ground station · T3 keyboard · T4 Foxglove · T4b browser gamepad · T5 scripted
 - [Viewers](#viewers): V1 Foxglove · V2 RViz · V3 F' GDS
 - [Recipes](#recipes) · [Platform support](#which-modes-each-platform-supports) · [Launch argument reference](#launch-argument-reference) · [Health check](#quick-health-check-any-mode)
+
+---
+
+## Deployment split: rover vs ground station
+
+Two deployments, and every machine is exactly one of them. `tooling/billee-env.sh`
+derives `BILLEE_ROLE` from the platform, and `sim-up` / `ground-up` / `rover-up` each
+refuse the wrong role (override with `BILLEE_ROLE=` if you really mean it).
+
+| | **Rover** | **Ground station** |
+|---|---|---|
+| Machine | NVIDIA Jetson, only | x86 + NVIDIA · ARM64 Linux (native) · Apple-Silicon Mac |
+| `BILLEE_PLATFORM` | `l4t` | `x86` · `linux-aarch64` · `mac` |
+| Pixi env | `l4t` | `default` · `linux-aarch64` · `mac-cpu` |
+| Pixi role feature | `rover` | `ground-station` |
+| ROS variant | `ros-humble-ros-base` (no GUI) | `ros-humble-desktop` |
+| Run it with | `make rover` (`tooling/rover-up`) | `make ground` / `make sim` |
+| Image | `docker/Dockerfile.l4t-humble` | `Dockerfile.desktop.humble` / `.mac.humble`, or native |
+
+**What runs where**
+
+| | Rover | Ground station | Why |
+|---|---|---|---|
+| Real drivetrain (`odesc` over CAN) | ✅ | mock only | `can0` is physically on the Jetson |
+| `diff_drive_controller` / `ros2_control` | ✅ | ✅ | shared — the ground station runs it for the sim |
+| `robot_state_publisher` + URDF | ✅ | ✅ | both need the TF tree |
+| `foxglove_bridge` (:8765) | ✅ | ✅ | rover publishes; the station also runs a local one |
+| **Gazebo** (`ros_gz`, `gz_ros2_control`) | ❌ | ✅ | the sim is a ground-station activity |
+| **RViz2** | ❌ | ✅ | the rover never opens a window |
+| Game pad (`joy`, `joy_drive`) | ❌ | ✅ | the operator holds the pad |
+| ZED SDK / CUDA | ✅ (in the image) | x86 only | Jetson hardware |
+
+The rover's Pixi environment therefore carries **no Gazebo, no RViz and no GUI stack** —
+`ros-base` rather than `desktop`. Adding a GUI package to the shared `[dependencies]`
+block in `ros2_ws/pixi.toml` puts it back on the Jetson; put ground-station things in
+`[feature.ground-station.dependencies]` instead.
+
+**They talk over DDS.** Both machines share `ROS_DOMAIN_ID=42` (set in `pixi.toml`) and
+a LAN, so the ground station sees the rover's topics directly: teleop published on the
+station reaches the rover's `diff_drive_controller`, and the station's local Foxglove
+bridge exposes the rover's data. Over a link where DDS does not work, connect Foxglove
+Studio straight to `ws://<rover-ip>:8765` instead.
 
 ---
 
@@ -56,9 +99,11 @@ act on the host kernel's network interfaces: run them in a normal terminal on th
 (Linux or Jetson), from the repo root, not inside a container. The Linux containers use
 host networking, so they see the interfaces the host created.
 
-**Headless machines** (Mac container, Jetson over SSH, any machine without a display):
-Gazebo needs an X display, so put `xvfb-run -a` in front of any launch that starts the
-sim. `xvfb-run` is installed in the Mac and Jetson images and by `make setup linux-aarch64`.
+**Where the sim runs.** Gazebo runs on the base station, not on the rover — the Jetson
+runs the real drivetrain against real hardware, so the Jetson image ships no X server at
+all. On a base station without a display (the Mac container, a headless Linux box) Gazebo
+still needs one, so put `xvfb-run -a` in front of any launch that starts the sim;
+`xvfb-run` is in the Mac image and is installed by `make setup linux-aarch64`.
 
 ---
 
@@ -106,7 +151,7 @@ starts gamepad teleop on the same machine ([T1](#t1--gamepad-on-the-same-machine
 # Linux with a display: Gazebo + RViz window + Foxglove bridge
 ros2 launch chassis_bringup rover.launch.py rviz:=true
 
-# Headless (Mac container, Jetson over SSH): Gazebo in xvfb + Foxglove bridge only
+# Headless base station (Mac container, Linux box over SSH): Gazebo in xvfb + Foxglove bridge only
 xvfb-run -a ros2 launch chassis_bringup rover.launch.py
 
 # The simulator launch on its own, with its extra options
@@ -221,12 +266,14 @@ tooling/can-up down vcan0
 | T2 | **Gamepad at a ground station** | `ground_station.launch.py` | ground station, over DDS to the rover | same LAN + `ROS_DOMAIN_ID` |
 | T3 | **Keyboard** | `teleop_twist_keyboard` | any ROS 2 terminal on the graph | nothing |
 | T4 | **Foxglove Teleop panel** | Foxglove Studio → Teleop panel | any laptop with Studio | the bridge (:8765) |
+| T4b | **Gamepad through the browser** | Foxglove Joystick panel → `/joy` → `joy_drive` | any laptop with Studio + a pad | the bridge (:8765) |
 | T5 | **Scripted** | `ros2 topic pub` | any ROS 2 terminal on the graph | nothing |
 
 ### Gamepad controls (T1, T2)
 
 Arcade drive (`teleop/src/joy_teleop.cpp`, tuned in `teleop/config/joystick.yaml`; the
-sim's copy is `chassis_bringup/config/tele_params.yaml`):
+the sim reads that same file; only a browser-sourced pad has its own,
+`teleop/config/joystick_browser.yaml`):
 
 | Input | Action |
 |---|---|
@@ -247,7 +294,7 @@ The simulation launches (C1/C2) start the gamepad nodes automatically. For the r
 mock and vCAN modes, start them in another ROS 2 terminal:
 
 ```bash
-ros2 launch teleop teleop.launch.py      # joy_node + joy_tank_drive -> /diff_drive_controller/cmd_vel_unstamped
+ros2 launch teleop teleop.launch.py      # joy_node + joy_drive -> /diff_drive_controller/cmd_vel_unstamped
 ```
 
 Check the pad before driving:
@@ -258,8 +305,49 @@ ros2 topic echo /joy                     # buttons[5] = 1 with RB held; axes[0/2
 ros2 topic echo /diff_drive_controller/cmd_vel_unstamped   # non-zero only with RB held
 ```
 
-Works on Linux (x86 container, ARM64 Linux, Jetson). Not in the Mac container (Docker
-Desktop cannot pass a USB gamepad through) — use T3 or T4 there.
+Works on Linux (x86 container, ARM64 Linux) — ground stations. **Not** on the Jetson:
+the `l4t` environment has no `joy` package, because the operator's pad belongs on the
+ground station (see [Deployment split](#deployment-split-rover-vs-ground-station)). Not
+in the Mac container either (Docker Desktop cannot pass a USB gamepad through) — use
+T3, T4 or T4b there.
+
+#### Choosing the control scheme (arcade or tank)
+
+`joy_drive` runs either scheme; it is a parameter, not a separate node, so switching is
+a yaml edit and a relaunch — no rebuild. Edit `scheme:` in
+[`teleop/config/joystick.yaml`](../ros2_ws/src/teleop/config/joystick.yaml) (the same
+file `sim_gz.launch.py` reads, so the sim and the real rover stay in step):
+
+```yaml
+joy_drive:
+  ros__parameters:
+    scheme: arcade     # or: tank
+```
+
+| | `scheme: arcade` (default) | `scheme: tank` |
+|---|---|---|
+| Steering | left stick X | difference between the two sticks |
+| Throttle | RT forward, LT reverse (analog) | each stick drives one track |
+| `linear.x` | `(forward − reverse) · speed_scale` | `(left + right)/2 · speed_scale` |
+| `angular.z` | `steer · steer_scale` | `(right − left)/track_width · speed_scale` |
+| Tuning params | `steer_axis`, `steer_scale`, `invert_steer`, `throttle_axis`, `reverse_axis`, `trigger_rest`, `trigger_press` | `left_axis`, `right_axis`, `track_width` |
+
+Both gate on `deadman_button` and share `speed_scale`. An unknown `scheme:` logs a
+warning and falls back to arcade.
+
+For tank, **`track_width` must be the real distance between the tracks in metres** —
+it converts stick difference into rad/s, so a wrong value makes every turn the wrong
+rate. The checked-in `0.67` is inherited and unverified; measure it on the rover.
+
+Or override for one run without touching the file:
+
+```bash
+ros2 run teleop joy_drive --ros-args -p scheme:=tank -p left_axis:=1 -p right_axis:=4 \
+  -r /cmd_vel:=/diff_drive_controller/cmd_vel_unstamped
+```
+
+`scheme` is read once at startup, so `ros2 param set /joy_drive scheme ...` on a running
+node has no effect — relaunch to change it.
 
 ### T2 — Gamepad at a ground station
 
@@ -299,6 +387,37 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
 In Foxglove Studio connected to `ws://<host>:8765` ([V1](#v1--foxglove-studio)): add a
 **Teleop** panel and set its topic to `/diff_drive_controller/cmd_vel_unstamped`. One
 WebSocket, no DDS — the way to drive from a Mac or over a link where DDS does not work.
+
+### T4b — Real gamepad through the browser
+
+The pad plugs into the machine running Foxglove and reaches ROS 2 as `/joy` over the
+bridge, so `joy_drive` does the mixing exactly as it would on Linux. This is the only
+gamepad path on a Mac, where Docker Desktop passes no USB through.
+
+Add Foxglove's built-in **Joystick [local]** panel, set *Data Source: Gamepad*,
+*Publish Mode: On*, *Pub Joy Topic: `/joy`*, then launch with `joy_source:=browser`:
+
+```bash
+ros2 launch chassis_bringup sim_gz.launch.py joy_source:=browser
+#   tooling/sim-up picks this automatically on the Mac
+```
+
+`joy_source:=browser` swaps in `teleop/config/joystick_browser.yaml` and
+skips `joy_node` (there is no local device to open). The separate file is needed because
+a browser reports pads with the W3C *standard* mapping: only the two sticks are axes,
+LT/RT are `buttons[6]`/`[7]`, and stick-right is `+1` where Linux reports `+1` for left.
+
+**Triggers are on/off in this mode, not proportional** — full speed while held. That is
+`sensor_msgs/Joy` storing buttons as `int32`, not something the panel can fix. Steering
+stays analog.
+
+For a nicer panel, [`joshnewans/foxglove-joystick`](https://github.com/joshnewans/foxglove-joystick)
+draws a real pad graphic instead of raw axis sliders and adds keyboard and touchscreen
+modes, plus a *Subscribe* mode that visualises whatever `/joy` the rover is actually
+receiving — useful for debugging the ground-station link. Install it from the Foxglove
+extension marketplace or a `.foxe` release; it is a per-user Studio extension, so there
+is nothing to add to this repo. It does **not** lift the trigger limitation above: its
+README lists analog triggers and custom gamepad→`Joy` mapping as planned, not implemented.
 
 ### T5 — Scripted
 
@@ -400,11 +519,17 @@ For the fastest loop without Gazebo, step 1 can be the mock:
 
 ### Simulated rover with a remote operator
 
-1. Jetson ROS 2 terminal: `xvfb-run -a ros2 launch chassis_bringup rover.launch.py`
-2. Ground station ROS 2 terminal: `ros2 launch chassis_bringup ground_station.launch.py`
+1. Base-station ROS 2 terminal: `ros2 launch chassis_bringup rover.launch.py`
+   (headless there: `xvfb-run -a ros2 launch ...`)
+2. Second ground-station terminal: `ros2 launch chassis_bringup ground_station.launch.py`
 
-(The Jetson sim also starts its own joystick nodes; with no pad plugged into the
-Jetson they stay idle and the ground station's pad drives.)
+Gazebo runs on the base station, not on the Jetson — the rover's job in this mode is
+nothing, since there is no hardware in the loop. To put the real Jetson in the loop
+without motors, use the ODESC shadow ([C2](#c2--simulation--odesc-shadow)) or the mock
+backend on the Jetson instead.
+
+(The sim also starts its own joystick nodes; with no pad plugged into that machine they
+stay idle and the ground station's pad drives.)
 
 ---
 
@@ -417,22 +542,34 @@ and, where needed, runs inside its container:
 |---|---|
 | `make shell` | open a ROS 2 terminal as in [the table above](#open-a-ros-2-terminal) |
 | `make build` | `pixi run -e <env> build` |
-| `make sim` / `tooling/sim-up` | Linux with a display: `ros2 launch chassis_bringup sim_gz.launch.py foxglove:=true rviz:=true`; Mac / headless: `xvfb-run -a ros2 launch chassis_bringup sim_gz.launch.py foxglove:=true`. Adds `odesc_shadow:=true` when `vcan0` exists. |
+| `make sim` / `tooling/sim-up` | **ground station.** Linux with a display: `ros2 launch chassis_bringup sim_gz.launch.py foxglove:=true rviz:=true`; Mac / headless: `xvfb-run -a ros2 launch chassis_bringup sim_gz.launch.py foxglove:=true`. Adds `odesc_shadow:=true` when `vcan0` exists, and `joy_source:=browser` on the Mac. |
+| `make ground` / `tooling/ground-up` | **ground station.** `ros2 launch chassis_bringup ground_station.launch.py rviz:=<display> foxglove:=true joy_source:=<device\|browser> use_sim_time:=false`. Viewers + game pad against a rover already running on the network — no Gazebo. `SIM_TIME=true` when what you are watching is a sim. |
+| `make rover` / `tooling/rover-up` | **rover (Jetson).** `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=can0 foxglove:=true`. No viewer, no teleop. `make rover CAN=mock` runs the ODESC mock backend; `CAN=vcan0` the virtual bus. Checks the bus is up first. |
+
+`sim-up` and `ground-up` refuse to run on the rover, and `rover-up` refuses to run on a
+ground station; each prints the one you probably wanted. `BILLEE_ROLE=<rover|ground>`
+overrides the check.
 
 ---
 
 ## Which modes each platform supports
 
+Role: the first three columns are **ground stations**, the Jetson is the **rover**
+(see [Deployment split](#deployment-split-rover-vs-ground-station)).
+
 | | x86 + NVIDIA | ARM64 Linux (native) | Mac container | Jetson (`l4t`) |
 |---|---|---|---|---|
-| C1 Simulation | ✅ GPU | ✅ CPU (slower) | ✅ headless, `xvfb-run` | ✅ headless, `xvfb-run` |
-| C2 Sim + shadow / C5 vCAN | ✅ | ✅ | ❌ no host `vcan0` | ✅ |
-| C3 Real drivetrain | with a USB-CAN adapter | with a USB-CAN adapter | ❌ | ✅ `can0` |
+| C1 Simulation | ✅ GPU | ✅ CPU (slower) | ✅ headless, `xvfb-run` | ❌ no Gazebo in the `l4t` env, no X server in the image |
+| C2 Sim + ODESC shadow | ✅ | ✅ | ❌ no host `vcan0` | ❌ needs Gazebo |
+| C5 vCAN bench | ✅ | ✅ | ❌ no host `vcan0` | ✅ no Gazebo needed |
+| C3 Real drivetrain | with a USB-CAN adapter | with a USB-CAN adapter | ❌ | ✅ `can0` — this is the rover's job |
 | C4 Mock | ✅ | ✅ | ✅ | ✅ |
-| T1 Gamepad | ✅ | ✅ | ❌ | ✅ |
-| T2 Ground station (DDS) | ✅ | ✅ (VM: bridged net) | ❌ | — (it's the rover) |
-| T3 / T4 / T5 | ✅ | ✅ | ✅ | ✅ |
-| V2 RViz window | ✅ | ✅ | ❌ | with a display |
+| T1 Gamepad | ✅ | ✅ | ❌ use T4b | ❌ no `joy` in the `l4t` env |
+| T2 Ground station (DDS) | ✅ | ✅ (VM: bridged net) | ✅ via T4b | — (it's the rover) |
+| T3 keyboard / T5 scripted | ✅ | ✅ | ✅ | ❌ drive from a ground station |
+| T4 / T4b Foxglove | ✅ | ✅ | ✅ | — (connect *to* the rover's bridge) |
+| V1 Foxglove bridge | ✅ | ✅ | ✅ | ✅ serves :8765 |
+| V2 RViz window | ✅ | ✅ | ❌ | ❌ no RViz in the `l4t` env |
 
 ---
 

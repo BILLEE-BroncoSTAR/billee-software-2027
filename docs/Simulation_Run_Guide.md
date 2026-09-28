@@ -26,7 +26,7 @@ On your host machine:
     - viewer: on Linux with a display it also opens **RViz** (`RVIZ=false` to skip); on the Mac, and anywhere without a display, Gazebo runs under `xvfb-run -a` and you view in Foxglove (force with `HEADLESS=1`)
     - the ODESC shadow on `vcan0` is added automatically when `vcan0` exists (`SHADOW=true|false` to force)
     - controls: hold the right bumper (RB) as the safety button, then right trigger (RT) drives forward, left trigger (LT) reverses and the left stick steers left/right. Without RB held, the robot will not drive. Triggers read as released until they are pulled once
-    - if you would like to remap this please edit `chassis_bringup/config/tele_params.yaml`
+    - if you would like to remap this please edit `teleop/config/joystick.yaml` (the same file teleop.launch.py uses); `scheme: arcade` or `scheme: tank` picks the control scheme
 2. Go to your foxglove web dashboard or desktop app:
     1. Select "Open New Connection"
     2. Select "Foxglove Websocket"

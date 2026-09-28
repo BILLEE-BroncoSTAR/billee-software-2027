@@ -6,7 +6,8 @@
 #   ./sim-up true false  - same, without the gamepad nodes
 #
 # Args: [foxglove=true] [joystick=true]. Environment overrides:
-#   BILLEE_PLATFORM=<mac|linux-aarch64|l4t|x86>  Pixi env (default: from `make setup`, see tooling/billee-env.sh)
+#   BILLEE_PLATFORM=<mac|linux-aarch64|x86>  Pixi env (default: from `make setup`, see tooling/billee-env.sh)
+#   BILLEE_ROLE=ground     bypass the rover guard below
 #   RVIZ=true|false        default: true on Linux with a display, false on mac / headless
 #   SHADOW=true|false      ODESC shadow on vcan0; default: true when vcan0 exists
 #                          (create it on the host with `tooling/can-up vcan0`)
@@ -19,6 +20,14 @@ use_controller="${2:-true}"
 source "$(dirname "${BASH_SOURCE[0]}")/billee-env.sh"
 if [[ -z "$BILLEE_WS" ]]; then
   echo "sim-up: can't find ros2_ws" >&2
+  exit 1
+fi
+
+if [[ "$BILLEE_ROLE" == rover ]]; then
+  echo "sim-up: this is the rover ($BILLEE_PLATFORM). Gazebo runs on the ground" >&2
+  echo "sim-up:   station, not on the Jetson - the l4t environment has no Gazebo and" >&2
+  echo "sim-up:   the image has no X server. On the Jetson you want: tooling/rover-up" >&2
+  echo "sim-up:   To override anyway: BILLEE_ROLE=ground tooling/sim-up" >&2
   exit 1
 fi
 

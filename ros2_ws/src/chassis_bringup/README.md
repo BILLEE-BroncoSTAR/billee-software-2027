@@ -7,7 +7,7 @@
 | Launch file | Role | Key arguments (default) |
 |---|---|---|
 | `rover.launch.py` | **Rover entry point.** Includes `sim_gz` or `real` and always starts the Foxglove bridge on :8765. | `mode` (`sim` \| `real`), `rviz` (`false`), `can_interface` (`can0`), `gear_ratio` (`48.0`) — last two `mode:=real` only |
-| `ground_station.launch.py` | **Ground-station entry point.** `viz` + teleop (`joy_node` → `joy_tank_drive`), optionally opens the F' GDS web UI. | `use_sim_time` (`true`), `rviz` (`true`), `foxglove` (`true`), `joystick` (`true`), `fprime_gds` (`false`), `fprime_gds_url` (`$FPRIME_GDS_URL`) |
+| `ground_station.launch.py` | **Ground-station entry point.** `viz` + teleop (`joy_node` → `joy_drive`), optionally opens the F' GDS web UI. | `use_sim_time` (`true`), `rviz` (`true`), `foxglove` (`true`), `joystick` (`true`), `fprime_gds` (`false`), `fprime_gds_url` (`$FPRIME_GDS_URL`) |
 | `sim_gz.launch.py` | Gazebo Fortress backend: Gazebo + `ign_ros2_control`, bridges, spawn, controllers, joystick teleop. Detailed below. | `x`/`y`/`z`/`yaw`, `rviz` (`false`), `foxglove` (`false`), `joy_control` (`true`), `odesc_shadow` (`false`) |
 | `real.launch.py` | Real-hardware backend: standalone `ros2_control_node` + `odesc/OdescSystemHardware` (URDF `use_sim:=false`). Writes a temp `controllers.yaml` with `use_sim_time: false`. | `can_interface` (`can0`; `vcan0`, or `mock`/`none` for loopback), `gear_ratio` (`48.0`), `rviz`, `foxglove` (`false`) |
 | `odesc_shadow.launch.py` | Sim add-on (`sim_gz ... odesc_shadow:=true`): a second, `/odesc_shadow`-namespaced controller manager on the ODESC plugin + `odesc_vcan_emulator.py`, fed the same `cmd_vel` as Gazebo. Exercises CAN framing while Gazebo stays the physics/TF source. | `can_interface` (`vcan0`) — needs `tooling/can-up vcan0` |
@@ -19,7 +19,7 @@ The rest of this document covers the simulator backend. `launch/sim_gz.launch.py
 
 The launch is designed for simulation time. It provides the expanded XML to `robot_state_publisher` as its `robot_description` parameter and passes the same description to `ros_gz_sim create` to insert the rover into Gazebo. The model itself loads `ign_ros2_control`, which reads the controller configuration supplied by `robot_description`.
 
-The bridges are deliberately data-driven: `config/config.yaml` currently bridges only `/clock`; `config/zed_config.yaml` bridges four Gazebo camera streams from `/depth_cam` into ROS 2. Drive commands and odometry do not go through the Gazebo bridge: `diff_drive_controller` runs inside `ign_ros2_control` and talks to the wheel joints directly. Joystick teleop (`joy_node` + the `teleop` package's `joy_tank_drive`, parameters in `config/tele_params.yaml`) is started by `sim_gz.launch.py` and publishes to `/diff_drive_controller/cmd_vel_unstamped`.
+The bridges are deliberately data-driven: `config/config.yaml` currently bridges only `/clock`; `config/zed_config.yaml` bridges four Gazebo camera streams from `/depth_cam` into ROS 2. Drive commands and odometry do not go through the Gazebo bridge: `diff_drive_controller` runs inside `ign_ros2_control` and talks to the wheel joints directly. Joystick teleop (`joy_node` + the `teleop` package's `joy_drive`, parameters in `teleop/config/joystick.yaml`) is started by `sim_gz.launch.py` and publishes to `/diff_drive_controller/cmd_vel_unstamped`.
 
 Viewer configs live alongside: `rviz/drivetrain.rviz` for RViz2 and `foxglove/drivetrain.json` for Foxglove Studio (import via Layouts → Import from file). Both show the same content — grid, TF, robot model from `/robot_description`, and the `/diff_drive_controller/odom` trail, fixed frame `odom` — and are loaded by `launch/viz.launch.py` (`rviz:=` / `foxglove:=`).
 
@@ -56,7 +56,7 @@ graph TD
     L --> B1[ros_gz_bridge parameter_bridge]
     L --> B2[ros_gz_bridge parameter_bridge]
     L --> P[controller_manager spawner]
-    L --> T[joy_node + joy_tank_drive]
+    L --> T[joy_node + joy_drive]
     L -.->|rviz / foxglove| V[viz.launch.py]
     L -.->|odesc_shadow:=true| O[odesc_shadow.launch.py]
     X[robot_description / robot.urdf.xacro] --> R
@@ -143,7 +143,7 @@ pixi run -e <env> ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel_unstamped
 ```
 
-With a gamepad, hold the right bumper (RB, deadman), then right trigger = forward, left trigger = reverse, left stick = steer. Remap in `config/tele_params.yaml` (keep it in sync with `teleop/config/joystick.yaml`).
+With a gamepad, hold the right bumper (RB, deadman), then right trigger = forward, left trigger = reverse, left stick = steer. Set `scheme: tank` in `teleop/config/joystick.yaml` for two-stick tank drive instead; remap indices in that same file (`sim_gz.launch.py` and `teleop.launch.py` both read it).
 
 ### Verify it's running
 
@@ -253,13 +253,13 @@ With a gamepad, hold the right bumper (RB, deadman), then right trigger = forwar
 - **Parameters:** Controller names are positional launch arguments: `diff_drive_controller`, `joint_state_broadcaster`.
 - **Depends on:** A spawned BILLEE model whose `ign_ros2_control` plugin has created a controller manager.
 
-### Teleop (`joy_node` + `joy_tank_drive`)
+### Teleop (`joy_node` + `joy_drive`)
 
 - **Package:** `joy`, `teleop`
 - **Purpose:** Reads the gamepad and turns it into an arcade-drive `Twist`: triggers for throttle (RT forward, LT reverse), left stick for steering, gated by the RB deadman.
 - **Publishes:** `/joy` (`sensor_msgs/msg/Joy`); `/diff_drive_controller/cmd_vel_unstamped` (`geometry_msgs/msg/Twist`, remapped from `/cmd_vel`).
-- **Subscribes:** `/joy` (`joy_tank_drive`).
-- **Parameters:** `config/tele_params.yaml` — `device_id`, `deadzone`, `autorepeat_rate` (`joy_node`); `deadman_button`, `steer_axis`, `steer_scale`, `invert_steer`, `throttle_axis`, `reverse_axis`, `speed_scale`, `trigger_rest`, `trigger_press` (`joy_tank_drive`).
+- **Subscribes:** `/joy` (`joy_drive`).
+- **Parameters:** `teleop/config/joystick.yaml` — `device_id`, `deadzone`, `autorepeat_rate` (`joy_node`); `scheme`, `deadman_button`, `speed_scale`, plus the arcade set (`steer_axis`, `steer_scale`, `invert_steer`, `throttle_axis`, `reverse_axis`, `trigger_rest`, `trigger_press`) or the tank set (`left_axis`, `right_axis`, `track_width`) (`joy_drive`).
 - **Depends on:** a gamepad at `/dev/input/js<device_id>`; started unconditionally today (see §3).
 
 ### Optional includes

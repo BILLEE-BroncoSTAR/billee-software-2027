@@ -260,9 +260,11 @@ def _launch_description(ctx):
     use_joy = LaunchConfiguration('joy_control').perform(ctx).lower() in ('true', '1')
     joy_source = LaunchConfiguration('joy_source').perform(ctx).lower()
     from_browser = joy_source == 'browser'
+    # Both configs live in the teleop package, so sim_gz and teleop.launch.py read
+    # the same files and cannot drift. Local device vs browser pad differ in mapping.
     joy_params = os.path.join(
-        get_package_share_directory('chassis_bringup'), 'config',
-        'tele_params_browser.yaml' if from_browser else 'tele_params.yaml')
+        get_package_share_directory('teleop'), 'config',
+        'joystick_browser.yaml' if from_browser else 'joystick.yaml')
 
     teleop_nodes = []
     if use_joy:
@@ -276,8 +278,8 @@ def _launch_description(ctx):
             ))
         teleop_nodes.append(Node(
             package='teleop',
-            executable='joy_tank_drive',
-            name='joy_tank_drive',
+            executable='joy_drive',
+            name='joy_drive',
             parameters=[joy_params],
             remappings=[('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')],
         ))

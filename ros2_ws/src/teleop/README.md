@@ -1,10 +1,30 @@
-# teleop / joy_tank_drive
+# teleop / joy_drive
 
 ## 1. How This Node Works
 
-The `teleop` package turns a USB joystick into rover drive commands. Its launch file starts the ROS 2 `joy` driver, which reads the selected Linux joystick device and publishes `sensor_msgs/msg/Joy` messages on `/joy`. It also starts this package's `joy_tank_drive` executable, named `joy_tank_drive` at launch.
+The `teleop` package turns a USB joystick into rover drive commands. Its launch file starts the ROS 2 `joy` driver, which reads the selected Linux joystick device and publishes `sensor_msgs/msg/Joy` messages on `/joy`. It also starts this package's `joy_drive` executable, named `joy_drive` at launch.
 
-`joy_tank_drive` (name is historical — the scheme is arcade, not tank) reads the left stick X axis for steering and the two analog triggers for throttle: right trigger forward, left trigger reverse. While the configured deadman button is held it publishes `linear.x = (forward − reverse) · speed_scale` and `angular.z = steer · steer_scale`; it publishes a `geometry_msgs/msg/Twist` for every received joystick message, and an all-zero one whenever the deadman is not held. The launch remaps its `/cmd_vel` output to `/diff_drive_controller/cmd_vel_unstamped`, the unstamped velocity input expected by the workspace's diff-drive controller.
+`joy_drive` runs one of two control schemes, chosen by the `scheme` parameter in [`config/joystick.yaml`](config/joystick.yaml); changing it is a yaml edit and a relaunch, not a rebuild.
+
+- **`scheme: arcade`** (default) reads the left stick X axis for steering and the two analog triggers for throttle: right trigger forward, left trigger reverse. While the deadman is held it publishes `linear.x = (forward − reverse) · speed_scale` and `angular.z = steer · steer_scale`.
+- **`scheme: tank`** reads one stick per track. While the deadman is held it publishes `linear.x = (left + right)/2 · speed_scale` and `angular.z = (right − left)/track_width · speed_scale` — both sticks forward drives straight, opposite sticks spin in place. `track_width` is the real distance between the tracks in metres; measure it on the rover, because it sets how much stick difference becomes how many rad/s.
+
+A pad can also reach this node from a browser instead of `/dev/input`, via Foxglove's
+Joystick panel over the bridge — the only gamepad path on a Mac, where Docker Desktop
+passes no USB through. Select it with `joy_source:=browser`:
+
+```bash
+ros2 launch teleop teleop.launch.py joy_source:=browser
+```
+
+That skips `joy_node` (there is no local device to open) and loads
+[`config/joystick_browser.yaml`](config/joystick_browser.yaml) instead of
+`joystick.yaml`, because a browser reports pads with a different mapping.
+`tooling/ground-up` and `tooling/sim-up` select it automatically on the Mac. See
+[T4b in docs/RUN_MODES.md](../../../docs/RUN_MODES.md#t4b--real-gamepad-through-the-browser)
+for the mapping differences and the panel to use.
+
+Either way it publishes a `geometry_msgs/msg/Twist` for every received joystick message, and an all-zero one whenever the deadman is not held. The launch remaps its `/cmd_vel` output to `/diff_drive_controller/cmd_vel_unstamped`, the unstamped velocity input expected by the workspace's diff-drive controller.
 
 The package is event-driven: joystick messages trigger the conversion immediately, rather than a timer continuously republishing a command. The supplied `joy` configuration enables a 20 Hz autorepeat rate, so a connected joystick continues to deliver its most recent state and therefore continues to refresh a held command.
 
@@ -18,9 +38,9 @@ The package is event-driven: joystick messages trigger the conversion immediatel
 
 ## 3. How It Was Written
 
-The package keeps joystick hardware access and rover-specific drive mixing separate. `joy_node` is responsible for device selection, deadzone handling, and message publication; `JoyTankDrive` in [`src/joy_teleop.cpp`](src/joy_teleop.cpp) only maps the generic `Joy` message to a rover velocity command. This lets joystick tuning remain in [`config/joystick.yaml`](config/joystick.yaml) while retaining a small custom control node.
+The package keeps joystick hardware access and rover-specific drive mixing separate. `joy_node` is responsible for device selection, deadzone handling, and message publication; `JoyDrive` in [`src/joy_teleop.cpp`](src/joy_teleop.cpp) only maps the generic `Joy` message to a rover velocity command. This lets joystick tuning remain in [`config/joystick.yaml`](config/joystick.yaml) while retaining a small custom control node.
 
-The conversion in `JoyTankDrive::onJoy` maps a trigger axis to a `0..1` press amount
+The conversion in `JoyDrive::onJoy` maps a trigger axis to a `0..1` press amount
 (`(trigger_rest − v) / (trigger_rest − trigger_press)`, clamped; treated as `0` until the
 axis first reports a non-zero value, since some drivers report `0.0` for an untouched
 trigger) and mixes `linear.x = (forward − reverse) · speed_scale`,
@@ -38,7 +58,7 @@ No package-specific unit tests or hardware-in-the-loop tests are defined in the 
 ```mermaid
 graph TD
     L[teleop.launch.py] --> J[joy_node\npackage: joy]
-    L --> T[joy_tank_drive\npackage: teleop]
+    L --> T[joy_drive\npackage: teleop]
     J -->|/joy\nsensor_msgs/msg/Joy| T
     T -->|/cmd_vel remapped to\n/diff_drive_controller/cmd_vel_unstamped\ngeometry_msgs/msg/Twist| D[diff_drive_controller]
 ```
@@ -48,7 +68,7 @@ graph TD
 ```mermaid
 graph LR
     H[USB joystick] --> J[joy_node]
-    J -->|/joy\nsensor_msgs/msg/Joy| T[joy_tank_drive]
+    J -->|/joy\nsensor_msgs/msg/Joy| T[joy_drive]
     T -->|/diff_drive_controller/cmd_vel_unstamped\ngeometry_msgs/msg/Twist| D[diff_drive_controller]
 ```
 
@@ -81,7 +101,7 @@ source install/setup.bash
 ros2 launch teleop teleop.launch.py
 ```
 
-The launch reads `config/joystick.yaml`. The checked-in mapping is joystick device `0`, deadzone `0.05`, autorepeat rate `20.0 Hz`, `deadman_button 5` (RB / R1), `steer_axis 0` (left stick X), `throttle_axis 5` (RT / R2), `reverse_axis 2` (LT / L2), `steer_scale 1.5`, `speed_scale 2.0`. These indices are the same for Xbox and PlayStation pads via `joy_node`.
+The launch reads `config/joystick.yaml`, which is also the file `sim_gz.launch.py` uses, so there is one mapping rather than two that drift. The checked-in mapping is `scheme: arcade`, joystick device `0`, deadzone `0.05`, autorepeat rate `20.0 Hz`, `deadman_button 5` (RB / R1), `steer_axis 0` (left stick X), `throttle_axis 5` (RT / R2), `reverse_axis 2` (LT / L2), `steer_scale 1.5`, `speed_scale 2.0`; the tank set is `left_axis 1` (left stick Y), `right_axis 4` (right stick Y), `track_width 0.67`. These indices are the same for Xbox and PlayStation pads via `joy_node`.
 
 ### Verify it's running
 
@@ -91,7 +111,7 @@ The launch reads `config/joystick.yaml`. The checked-in mapping is joystick devi
    ros2 node list
    ```
 
-   Expected entries include `/joy_node` and `/joy_tank_drive`.
+   Expected entries include `/joy_node` and `/joy_drive`.
 
 2. Move the sticks and inspect the raw input:
 
@@ -139,10 +159,10 @@ The launch reads `config/joystick.yaml`. The checked-in mapping is joystick devi
 
 - **Depends on:** A joystick device available to the operating system.
 
-### `joy_tank_drive`
+### `joy_drive`
 
 - **Package:** `teleop`
-- **Purpose:** Converts left-stick steering + analog triggers to a deadman-gated velocity command.
+- **Purpose:** Converts game-pad input to a deadman-gated velocity command, using whichever control scheme the `scheme` parameter selects (`arcade` or `tank`).
 - **Publishes:**
 
   | Topic | Type | Description |
@@ -160,14 +180,18 @@ The launch reads `config/joystick.yaml`. The checked-in mapping is joystick devi
 
   | Name | Code default | Launch value | Description |
   |---|---:|---:|---|
-  | `deadman_button` | `5` | `5` | Button (RB / R1) that must be held to send motion. |
-  | `steer_axis` | `0` | `0` | Left stick X axis for steering. |
-  | `steer_scale` | `1.5` | `1.5` | `angular.z` (rad/s) at full stick. |
-  | `invert_steer` | `false` | `false` | Negate steering if the pad reports stick-right as `+1`. |
-  | `throttle_axis` | `5` | `5` | Forward trigger axis (RT / R2). |
-  | `reverse_axis` | `2` | `2` | Reverse trigger axis (LT / L2). |
-  | `speed_scale` | `2.0` | `2.0` | `linear.x` (m/s) at full trigger. |
-  | `trigger_rest` | `1.0` | `1.0` | `/joy` axis value with a trigger released. |
-  | `trigger_press` | `-1.0` | `-1.0` | `/joy` axis value with a trigger fully pressed. |
+  | `scheme` | `arcade` | `arcade` | Control scheme: `arcade` (stick steers, triggers drive) or `tank` (one stick per track). An unknown value warns and falls back to `arcade`. |
+  | `deadman_button` | `5` | `5` | Button (RB / R1) that must be held to send motion. Both schemes. |
+  | `speed_scale` | `2.0` | `2.0` | `linear.x` (m/s) at full throttle. Both schemes. |
+  | `steer_axis` | `0` | `0` | Left stick X axis for steering. Arcade only. |
+  | `steer_scale` | `1.5` | `1.5` | `angular.z` (rad/s) at full stick. Arcade only. |
+  | `invert_steer` | `false` | `false` | Negate steering if the pad reports stick-right as `+1`. Arcade only. |
+  | `throttle_axis` | `5` | `5` | Forward trigger axis (RT / R2). Arcade only. |
+  | `reverse_axis` | `2` | `2` | Reverse trigger axis (LT / L2). Arcade only. |
+  | `trigger_rest` | `1.0` | `1.0` | `/joy` axis value with a trigger released. Arcade only. |
+  | `trigger_press` | `-1.0` | `-1.0` | `/joy` axis value with a trigger fully pressed. Arcade only. |
+  | `left_axis` | `1` | `1` | Left stick Y axis, driving the left track. Tank only. |
+  | `right_axis` | `4` | `4` | Right stick Y axis, driving the right track. Tank only. |
+  | `track_width` | `0.67` | `0.67` | Distance between the tracks in metres; converts stick difference to rad/s. **Measure it on the rover.** Tank only. |
 
 - **Depends on:** `joy_node` publishing valid `/joy` messages and a consumer, typically `diff_drive_controller`, subscribed to the remapped command topic.

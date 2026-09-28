@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# ground-up - bring up the ground station for this platform: viewers + teleop.
+#
+# The ground station is everything that is NOT the rover: an x86 Linux box, a native
+# ARM64 Linux machine, or a Mac container. It runs RViz / the Foxglove bridge and the
+# game pad, and talks to the rover (or to a sim on another machine) over DDS.
+#
+#   ./ground-up              - RViz (where there's a display) + Foxglove bridge + game pad
+#   ./ground-up true false   - same, view only (no teleop nodes)
+#
+# Args: [foxglove=true] [joystick=true]. Environment overrides:
+#   BILLEE_PLATFORM=<mac|linux-aarch64|x86>   Pixi env (default: from `make setup`)
+#   BILLEE_ROLE=ground                        bypass the rover guard below
+#   RVIZ=true|false      default: true on Linux with a display, false on mac / headless
+#   SIM_TIME=true|false  default false (real rover). Set true when the thing you are
+#                        watching is a Gazebo sim, so RViz and the bridge follow /clock.
+#
+# To drive the sim on THIS machine instead, use tooling/sim-up - it starts its own
+# viewers and teleop, so running both would duplicate every node.
+set -euo pipefail
+
+start_foxglove="${1:-true}"
+use_controller="${2:-true}"
+
+source "$(dirname "${BASH_SOURCE[0]}")/billee-env.sh"
+if [[ -z "$BILLEE_WS" ]]; then
+  echo "ground-up: can't find ros2_ws" >&2
+  exit 1
+fi
+
+if [[ "$BILLEE_ROLE" == rover ]]; then
+  echo "ground-up: this is the rover ($BILLEE_PLATFORM) - the ground station runs on a" >&2
+  echo "ground-up:   separate machine (x86 Linux, ARM64 Linux, or a Mac container)." >&2
+  echo "ground-up:   On the Jetson you want: tooling/rover-up" >&2
+  echo "ground-up:   To override anyway: BILLEE_ROLE=ground tooling/ground-up" >&2
+  exit 1
+fi
+
+has_display=false
+if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" && "$BILLEE_PLATFORM" != mac ]]; then
+  has_display=true
+fi
+
+# No xvfb here on purpose: RViz in a throwaway X server that nobody can see is
+# wasted CPU. Without a display the ground station's viewer is Foxglove Studio.
+rviz="${RVIZ:-$has_display}"
+sim_time="${SIM_TIME:-false}"
+
+# Docker Desktop passes no USB through, so on the Mac a game pad can only reach
+# ROS through the browser: Foxglove's Joystick panel publishes /joy itself.
+joy_source=device
+if [[ "$BILLEE_PLATFORM" == mac ]]; then
+  joy_source=browser
+fi
+
+echo "ground-up: platform $BILLEE_PLATFORM, Pixi env $BILLEE_PIXI_ENV," \
+  "rviz=$rviz foxglove=$start_foxglove joystick=$use_controller joy_source=$joy_source" \
+  "use_sim_time=$sim_time"
+if [[ "$start_foxglove" == true ]]; then
+  echo "ground-up: Foxglove Studio -> ws://localhost:8765 (or ws://<this-machine-ip>:8765)"
+fi
+if [[ "$joy_source" == browser && "$use_controller" == true ]]; then
+  echo "ground-up: game pad -> add Foxglove's 'Joystick [local]' panel, set Data Source:"
+  echo "ground-up:   Gamepad, Publish Mode: On, Pub Joy Topic: /joy. Hold RB to drive."
+fi
+if [[ "$sim_time" == false ]]; then
+  echo "ground-up: use_sim_time=false (real rover). Watching a Gazebo sim? SIM_TIME=true."
+fi
+cd "$BILLEE_WS"
+exec pixi run --environment "$BILLEE_PIXI_ENV" \
+  ros2 launch chassis_bringup ground_station.launch.py \
+  rviz:="$rviz" foxglove:="$start_foxglove" \
+  joystick:="$use_controller" joy_source:="$joy_source" \
+  use_sim_time:="$sim_time"

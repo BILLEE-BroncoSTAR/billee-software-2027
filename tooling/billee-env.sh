@@ -4,6 +4,12 @@
 #   BILLEE_WS         absolute path to ros2_ws
 #   BILLEE_PLATFORM   mac | linux-aarch64 | l4t | x86
 #   BILLEE_PIXI_ENV   mac-cpu | linux-aarch64 | l4t | default
+#   BILLEE_ROLE       rover (l4t) | ground (everything else)
+#
+# BILLEE_ROLE is the deployment split: the Jetson runs the rover stack (real
+# drivetrain over CAN, no viewer), every other platform is a ground station
+# (viewers, teleop, and the Gazebo sim). tooling/rover-up, ground-up and sim-up
+# each refuse the wrong role; set BILLEE_ROLE explicitly to override.
 #
 # The platform comes from, first match wins:
 #   1. $BILLEE_PLATFORM, if already set (per-command override)
@@ -57,11 +63,16 @@ case "$BILLEE_PLATFORM" in
   *) BILLEE_PIXI_ENV=default ;;
 esac
 
+# Deployment role. Only the Jetson is the rover; everything else is a ground station.
+if [[ -z "${BILLEE_ROLE:-}" ]]; then
+  if [[ "$BILLEE_PLATFORM" == l4t ]]; then BILLEE_ROLE=rover; else BILLEE_ROLE=ground; fi
+fi
+
 # A native `make setup linux-aarch64` installs pixi to ~/.pixi/bin; pick it up even
 # before the user's shell has re-read ~/.bashrc.
 if ! command -v pixi >/dev/null 2>&1 && [[ -x "$HOME/.pixi/bin/pixi" ]]; then
   PATH="$HOME/.pixi/bin:$PATH"
 fi
 
-export BILLEE_WS BILLEE_PLATFORM BILLEE_PIXI_ENV PATH
+export BILLEE_WS BILLEE_PLATFORM BILLEE_PIXI_ENV BILLEE_ROLE PATH
 unset -f _billee_find_ws _billee_detect_platform

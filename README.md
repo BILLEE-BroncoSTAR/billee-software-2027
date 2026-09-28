@@ -11,6 +11,7 @@ git clone https://github.com/BILLEE-BroncoSTAR/billee-software-2027.git
 cd billee-software-2027
 make setup <l4t | x86 | linux-aarch64 | mac>   # once per machine - see Setup below
 make sim                                       # simulated rover + this machine's viewer
+#   ...or, against a real rover: `make ground` here, `make rover` on the Jetson
 ```
 
 Then drive it (see [Run modes](#run-modes)). `make help` lists every command.
@@ -21,9 +22,18 @@ Then drive it (see [Run modes](#run-modes)). `make help` lists every command.
 | `make build` | Rebuild `ros2_ws` after code changes |
 | `make shell` | A shell with ROS 2 and the workspace sourced (`ros2 launch …` works as-is) |
 | `make sim` | Gazebo sim + gamepad teleop + Foxglove bridge (:8765); opens RViz on Linux with a display |
+| `make ground` | Ground station against a real rover: viewers + game pad, no Gazebo |
+| `make rover` | Jetson only: real drivetrain over CAN + Foxglove bridge, no viewer |
 
 All of them follow the platform you set up: natively on ARM64 Linux, through the
 platform's Docker image everywhere else.
+
+**Two deployments.** The **Jetson is the rover** — real drivetrain over CAN, headless,
+no Gazebo and no RViz in its environment. **Everything else is a ground station** (x86
+Linux, native ARM64 Linux, or the Mac container) and runs the viewers, the game pad and
+the Gazebo sim. `make rover` only works on the Jetson; `make sim` / `make ground` only
+work on a ground station, and each tells you which one you wanted. Full breakdown of
+what runs where: [Deployment split](docs/RUN_MODES.md#deployment-split-rover-vs-ground-station).
 
 ## Setup
 
@@ -228,11 +238,13 @@ billee-software-2027/
 ├── .devcontainer/            VS Code devcontainers: default (x86+NVIDIA), mac/, l4t/
 ├── docker/                   Dockerfiles per platform + shell config baked into the images
 ├── tooling/
-│   ├── billee-env.sh         resolves platform -> workspace + Pixi env (sourced by the rest)
+│   ├── billee-env.sh         resolves platform -> workspace + Pixi env + role (sourced by the rest)
 │   ├── desktop-ros2          build/run/shell the platform's image without VS Code
 │   ├── rover-ros2            desktop-ros2 pinned to l4t
 │   ├── install-x86-host      x86 host prep: NVIDIA driver, Docker, NVIDIA Container Toolkit
-│   ├── sim-up                sim with the platform's viewer (+ ODESC shadow if vcan0 exists)
+│   ├── sim-up                [ground] sim with the platform's viewer (+ ODESC shadow if vcan0 exists)
+│   ├── ground-up             [ground] viewers + game pad against a rover on the network
+│   ├── rover-up              [rover]  real drivetrain over CAN + Foxglove bridge, no viewer
 │   └── can-up, can0.service  bring can0 / vcan0 up (host), persist can0 across reboots
 ├── docs/                     RUN_MODES (all modes), RUN_GUIDE (two-machine procedure), references
 └── ros2_ws/                  the ROS 2 workspace (Pixi project: pixi.toml / pixi.lock)
@@ -242,7 +254,7 @@ billee-software-2027/
         ├── robot_description/ URDF/xacro, meshes, ros2_control + controllers.yaml
         ├── odesc/            ros2_control hardware plugin for the ODESC/ODrive CAN drives,
         │                     mock backend, vCAN emulator, CAN node map
-        └── teleop/           joy_tank_drive: gamepad -> arcade-drive Twist (RB deadman, triggers, stick)
+        └── teleop/           joy_drive: gamepad -> arcade-drive Twist (RB deadman, triggers, stick)
 ```
 
 Each package has its own README with its nodes, topics and parameters.
@@ -252,13 +264,13 @@ Each package has its own README with its nodes, topics and parameters.
 | Layer | Technology |
 |---|---|
 | Middleware | ROS 2 Humble (from [RoboStack](https://robostack.github.io/) via Pixi, not apt), Fast DDS, `ROS_DOMAIN_ID=42` |
-| Environments | [Pixi](https://pixi.sh) 0.76.1 — `default` (linux-64 + CUDA 13), `mac-cpu` / `linux-aarch64` / `l4t` (linux-aarch64, CPU) |
+| Environments | [Pixi](https://pixi.sh) 0.76.1 — `default` (linux-64 + CUDA 13), `mac-cpu` / `linux-aarch64` / `l4t` (linux-aarch64, CPU). Role features: `ground-station` (`ros-humble-desktop` + Gazebo) on all but `l4t`, which gets `rover` (`ros-humble-ros-base`, no GUI) |
 | Containers | Ubuntu 22.04 + CUDA 13.2 + ZED SDK (x86), Ubuntu 22.04 + mesa llvmpipe + xvfb (Mac), JetPack L4T r36.3 + ZED SDK (Jetson) |
 | Build | `colcon` + `ament_cmake` / `ament_python`, `ruff` for Python (`pixi run fmt`) |
 | Control | `ros2_control`: `diff_drive_controller` + `joint_state_broadcaster`, swappable hardware plugin |
 | Drives | `odesc/OdescSystemHardware`: SocketCAN, ODrive CANSimple, 6× ODESC V4.2 + NEO, 48:1, 500 kbit/s |
 | Simulation | Gazebo Fortress (Ignition 6) via `ros_gz` + `ign_ros2_control` |
-| Teleop | `joy` + `teleop/joy_tank_drive`, `teleop_twist_keyboard` |
+| Teleop | `joy` + `teleop/joy_drive`, `teleop_twist_keyboard` |
 | Visualization | RViz2, Foxglove Studio via `foxglove_bridge` (:8765), F' GDS web UI |
 
 ## Drivetrain architecture
@@ -281,7 +293,7 @@ flowchart TB
 
     subgraph TELE["teleop  (teleop pkg)"]
         JOY["joy_node<br/>joystick.yaml"]
-        TANK["joy_tank_drive<br/>arcade: RT/LT throttle, stick steer<br/>RB (button 5) deadman"]
+        TANK["joy_drive<br/>arcade: RT/LT throttle, stick steer<br/>RB (button 5) deadman"]
     end
     PAD -->|USB| JOY
     JOY -->|"/joy  sensor_msgs/Joy"| TANK
@@ -349,7 +361,7 @@ flowchart TB
 only place the **48:1** motor↔wheel gear ratio is applied) → `ros2_control`
 (`resource_manager` + `diff_drive_controller` + `joint_state_broadcaster`, config in
 `controllers.yaml`) → ROS graph (`/…/cmd_vel_unstamped`, `/…/odom`, `/joint_states`,
-`/tf`) → teleop (`joy_node` → `joy_tank_drive`) and visualization
+`/tf`) → teleop (`joy_node` → `joy_drive`) and visualization
 (`foxglove_bridge` :8765 for the remote ground station, `rviz2` for a local
 display). Canonical CAN node-ID ↔ wheel map: `ros2_ws/src/odesc/config/node_map.yaml`.
 

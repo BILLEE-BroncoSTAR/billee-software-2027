@@ -6,8 +6,10 @@
 
 Starts:
   - viz.launch.py  -> rviz2 (drivetrain.rviz) + foxglove_bridge on :8765
-  - teleop.launch.py -> joy_node + joy_tank_drive  (publishes cmd_vel over DDS);
-    skip with joystick:=false (e.g. headless / Mac container / Foxglove-only station)
+  - teleop.launch.py -> joy_node + joy_drive  (publishes cmd_vel over DDS);
+    skip with joystick:=false (view-only station). On a Mac use joy_source:=browser:
+    Docker Desktop passes no USB through, so the pad reaches ROS via Foxglove's
+    Joystick panel instead (tooling/ground-up picks this automatically).
   - optionally opens the F' GDS web UI in a browser (fprime_gds:=true); the address is
     $FPRIME_GDS_URL (set in ros2_ws/pixi.toml) or fprime_gds_url:=
 
@@ -42,8 +44,16 @@ declare_args = [
     DeclareLaunchArgument(
         "joystick",
         default_value="true",
-        description="Start teleop (joy_node + joy_tank_drive). Set false for a "
+        description="Start teleop (joy_node + joy_drive). Set false for a "
         "view-only station or where no /dev/input gamepad exists (Mac container, CI).",
+    ),
+    DeclareLaunchArgument(
+        "joy_source",
+        default_value="device",
+        choices=["device", "browser"],
+        description="Where /joy comes from: 'device' (local pad via joy_node) or "
+        "'browser' (Foxglove Joystick panel over the bridge - the only pad path "
+        "on a Mac).",
     ),
     DeclareLaunchArgument(
         "fprime_gds",
@@ -81,6 +91,7 @@ def generate_launch_description():
                 [FindPackageShare("teleop"), "launch", "teleop.launch.py"]
             )
         ),
+        launch_arguments={"joy_source": LaunchConfiguration("joy_source")}.items(),
         condition=IfCondition(LaunchConfiguration("joystick")),
     )
 

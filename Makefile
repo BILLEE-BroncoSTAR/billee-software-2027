@@ -244,15 +244,40 @@ build: ## Rebuild ros2_ws for this machine (run make setup first)
 shell: ## Open a shell with ROS 2 + the workspace sourced, for this machine
 	$(call in_platform_env,shell --environment "$$BILLEE_PIXI_ENV")
 
+# The three run targets follow the deployment split (see tooling/billee-env.sh):
+#   sim / ground -> ground station (x86, ARM64 Linux, Mac container)
+#   rover        -> the Jetson, and only the Jetson
+# Each script refuses the wrong role. Every container has tooling/ at ../tooling
+# relative to its ros2_ws working directory.
+
 # tooling/sim-up picks the viewer: Mac -> headless Gazebo + Foxglove bridge on :8765
-# (published to the Mac), Linux with a display -> RViz (+ Foxglove). Every container
-# has tooling/ at ../tooling relative to its ros2_ws working directory.
+# (published to the Mac), Linux with a display -> RViz (+ Foxglove).
 sim: ## Run the Gazebo sim with this machine's viewer (Mac: Foxglove, Linux: RViz)
 	@source "$(REPO_ROOT)/tooling/billee-env.sh"; \
 	if [ "$(IN_CONTAINER)" = 1 ] || [ "$$BILLEE_PLATFORM" = linux-aarch64 ]; then \
 	  "$(REPO_ROOT)/tooling/sim-up"; \
 	else \
 	  "$(CONTAINER)" run ../tooling/sim-up; \
+	fi
+
+# Ground station against a REAL rover (or a sim on another machine): viewers + game
+# pad only, no Gazebo. SIM_TIME=true when what you are watching is a sim.
+ground: ## Run the ground station (viewers + teleop) against a rover on the network
+	@source "$(REPO_ROOT)/tooling/billee-env.sh"; \
+	if [ "$(IN_CONTAINER)" = 1 ] || [ "$$BILLEE_PLATFORM" = linux-aarch64 ]; then \
+	  "$(REPO_ROOT)/tooling/ground-up"; \
+	else \
+	  "$(CONTAINER)" run ../tooling/ground-up; \
+	fi
+
+# Rover stack on the Jetson: real drivetrain over CAN + the Foxglove bridge, no viewer.
+# `make rover CAN=mock` runs the ODESC mock backend instead of touching a bus.
+rover: ## Run the rover stack on the Jetson (real drivetrain, no viewer)
+	@source "$(REPO_ROOT)/tooling/billee-env.sh"; \
+	if [ "$(IN_CONTAINER)" = 1 ]; then \
+	  "$(REPO_ROOT)/tooling/rover-up" $(CAN); \
+	else \
+	  "$(CONTAINER)" run ../tooling/rover-up $(CAN); \
 	fi
 
 # --------------------------------------------------------------------- helpers

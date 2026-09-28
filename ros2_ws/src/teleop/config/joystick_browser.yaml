@@ -1,10 +1,13 @@
-# Teleop parameters for a game pad arriving over the Foxglove bridge instead of
-# a local /dev/input device - i.e. Foxglove's "Joystick [local]" panel with
-# Data Source: Gamepad, Publish Mode: On, Pub Joy Topic: /joy.
+# Teleop parameters for a game pad arriving over the Foxglove bridge instead of a
+# local /dev/input device - i.e. Foxglove's "Joystick [local]" panel with Data
+# Source: Gamepad, Publish Mode: On, Pub Joy Topic: /joy.
+# Counterpart to joystick.yaml, which is the same node fed by a local device.
 #
 # Use with:  ros2 launch chassis_bringup sim_gz.launch.py joy_source:=browser
-# (tooling/sim-up picks this automatically on the Mac, where Docker Desktop
-# passes no USB through and the browser is the only way in.)
+#            ros2 launch chassis_bringup ground_station.launch.py joy_source:=browser
+#            ros2 launch teleop teleop.launch.py joy_source:=browser
+# (tooling/sim-up and tooling/ground-up pick this automatically on the Mac, where
+# Docker Desktop passes no USB through and the browser is the only way in.)
 #
 # A browser reports pads with the W3C "standard" mapping, which differs from
 # Linux joy_node in two ways that matter here:
@@ -15,8 +18,10 @@
 #      steering sign is flipped - hence invert_steer below.
 # Verify any of this with:  ros2 topic echo /joy   while moving each control.
 
-joy_tank_drive:                 # historical name; the scheme is arcade steer + throttle
+joy_drive:
   ros__parameters:
+    scheme: arcade              # tank needs two analog sticks; the browser has them,
+                                # but the trigger note below is why arcade is the default here
     deadman_button: 5           # RB (Xbox) / R1 (PS) - hold to move; release = stop
     steer_axis: 0               # left stick X
     steer_scale: 1.5            # rad/s at full stick

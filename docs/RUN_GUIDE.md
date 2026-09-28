@@ -40,12 +40,14 @@ debugging.
 
 **[rover]**
 ```bash
-# sim (Gazebo, no ODESC):
-xvfb-run -a pixi run --environment l4t ros2 launch chassis_bringup rover.launch.py
 # real drivetrain (ODESC over CAN — bring up can0 first, see B.1):
 pixi run --environment l4t ros2 launch chassis_bringup rover.launch.py mode:=real
 #   mode:=real also takes can_interface:= (can0 | mock | vcan0) and gear_ratio:=
+# no hardware to hand? the mock backend needs no CAN and no Gazebo:
+pixi run --environment l4t ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock
 ```
+The default `mode:=sim` starts Gazebo, which belongs on the base station — run it there
+(section A), not on the Jetson.
 `rover.launch.py` runs the right backend **and** the `foxglove_bridge` (:8765). No viewer,
 no teleop, no browser — those are all on `ground_station.launch.py` below.
 
@@ -107,11 +109,12 @@ pixi run --environment l4t -- colcon build --symlink-install \
 
 ## A. Simulation (Gazebo, no CAN hardware)
 
-**1. [rover] — sim + robot + controllers**
+**1. [ground] — sim + robot + controllers**
 ```bash
-xvfb-run -a pixi run --environment l4t ros2 launch chassis_bringup sim_gz.launch.py
+pixi run ros2 launch chassis_bringup sim_gz.launch.py
 ```
-Drop `xvfb-run -a` only if the Jetson has a monitor and you want the Gazebo window.
+Gazebo runs on the base station, not on the rover — the Jetson image has no X server.
+On a base station without a display (Mac container, headless Linux) prefix `xvfb-run -a`.
 
 ### Nav2 → ODESC shadow test in Gazebo
 
@@ -127,7 +130,7 @@ disabled so Gazebo remains the authoritative transform publisher.
 ~/billee-software-2027/tooling/can-up vcan0
 
 # Starts Gazebo plus the ODESC shadow manager and six-node ODrive CAN emulator.
-xvfb-run -a pixi run --environment l4t ros2 launch chassis_bringup sim_gz.launch.py \
+pixi run ros2 launch chassis_bringup sim_gz.launch.py \
   odesc_shadow:=true can_interface:=vcan0
 ```
 
@@ -343,10 +346,11 @@ unaffected by it.
   `reverse_axis 2` (LT/L2), `steer_scale 1.5`, `speed_scale 2.0`.
   `linear.x = (fwd−rev)·speed_scale`, `angular.z = steer·steer_scale`; all-zero unless the
   deadman is held. Every index/sign is a param — retune in the yaml, no rebuild.
-  The sim starts its own copy of these nodes with `chassis_bringup/config/tele_params.yaml`
+  The sim starts its own copy of these nodes with the same `teleop/config/joystick.yaml`
   (same values — keep the two in sync).
-- **`xvfb-run`** is only for headless Gazebo on the rover. Never needed for RViz — RViz runs
-  on **[ground]** with a real display.
+- **`xvfb-run`** is only for Gazebo on a base station with no display (Mac container,
+  headless Linux). The rover never runs Gazebo, so its image has no X server. Never needed
+  for RViz — RViz runs on **[ground]** with a real display.
 - **RT warning** `Could not enable FIFO RT scheduling policy` from `ros2_control_node` is
   harmless (runs `SCHED_OTHER`). For low jitter grant `rtprio` via `/etc/security/limits.d/`
   or a systemd unit with `AmbientCapabilities=CAP_SYS_NICE`. Not `setcap` (breaks conda libs).
@@ -358,7 +362,7 @@ unaffected by it.
 | Symptom | Fix |
 |---|---|
 | `colcon build` killed / machine hangs (rover) | RAM pressure (8 GB). Keep `--parallel-workers 2 --executor sequential`; `/swapfile2` (8 GB) is active. |
-| Gazebo window never appears (rover, SSH) | Expected — headless. Use `xvfb-run -a`; view in RViz/Foxglove. |
+| Gazebo window never appears ([ground] over SSH) | Expected — no display. Use `xvfb-run -a`; view in RViz/Foxglove. |
 | RViz empty tree / no topics ([ground]) | Not on the rover's DDS graph. Same LAN + `ROS_DOMAIN_ID` (`echo $ROS_DOMAIN_ID` → `42` on both); DDS UDP ports open. Test: `pixi run --environment default ros2 topic list`. See [Cross-machine ROS 2](#cross-machine-ros-2). |
 | RViz "package 'chassis_bringup' not found" / missing meshes | `[ground]` workspace not built: `pixi run --environment default build`. |
 | Gamepad on [ground] but the Gazebo rover doesn't move | `[ground]` not on the rover's DDS graph — `ros2 topic list` from `[ground]` must show `/diff_drive_controller/cmd_vel_unstamped`. Check same `ROS_DOMAIN_ID` (`42`), same LAN, firewall. Then `ros2 topic echo /joy` shows pad input, and the deadman (RB/R1) is held. |
@@ -372,4 +376,4 @@ unaffected by it.
 | Real: hangs at "Loading controller 'diff_drive_controller'" | Standalone `ros2_control_node` on `use_sim_time:=true` with no `/clock`. `real.launch.py` handles it; if hand-rolled, pass `-p use_sim_time:=false`. |
 | `can_interface:=vcan0` but no frames | `tooling/can-up vcan0` first; `candump -L vcan0`. Expect six `0x07` frames on activate, then `0x0D` per write while driving. |
 | `ros2 pkg list` missing the 4 packages | Overlay not sourced — go through `pixi run --environment <env>`; confirm `install/` exists. |
-| Joystick does nothing, `/joy` silent | Wrong `device_id` / not `/dev/input/js0`. `ls /dev/input/js*`, `jstest`. Chain: `/joy` → `joy_tank_drive` → `/diff_drive_controller/cmd_vel_unstamped` (hold RB/R1). |
+| Joystick does nothing, `/joy` silent | Wrong `device_id` / not `/dev/input/js0`. `ls /dev/input/js*`, `jstest`. Chain: `/joy` → `joy_drive` → `/diff_drive_controller/cmd_vel_unstamped` (hold RB/R1). |

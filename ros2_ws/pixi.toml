@@ -8,19 +8,16 @@ platforms = [
 ]
 version = "0.1.0"
 
-# The default environment remains the NVIDIA desktop environment used on Linux.
+# ---------------------------------------------------------------- platform features
+# These carry only the platform, its build task and pypi deps. What ROS packages a
+# machine gets comes from its ROLE feature below (rover / ground-station).
+
+# x86-64 Linux with an NVIDIA GPU. Ground station.
 [feature.linux-cuda]
 platforms = ["linux-64-cuda"]
 
 [feature.linux-cuda.tasks]
 build = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release' ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' ' -DCMAKE_CXX_FLAGS=\"-Wl,--allow-shlib-undefined\"'"
-
-[feature.linux-cuda.dependencies]
-ros-humble-desktop = ">=0.10.0,<0.11"
-colcon-common-extensions = "*"
-flake8-docstrings = "*"
-pytest-cov = "*"
-ros-humble-turtlesim = ">=1.4.3,<2"
 
 [feature.linux-cuda.pypi-dependencies]
 argcomplete = "*"
@@ -28,22 +25,15 @@ numpy = "*"
 empy = "*"
 lark = "*"
 
-# CPU-only aarch64 environment. Shared by:
-#   - `mac-cpu`       : Apple-Silicon Docker Desktop containers, see .devcontainer/mac/
-#   - `linux-aarch64` : ARM64 Linux run natively (e.g. a Linux VM on an Apple-Silicon Mac)
-#   - `l4t`           : NVIDIA Jetson (L4T / JetPack) rover, see .devcontainer/l4t/
+# CPU-only aarch64. Shared by three environments with two different roles:
+#   - `mac-cpu`       : Apple-Silicon Docker Desktop containers (.devcontainer/mac/) - ground
+#   - `linux-aarch64` : ARM64 Linux run natively                                     - ground
+#   - `l4t`           : NVIDIA Jetson (L4T / JetPack)          (.devcontainer/l4t/)  - ROVER
 [feature.aarch64-cpu]
 platforms = ["linux-aarch64"]
 
 [feature.aarch64-cpu.tasks]
 build = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release'"
-
-[feature.aarch64-cpu.dependencies]
-ros-humble-desktop = ">=0.10.0,<0.11"
-colcon-common-extensions = "*"
-flake8-docstrings = "*"
-pytest-cov = "*"
-ros-humble-turtlesim = ">=1.4.3,<2"
 
 [feature.aarch64-cpu.pypi-dependencies]
 argcomplete = "*"
@@ -51,36 +41,70 @@ numpy = "*"
 empy = "*"
 lark = "*"
 
+# ------------------------------------------------------------------- role features
+# The deployment split. The Jetson runs the rover stack; every other machine is a
+# ground station. Keep anything with a GUI or a physics engine OUT of `rover`: the
+# Jetson never opens a window and never runs Gazebo (docs/RUN_MODES.md).
+
+# ROVER - the Jetson, and only the Jetson. Headless: real drivetrain over CAN plus
+# the Foxglove bridge a ground station connects to. `ros-base` is `desktop` minus
+# RViz, Gazebo, the demo packages and the rest of the GUI stack.
+[feature.rover]
+platforms = ["linux-aarch64"]
+
+[feature.rover.dependencies]
+ros-humble-ros-base = ">=0.10.0,<0.11"
+
+# GROUND STATION - x86 Linux, native ARM64 Linux, or the Mac container. Viewers,
+# game pad, and the Gazebo sim, which runs here rather than on the rover.
+[feature.ground-station]
+
+[feature.ground-station.dependencies]
+# `desktop` brings RViz2 and the joy driver; `ros-base` (rover) has neither.
+ros-humble-desktop = ">=0.10.0,<0.11"
+# Gazebo and its ros2_control bridge: the sim runs on the ground station.
+ros-humble-ros-gz = ">=0.244.24,<0.245"
+ros-humble-gz-ros2-control = ">=0.7.19,<0.8"
+ros-humble-ign-ros2-control = ">=0.7.19,<0.8"
+# Viewers / operator tooling.
+ros-humble-joint-state-publisher-gui = ">=2.4.0,<3"
+ros-humble-turtlesim = ">=1.4.3,<2"
+# Keyboard teleop - the drive path where no /dev/input gamepad exists (Mac, CI).
+ros-humble-teleop-twist-keyboard = "*"
+# Lint / test tooling: developers work on a ground station, not on the rover.
+flake8-docstrings = "*"
+pytest-cov = "*"
+
 [environments]
-default = { features = ["linux-cuda"]}
+default = { features = ["linux-cuda", "ground-station"]}
 # mac-cpu and linux-aarch64 share a solve-group, so the Mac container and a native
 # ARM64 Linux machine lock identical package versions. l4t (the rover) is solved on
 # its own so it only changes when it is deliberately updated and tested on the Jetson.
-mac-cpu = { features = ["aarch64-cpu"], solve-group = "aarch64-desktop" }
-linux-aarch64 = { features = ["aarch64-cpu"], solve-group = "aarch64-desktop" }
-l4t = { features = ["aarch64-cpu"]}
+mac-cpu = { features = ["aarch64-cpu", "ground-station"], solve-group = "aarch64-desktop" }
+linux-aarch64 = { features = ["aarch64-cpu", "ground-station"], solve-group = "aarch64-desktop" }
+l4t = { features = ["aarch64-cpu", "rover"]}
 
+# Shared by BOTH roles: the build toolchain, and the robot itself (URDF -> TF ->
+# ros2_control -> diff_drive_controller). The ground station needs the drivetrain
+# stack too, because that is what the Gazebo sim drives.
 [dependencies]
-ros-humble-xacro = "*"
-ros-humble-joint-state-publisher-gui = ">=2.4.0,<3"
-ros-humble-robot-state-publisher = ">=3.0.3,<4"
-ros-humble-ament-cmake-auto = ">=1.3.14,<2"
+# Build toolchain.
 compilers = ">=1.11.0,<2"
 pkg-config = ">=0.29.2,<0.30"
 cmake = "<4"
 ninja = ">=1.13.2,<2"
 colcon-common-extensions = ">=0.3.0,<0.4"
-ros-humble-ros-gz = ">=0.244.24,<0.245"
+ros-humble-ament-cmake-auto = ">=1.3.14,<2"
+ruff = ">=0.16.2,<0.17"
+# The robot: URDF -> TF -> ros2_control -> diff_drive_controller. The rover drives
+# real ODESCs with it; the ground station drives the Gazebo sim with the same stack.
+ros-humble-xacro = "*"
+ros-humble-robot-state-publisher = ">=3.0.3,<4"
+ros-humble-ros2-control = ">=2.54.0,<3"
 ros-humble-controller-manager = ">=2.54.0,<3"
 ros-humble-ros2-controllers = ">=2.53.1,<3"
-ros-humble-gz-ros2-control = ">=0.7.19,<0.8"
-ruff = ">=0.16.2,<0.17"
-ros-humble-ros2-control = ">=2.54.0,<3"
-ros-humble-ign-ros2-control = ">=0.7.19,<0.8"
 # Foxglove WebSocket bridge: rover publishes on :8765, ground station connects with Foxglove Studio.
 ros-humble-foxglove-bridge = "*"
-# Keyboard teleop — the drive path where no /dev/input gamepad exists (Mac devcontainer, CI).
-ros-humble-teleop-twist-keyboard = "*"
 
 [activation]
 scripts = ["install/setup.sh"]

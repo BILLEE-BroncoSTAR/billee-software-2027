@@ -11,8 +11,10 @@ launch instead:
     ros2 launch chassis_bringup real.launch.py  can_interface:=mock rviz:=true
 
 Both readers show the same thing: the robot model + TF tree + wheel odometry,
-fixed frame `odom`. RViz needs a display (use `xvfb-run -a` for headless checks);
-Foxglove Studio connects from a laptop to `ws://<jetson-ip>:8765` and needs none.
+fixed frame `odom`. RViz needs a display and runs on a ground station, never on the
+rover. Foxglove Studio needs no display: point it at this machine's own bridge
+(`ws://localhost:8765`), or straight at the rover's (`ws://<rover-ip>:8765`) over a
+link where DDS does not work.
 """
 
 from launch import LaunchDescription

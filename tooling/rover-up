@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# rover-up - bring up the rover stack on the Jetson: real drivetrain, no viewer.
+#
+# This is the only stack that runs on the rover. It starts the ODESC drivetrain over
+# CAN plus the foxglove_bridge on :8765 so a ground station can connect. No RViz, no
+# Gazebo, no game pad - those all live on the ground station (tooling/ground-up).
+#
+#   ./rover-up                 - real drivetrain on can0
+#   ./rover-up mock            - no CAN at all: the ODESC mock backend (gear-ratio
+#                                loopback feedback), for bring-up without hardware
+#   ./rover-up vcan0           - the virtual bus, after `tooling/can-up vcan0`
+#
+# Args: [can_interface=can0]. Environment overrides:
+#   BILLEE_PLATFORM=l4t   Pixi env (default: from `make setup`)
+#   BILLEE_ROLE=rover     bypass the ground-station guard below
+#   GEAR_RATIO=<float>    default comes from the URDF (48.0 for ODESC V4.2 + NEO v1.1)
+#   FOXGLOVE=true|false   default true; the ground station connects to :8765
+#
+# Bring the CAN bus up on the host first (not inside the container):
+#   tooling/can-up can0
+set -euo pipefail
+
+can_interface="${1:-can0}"
+
+source "$(dirname "${BASH_SOURCE[0]}")/billee-env.sh"
+if [[ -z "$BILLEE_WS" ]]; then
+  echo "rover-up: can't find ros2_ws" >&2
+  exit 1
+fi
+
+if [[ "$BILLEE_ROLE" != rover ]]; then
+  echo "rover-up: this is a ground station ($BILLEE_PLATFORM), not the rover." >&2
+  echo "rover-up:   The rover stack runs on the Jetson (l4t)." >&2
+  echo "rover-up:   Here you want: tooling/ground-up, or tooling/sim-up for the sim." >&2
+  echo "rover-up:   To test the drivetrain here without hardware: BILLEE_ROLE=rover \\" >&2
+  echo "rover-up:     tooling/rover-up mock" >&2
+  exit 1
+fi
+
+start_foxglove="${FOXGLOVE:-true}"
+
+# A real bus has to exist before ros2_control opens it; mock and the virtual bus don't.
+if [[ "$can_interface" != mock && "$can_interface" != none ]]; then
+  if ! ip link show "$can_interface" &>/dev/null; then
+    echo "rover-up: CAN interface '$can_interface' is not up." >&2
+    echo "rover-up:   On the HOST (not in the container): tooling/can-up $can_interface" >&2
+    echo "rover-up:   Or run without hardware: tooling/rover-up mock" >&2
+    exit 1
+  fi
+fi
+
+gear_args=()
+if [[ -n "${GEAR_RATIO:-}" ]]; then
+  gear_args=(gear_ratio:="$GEAR_RATIO")
+fi
+
+echo "rover-up: platform $BILLEE_PLATFORM, Pixi env $BILLEE_PIXI_ENV," \
+  "mode=real can_interface=$can_interface foxglove=$start_foxglove"
+if [[ "$start_foxglove" == true ]]; then
+  echo "rover-up: ground station -> ws://<this-rover-ip>:8765, or over DDS on" \
+    "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}"
+fi
+cd "$BILLEE_WS"
+exec pixi run --environment "$BILLEE_PIXI_ENV" \
+  ros2 launch chassis_bringup rover.launch.py mode:=real \
+  can_interface:="$can_interface" foxglove:="$start_foxglove" "${gear_args[@]}"
