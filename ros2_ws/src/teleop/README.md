@@ -2,34 +2,34 @@
 
 ## 1. How This Node Works
 
-The `teleop` package converts a Linux joystick into differential-drive velocity commands for the rover. Its standalone launch file starts two nodes: ROS 2's `joy_node`, which reads the joystick device and publishes `sensor_msgs/msg/Joy` on `/joy`, and this package's `joy_tank_drive` node, which converts that input to `geometry_msgs/msg/Twist`.
+The `teleop` package turns a USB joystick into rover drive commands. Its launch file starts the ROS 2 `joy` driver, which reads the selected Linux joystick device and publishes `sensor_msgs/msg/Joy` messages on `/joy`. It also starts this package's `joy_tank_drive` executable, named `joy_tank_drive` at launch.
 
-`joy_tank_drive` uses a tank-drive scheme. It reads one axis for the left track and one for the right track, averages them for forward/reverse velocity, and uses their difference plus the configured track width for yaw rate. With the default checked-in configuration, the node reads `/joy.axes[1]` as the left command and `/joy.axes[4]` as the right command. It calculates:
+`joy_tank_drive` (name is historical — the scheme is arcade, not tank) reads the left stick X axis for steering and the two analog triggers for throttle: right trigger forward, left trigger reverse. While the configured deadman button is held it publishes `linear.x = (forward − reverse) · speed_scale` and `angular.z = steer · steer_scale`; it publishes a `geometry_msgs/msg/Twist` for every received joystick message, and an all-zero one whenever the deadman is not held. The launch remaps its `/cmd_vel` output to `/diff_drive_controller/cmd_vel_unstamped`, the unstamped velocity input expected by the workspace's diff-drive controller.
 
-```text
-linear.x  = ((left + right) / 2) * max_vel
-angular.z = ((right - left) / track_width) * max_vel
-```
-
-Motion is gated by `safety_button` (button `5` by default). Holding it publishes the calculated command; releasing it publishes a zero-initialized `Twist`, stopping the rover on the next joystick update. The node publishes one command per incoming `/joy` message. The supplied `joy_node` configuration sets `autorepeat_rate` to 20 Hz, so the latest joystick state is republished while the controller remains connected.
-
-The launch file remaps the node's `/cmd_vel` output to `/diff_drive_controller/cmd_vel_unstamped`, the unstamped command input of the workspace's `diff_drive_controller`. The Gazebo bring-up can start this same pair with `joy_control:=true`; the ground-station launch includes the package's standalone launch by default.
+The package is event-driven: joystick messages trigger the conversion immediately, rather than a timer continuously republishing a command. The supplied `joy` configuration enables a 20 Hz autorepeat rate, so a connected joystick continues to deliver its most recent state and therefore continues to refresh a held command.
 
 ## 2. Technologies Behind It
 
-- **ROS distro:** ROS 2 Humble (the workspace Pixi manifest declares Humble packages).
-- **Language(s) / core libraries:** C++ and `rclcpp`; `sensor_msgs/msg/Joy` input and `geometry_msgs/msg/Twist` output.
-- **External dependencies:** The ROS 2 `joy` package and a joystick available to Linux, normally as a `/dev/input/js*` device.
-- **Build system / target platform(s):** `ament_cmake` and `colcon`, run through the repository's Pixi environment where applicable. The node is portable ROS 2 C++ and commands the rover's `diff_drive_controller`.
-- **Middleware / networking notes:** Default ROS 2 settings with depth-1 publisher and subscription queues. The package has no custom DDS, bridge, or network configuration; DDS carries its command when teleop runs on a ground station.
+- **ROS distro:** ROS 2 Humble, as configured by `ros2_ws/pixi.toml`.
+- **Language(s) / core libraries:** C++ with `rclcpp`; `sensor_msgs/msg/Joy` input and `geometry_msgs/msg/Twist` output.
+- **External dependencies:** The ROS 2 `joy` package and a joystick exposed by Linux (normally under `/dev/input`). No vendor SDK or custom hardware driver is used here.
+- **Build system / target platform(s):** `ament_cmake` and `colcon`; this repository provides a Pixi environment for the ROS desktop workspace. The node is portable ROS 2 C++ and is intended to command the rover's `diff_drive_controller`.
+- **Middleware / networking notes:** The code uses default ROS 2 communication settings with depth-1 queues for both `/joy` and `/cmd_vel`. It has no bridge, DDS-vendor, or network-specific configuration.
 
 ## 3. How It Was Written
 
-The design separates generic joystick handling from rover-specific drive mixing. `joy_node` owns Linux device access, deadzone processing, and autorepeat. `JoyTankDrive` in [`src/joy_teleop.cpp`](src/joy_teleop.cpp) receives the normalized axes and applies the differential-drive mixing. This keeps controller selection and tuning in [`config/joystick.yaml`](config/joystick.yaml), without changing or rebuilding the node.
+The package keeps joystick hardware access and rover-specific drive mixing separate. `joy_node` is responsible for device selection, deadzone handling, and message publication; `JoyTankDrive` in [`src/joy_teleop.cpp`](src/joy_teleop.cpp) only maps the generic `Joy` message to a rover velocity command. This lets joystick tuning remain in [`config/joystick.yaml`](config/joystick.yaml) while retaining a small custom control node.
 
-`JoyTankDrive::topic_callback` starts every message with a zero `Twist`. When the safety button is pressed, it fills only `linear.x` and `angular.z`; all other fields remain zero. `max_vel` scales both the linear and angular results, while `track_width` controls the turn-rate calculation. This direct event-driven approach avoids a second timer and ensures that releasing the safety button results in a zero command on the next `Joy` message.
+The conversion in `JoyTankDrive::onJoy` maps a trigger axis to a `0..1` press amount
+(`(trigger_rest − v) / (trigger_rest − trigger_press)`, clamped; treated as `0` until the
+axis first reports a non-zero value, since some drivers report `0.0` for an untouched
+trigger) and mixes `linear.x = (forward − reverse) · speed_scale`,
+`angular.z = (invert_steer ? −1 : 1) · axes[steer_axis] · steer_scale`. Holding the deadman
+button gates both; releasing it publishes a zero `Twist`. All configured indices are
+range-checked against the incoming `Joy` message — an out-of-range index logs a throttled
+warning and publishes zeros instead of crashing.
 
-There are no package-specific unit or hardware-in-the-loop tests. The callback currently indexes `msg.axes` and `msg.buttons` directly, so invalid `left_axis`, `right_axis`, or `safety_button` values can cause an out-of-range access. Confirm mappings with `/joy` before operating the drivetrain, and keep drive power disabled or the rover safely supported while tuning a new controller.
+No package-specific unit tests or hardware-in-the-loop tests are defined in the source. Validate changes with a connected controller by inspecting `/joy` and `/diff_drive_controller/cmd_vel_unstamped` before enabling the rover drivetrain.
 
 ## 4. Architecture
 
@@ -47,7 +47,7 @@ graph TD
 
 ```mermaid
 graph LR
-    H[Linux joystick device] --> J[joy_node]
+    H[USB joystick] --> J[joy_node]
     J -->|/joy\nsensor_msgs/msg/Joy| T[joy_tank_drive]
     T -->|/diff_drive_controller/cmd_vel_unstamped\ngeometry_msgs/msg/Twist| D[diff_drive_controller]
 ```
@@ -56,10 +56,10 @@ graph LR
 
 ### Prerequisites
 
-- A built ROS 2 Humble workspace, or the repository's Pixi environment.
-- A joystick recognized by the host. The checked-in configuration opens `device_id: 0`.
-- A running `diff_drive_controller` subscribed to `/diff_drive_controller/cmd_vel_unstamped` if motion is required.
-- The rover safely supported or drive power disabled while checking a controller's axis and button mapping.
+- A ROS 2 Humble environment or the repository's Pixi environment.
+- A joystick recognized by the host operating system. The supplied configuration selects `device_id: 0`.
+- A running `diff_drive_controller` that accepts unstamped velocity commands on `/diff_drive_controller/cmd_vel_unstamped` if rover motion is required.
+- Keep the rover safely supported or its drive power disabled while checking the mappings for a new controller.
 
 ### Build
 
@@ -71,11 +71,9 @@ pixi run colcon build --packages-select teleop
 source install/setup.bash
 ```
 
-With a separately installed Humble environment, source Humble first and run the equivalent `colcon build --packages-select teleop` command.
+If using a separately installed ROS 2 Humble environment, run the equivalent `colcon build --packages-select teleop` after sourcing the Humble setup script.
 
 ### Launch
-
-Start teleop by itself:
 
 ```bash
 cd ros2_ws
@@ -83,21 +81,11 @@ source install/setup.bash
 ros2 launch teleop teleop.launch.py
 ```
 
-For the integrated simulation, use the chassis bring-up launch with joystick control enabled (its default):
-
-```bash
-ros2 launch chassis_bringup sim_gz.launch.py joy_control:=true
-```
-
-The ground-station launch also includes `teleop.launch.py` unless `joystick:=false` is supplied:
-
-```bash
-ros2 launch chassis_bringup ground_station.launch.py
-```
+The launch reads `config/joystick.yaml`. The checked-in mapping is joystick device `0`, deadzone `0.05`, autorepeat rate `20.0 Hz`, `deadman_button 5` (RB / R1), `steer_axis 0` (left stick X), `throttle_axis 5` (RT / R2), `reverse_axis 2` (LT / L2), `steer_scale 1.5`, `speed_scale 2.0`. These indices are the same for Xbox and PlayStation pads via `joy_node`.
 
 ### Verify it's running
 
-1. Confirm the nodes are present:
+1. Confirm both processes are present:
 
    ```bash
    ros2 node list
@@ -105,77 +93,81 @@ ros2 launch chassis_bringup ground_station.launch.py
 
    Expected entries include `/joy_node` and `/joy_tank_drive`.
 
-2. Identify the controller's actual axis and button indices before changing the YAML:
+2. Move the sticks and inspect the raw input:
 
    ```bash
    ros2 topic echo /joy
    ```
 
-3. Hold safety button `5`, move the configured left and right axes, and inspect the command:
+3. In another terminal, hold the deadman (RB / R1, button `5`) and verify the generated command:
 
    ```bash
    ros2 topic echo /diff_drive_controller/cmd_vel_unstamped
    ```
 
-   When the safety button is released, the next command is all zeros. When held, equal left/right values produce linear motion; different values produce a non-zero `angular.z`.
+   With the deadman released, each published `Twist` should contain zero velocity. With it held, pulling RT/R2 gives `linear.x > 0`, LT/L2 gives `linear.x < 0`, and the left stick sets `angular.z`.
 
 ### Common issues
 
-- **No `/joy` messages:** confirm the controller is connected to the host and change `joy_node.ros__parameters.device_id` if it is not device `0`.
-- **No motion command:** hold safety button `5`, or set `safety_button` under `joy_tank_drive.ros__parameters` to the correct button index. It is not explicitly set in the checked-in YAML, so the node default of `5` applies.
-- **Incorrect forward direction or turning:** inspect `/joy`, then change `left_axis` and `right_axis` to match the physical controls. Axis signs come directly from the joystick driver; reverse an axis in the controller configuration if needed.
-- **Node exits or crashes on input:** verify that both configured axis indices and `safety_button` exist in the received `Joy` message. The current implementation does not bounds-check them.
-- **Commands appear but the rover does not move:** ensure `diff_drive_controller` is active and listening on `/diff_drive_controller/cmd_vel_unstamped`.
+- **No `/joy` messages:** make sure the joystick is connected, is visible to the host, and is the device selected by `device_id: 0`; choose a different `device_id` in `config/joystick.yaml` when needed.
+- **No drive command while moving the sticks:** hold the deadman (button `5`), or set the correct `deadman_button` index for your pad in `config/joystick.yaml`.
+- **Trigger does nothing until pulled once:** expected — `joy_node` reports `0.0` for an untouched trigger; the node treats that as released until the first real reading.
+- **Unexpected steering or speed:** inspect `/joy`, then update `steer_axis` / `throttle_axis` / `reverse_axis` / `invert_steer` / the `*_scale` values to match the physical controller.
+- **Commands appear but the rover does not move:** start and configure the `diff_drive_controller`; its command topic must be `/diff_drive_controller/cmd_vel_unstamped`. `ros2 control list_controllers` should show it active (in the sim it runs inside Gazebo's `ign_ros2_control`; no velocity bridge is needed).
 
 ## 6. Subnode Breakdown
 
 ### `joy_node`
 
 - **Package:** `joy`
-- **Purpose:** Opens the Linux joystick device, preprocesses its state, and publishes ROS 2 joystick messages.
+- **Purpose:** Reads the configured Linux joystick device, applies input preprocessing, and emits ROS 2 joystick messages.
 - **Publishes:**
 
   | Topic | Type | Description |
   |---|---|---|
-  | `/joy` | `sensor_msgs/msg/Joy` | Joystick axis values and button states. |
+  | `/joy` | `sensor_msgs/msg/Joy` | Axis values and button states from the joystick. |
 
-- **Subscribes:** None declared by this package launch.
-- **Services / Actions:** No services or actions are declared by this package launch.
+- **Subscribes:** None declared by this launch.
+- **Services / Actions:** No services or actions are declared by this package's launch.
 - **Parameters:**
 
   | Name | Launch value | Description |
   |---|---:|---|
-  | `device_id` | `0` | Linux joystick-device index to open. |
+  | `device_id` | `0` | Linux joystick device index to open. |
   | `deadzone` | `0.05` | Input magnitude treated as centered. |
   | `autorepeat_rate` | `20.0` | Rate in Hz for republishing the latest joystick state. |
 
-- **Depends on:** A joystick device visible to the host operating system.
+- **Depends on:** A joystick device available to the operating system.
 
 ### `joy_tank_drive`
 
 - **Package:** `teleop`
-- **Purpose:** Converts separate left and right joystick axes to a deadman-gated differential-drive velocity command.
+- **Purpose:** Converts left-stick steering + analog triggers to a deadman-gated velocity command.
 - **Publishes:**
 
   | Topic | Type | Description |
   |---|---|---|
-  | `/cmd_vel` (remapped to `/diff_drive_controller/cmd_vel_unstamped`) | `geometry_msgs/msg/Twist` | Tank-drive command: `linear.x` is average track speed; `angular.z` is the scaled track-speed difference. |
+  | `/cmd_vel` (remapped to `/diff_drive_controller/cmd_vel_unstamped`) | `geometry_msgs/msg/Twist` | Forward/reverse command in `linear.x` and turn command in `angular.z`. |
 
 - **Subscribes:**
 
   | Topic | Type | Description |
   |---|---|---|
-  | `/joy` | `sensor_msgs/msg/Joy` | Joystick axes and buttons from `joy_node`. |
+  | `/joy` | `sensor_msgs/msg/Joy` | Raw axes and button state from `joy_node`. |
 
 - **Services / Actions:** No custom services or actions.
 - **Parameters:**
 
   | Name | Code default | Launch value | Description |
   |---|---:|---:|---|
-  | `left_axis` | `0` | `1` | Axis used as the left-track command. |
-  | `right_axis` | `2` | `4` | Axis used as the right-track command. |
-  | `safety_button` | `5` | `5` (default) | Button that must be held before non-zero motion is sent. |
-  | `max_vel` | `0.0` | `2.0` | Multiplier applied to both linear and angular output. |
-  | `track_width` | `0.67` | `0.67` | Divisor in the yaw-rate calculation; intended rover track width. |
+  | `deadman_button` | `5` | `5` | Button (RB / R1) that must be held to send motion. |
+  | `steer_axis` | `0` | `0` | Left stick X axis for steering. |
+  | `steer_scale` | `1.5` | `1.5` | `angular.z` (rad/s) at full stick. |
+  | `invert_steer` | `false` | `false` | Negate steering if the pad reports stick-right as `+1`. |
+  | `throttle_axis` | `5` | `5` | Forward trigger axis (RT / R2). |
+  | `reverse_axis` | `2` | `2` | Reverse trigger axis (LT / L2). |
+  | `speed_scale` | `2.0` | `2.0` | `linear.x` (m/s) at full trigger. |
+  | `trigger_rest` | `1.0` | `1.0` | `/joy` axis value with a trigger released. |
+  | `trigger_press` | `-1.0` | `-1.0` | `/joy` axis value with a trigger fully pressed. |
 
-- **Depends on:** `joy_node` publishing a `Joy` message with all configured indices, plus a consumer such as `diff_drive_controller` subscribed to the remapped command topic.
+- **Depends on:** `joy_node` publishing valid `/joy` messages and a consumer, typically `diff_drive_controller`, subscribed to the remapped command topic.
