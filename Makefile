@@ -3,7 +3,8 @@
 #   make setup mac             Apple-Silicon Mac (Docker Desktop) -> mac-cpu image
 #   make setup linux-aarch64   ARM64 Linux, no NVIDIA GPU -> native Pixi linux-aarch64 env
 #   make setup l4t             NVIDIA Jetson rover (JetPack / L4T) -> rover image + l4t env
-#   make setup x86             x86-64 Linux + NVIDIA GPU (ground station) -> desktop image + default env
+#   make setup x86             x86-64 Linux + NVIDIA GPU (ground station) -> NVIDIA driver, Docker,
+#                              NVIDIA Container Toolkit (tooling/install-x86-host), desktop image + default env
 #
 # After setup, `make build` rebuilds and `make shell` opens a ROS 2 shell for the
 # recorded platform - natively, or through tooling/desktop-ros2 when it lives in a container.
@@ -13,7 +14,8 @@
 # skips the host steps and only installs + builds the Pixi environment.
 #
 # Options:
-#   SKIP_APT=1   don't apt-install host packages (can-utils, kmod)
+#   SKIP_APT=1   don't install host packages (apt packages; for x86 also the NVIDIA
+#                driver, Docker and the NVIDIA Container Toolkit)
 
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
@@ -205,14 +207,18 @@ endif
 
 # ---------------------------------------------------------------------------- x86
 
-setup-x86: ## x86-64 + NVIDIA ground station: build the desktop image + default env inside it
+setup-x86: ## x86-64 + NVIDIA ground station: install driver/Docker/NVIDIA toolkit, build image + env
 	@[ "$(HOST_OS)" = Linux ] && [ "$(HOST_ARCH)" = x86_64 ] || { \
 	  echo "$@ needs an x86-64 Linux machine (this is $(HOST_OS)/$(HOST_ARCH))." >&2; exit 1; }
 	$(call record_platform,x86)
 ifeq ($(IN_CONTAINER),1)
 	$(call pixi_build,default)
 else
-	@$(MAKE) --no-print-directory apt-deps
+ifeq ($(SKIP_APT),)
+	@# NVIDIA driver, Docker Engine, NVIDIA Container Toolkit. Exits 3 when a reboot or
+	@# re-login is needed; re-running make setup x86 then continues from there.
+	"$(REPO_ROOT)/tooling/install-x86-host"
+endif
 	$(require_docker)
 	$(require_nvidia_runtime)
 	BILLEE_PLATFORM=x86 "$(CONTAINER)" build

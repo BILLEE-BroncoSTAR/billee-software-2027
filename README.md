@@ -110,14 +110,37 @@ In a VM, use bridged networking if it should talk DDS to the rover or another ma
 
 The ground-station setup: GPU-accelerated Gazebo, RViz, the gamepad and F' GDS.
 
-**Needs:** Ubuntu 24+, NVIDIA driver for CUDA 13.2, Docker Engine + NVIDIA Container
-Toolkit, optionally VS Code + Remote Development extensions.
+**Needs:** Ubuntu 24.04 or newer, an NVIDIA GPU, `sudo`, and `make`
+(`sudo apt install -y make`). Everything else is installed for you. Optionally VS Code +
+Remote Development extensions.
 
-1. **Set up** (builds `billee-desktop:latest` with CUDA + ZED SDK, then the `default`
-   env inside it):
+1. **Set up:**
    ```sh
    make setup x86
    ```
+   First, `tooling/install-x86-host` prepares the machine. Each step is skipped when it's
+   already done:
+
+   | Step | Installs |
+   |---|---|
+   | Base packages | `curl`, `gnupg`, `make`, `can-utils`, `kmod`, `xhost`, `ubuntu-drivers-common` |
+   | NVIDIA driver | Ubuntu's recommended driver (`ubuntu-drivers install`), only if the current one doesn't support the image's CUDA version (13.2, read from `docker/Dockerfile.desktop.humble`) |
+   | Docker Engine | from Docker's apt repository, and adds you to the `docker` group |
+   | NVIDIA Container Toolkit | from NVIDIA's apt repository, registered as Docker's `nvidia` runtime |
+   | Smoke test | `nvidia-smi` inside a container with `--gpus all` |
+
+   A new driver needs a **reboot** and a new group needs a **re-login**: setup stops and
+   tells you which. Do it, then run `make setup x86` again; it continues from where it
+   stopped. Then it builds `billee-desktop:latest` (CUDA + ZED SDK) and the `default` env
+   inside it.
+
+   - Preview without changing anything: `DRY_RUN=1 tooling/install-x86-host`
+   - Pick a driver branch instead of Ubuntu's recommendation:
+     `NVIDIA_DRIVER_BRANCH=<n> make setup x86` (runs `ubuntu-drivers install nvidia:<n>`)
+   - With **Secure Boot** on, the driver install asks for a password, and on the next boot
+     you choose **Enroll MOK** and enter it.
+   - Already set up by hand, or not on Ubuntu: `make setup x86 SKIP_APT=1` skips this step
+     and only checks that Docker and the `nvidia` runtime work.
 2. **Run:** `make sim` (Gazebo + **RViz**), or `make shell` and e.g.
    `ros2 launch chassis_bringup ground_station.launch.py` to operate the real rover.
 3. **VS Code (optional):** **Reopen in Container → desktop-roshumble_dev-x862** shares
@@ -209,6 +232,7 @@ billee-software-2027/
 │   ├── billee-env.sh         resolves platform -> workspace + Pixi env (sourced by the rest)
 │   ├── desktop-ros2          build/run/shell the platform's image without VS Code
 │   ├── rover-ros2            desktop-ros2 pinned to l4t
+│   ├── install-x86-host      x86 host prep: NVIDIA driver, Docker, NVIDIA Container Toolkit
 │   ├── sim-up                sim with the platform's viewer (+ ODESC shadow if vcan0 exists)
 │   └── can-up, can0.service  bring can0 / vcan0 up (host), persist can0 across reboots
 ├── docs/                     RUN_MODES (all modes), RUN_GUIDE (two-machine procedure), references

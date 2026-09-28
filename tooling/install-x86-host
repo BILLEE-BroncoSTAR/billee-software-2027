@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+# install-x86-host — prepare an x86-64 Ubuntu machine with an NVIDIA GPU to run the
+# BILLEE desktop image (docker/Dockerfile.desktop.humble). Run by `make setup x86`.
+#
+# Installs, each step skipped when already done:
+#   1. base packages      curl, gnupg, make, can-utils, kmod, xhost (x11-xserver-utils)
+#   2. NVIDIA driver      new enough for the image's CUDA version (ubuntu-drivers)
+#   3. Docker Engine      from Docker's apt repo, and adds you to the `docker` group
+#   4. NVIDIA Container Toolkit, registered as Docker's `nvidia` runtime
+#   5. smoke test         `nvidia-smi` inside a container with --gpus all
+#
+# A new driver needs a reboot and a new group needs a re-login: the script stops and
+# says so; run `make setup x86` again afterwards and it continues where it left off.
+#
+# Environment:
+#   DRY_RUN=1               print the install commands instead of running them
+#   NVIDIA_DRIVER_BRANCH=N  install that driver branch (ubuntu-drivers install nvidia:N)
+#                           instead of Ubuntu's recommended one
+#
+# Exit codes: 0 ready · 1 error · 3 reboot or re-login needed, then re-run.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+dockerfile="$repo_root/docker/Dockerfile.desktop.humble"
+DRY_RUN="${DRY_RUN:-0}"
+
+say()  { printf '\033[1;34m[x86-host]\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[x86-host]\033[0m %s\n' "$*" >&2; }
+die()  { printf '\033[1;31m[x86-host]\033[0m %s\n' "$*" >&2; exit 1; }
+run() {
+  if [[ "$DRY_RUN" == 1 ]]; then printf '  would run: %s\n' "$*"; else "$@"; fi
+}
+# `run` for a pipeline / redirection, given as one shell string.
+run_sh() {
+  if [[ "$DRY_RUN" == 1 ]]; then printf '  would run: %s\n' "$1"; else bash -c "$1"; fi
+}
+
+# ---------------------------------------------------------------- preflight
+
+[[ "$(uname -s)" == Linux && "$(uname -m)" == x86_64 ]] ||
+  die "needs x86-64 Linux (this is $(uname -s)/$(uname -m))."
+[[ -r /etc/os-release ]] && . /etc/os-release
+[[ "${ID:-}" == ubuntu ]] ||
+  die "automatic install supports Ubuntu (this is ${PRETTY_NAME:-unknown}). Install the NVIDIA driver, Docker Engine and the NVIDIA Container Toolkit by hand, then run: make setup x86 SKIP_APT=1"
+[[ $EUID -ne 0 ]] || die "run as your normal user (it uses sudo where needed), not as root."
+
+# CUDA version the image needs, from the Dockerfile's ARGs (single source of truth).
+cuda_major="$(sed -n 's/^ARG CUDA_MAJOR=\([0-9]*\).*/\1/p' "$dockerfile" | head -1)"
+cuda_minor="$(sed -n 's/^ARG CUDA_MINOR=\([0-9]*\).*/\1/p' "$dockerfile" | head -1)"
+[[ -n "$cuda_major" && -n "$cuda_minor" ]] || die "can't read the CUDA version from $dockerfile"
+need_cuda="$cuda_major.$cuda_minor"
+
+# Does the running driver support at least CUDA $need_cuda? (nvidia-smi reports the
+# highest CUDA version the driver supports.)
+driver_cuda() { nvidia-smi 2>/dev/null | sed -n 's/.*CUDA Version: *\([0-9]*\.[0-9]*\).*/\1/p' | head -1; }
+version_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
+
+needs_reboot=0
+needs_relogin=0
+[[ "$DRY_RUN" == 1 ]] && say "DRY_RUN=1: showing what would be installed; nothing is changed."
+say "Ubuntu ${VERSION_ID:-?}; image needs an NVIDIA driver supporting CUDA >= $need_cuda."
+
+# ---------------------------------------------------------------- 1. base packages
+
+base_pkgs=(ca-certificates curl gnupg make can-utils kmod x11-xserver-utils ubuntu-drivers-common pciutils)
+missing=()
+for p in "${base_pkgs[@]}"; do
+  dpkg -s "$p" &>/dev/null || missing+=("$p")
+done
+if ((${#missing[@]})); then
+  say "1/5 Installing base packages: ${missing[*]}"
+  run sudo apt-get update
+  run sudo apt-get install -y --no-install-recommends "${missing[@]}"
+else
+  say "1/5 Base packages: already installed."
+fi
+
+# ---------------------------------------------------------------- 2. NVIDIA driver
+
+if ! lspci 2>/dev/null | grep -qi 'nvidia'; then
+  die "no NVIDIA GPU found (lspci). The x86 setup needs one; without a GPU use the CPU-only path instead (see README → Setup)."
+fi
+
+current="$(driver_cuda || true)"
+if [[ -n "$current" ]] && version_ge "$current" "$need_cuda"; then
+  say "2/5 NVIDIA driver: OK (supports CUDA $current)."
+else
+  if [[ -n "$current" ]]; then
+    say "2/5 NVIDIA driver supports only CUDA $current (< $need_cuda); installing a newer one."
+  elif dpkg -l 'nvidia-driver-*' 2>/dev/null | grep -q '^ii'; then
+    # Installed but not loaded: typically installed and not rebooted yet.
+    warn "2/5 An NVIDIA driver package is installed but not running (nvidia-smi fails). Reboot, then run make setup x86 again."
+    exit 3
+  else
+    say "2/5 No NVIDIA driver; installing one."
+  fi
+  if [[ -n "${NVIDIA_DRIVER_BRANCH:-}" ]]; then
+    run sudo ubuntu-drivers install "nvidia:${NVIDIA_DRIVER_BRANCH}"
+  else
+    say "    Ubuntu's recommended driver: $(ubuntu-drivers devices 2>/dev/null | sed -n 's/.*driver *: *\(nvidia-driver-[0-9a-z-]*\).*recommended.*/\1/p' | head -1)"
+    run sudo ubuntu-drivers install
+  fi
+  warn "    With Secure Boot on, you'll be asked to enroll a key (MOK) on the next boot - pick 'Enroll MOK' and enter the password you set."
+  needs_reboot=1
+fi
+
+# ---------------------------------------------------------------- 3. Docker Engine
+
+if [[ "$(command -v docker || true)" == /snap/* ]]; then
+  warn "3/5 Docker is the snap package, which does not work with the NVIDIA Container Toolkit."
+  warn "    Remove it (sudo snap remove docker) and run make setup x86 again."
+  exit 1
+fi
+if command -v docker &>/dev/null; then
+  say "3/5 Docker Engine: already installed ($(docker --version 2>/dev/null | cut -d, -f1))."
+else
+  say "3/5 Installing Docker Engine from Docker's apt repository."
+  run sudo install -m 0755 -d /etc/apt/keyrings
+  run sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  run sudo chmod a+r /etc/apt/keyrings/docker.asc
+  run_sh "printf 'Types: deb\nURIs: https://download.docker.com/linux/ubuntu\nSuites: %s\nComponents: stable\nArchitectures: %s\nSigned-By: /etc/apt/keyrings/docker.asc\n' \"${UBUNTU_CODENAME:-$VERSION_CODENAME}\" \"$(dpkg --print-architecture)\" | sudo tee /etc/apt/sources.list.d/docker.sources >/dev/null"
+  run sudo apt-get update
+  run sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+fi
+if ! id -nG "$USER" | tr ' ' '\n' | grep -qx docker; then
+  say "    Adding $USER to the docker group."
+  run sudo usermod -aG docker "$USER"
+  needs_relogin=1
+elif ! docker info &>/dev/null && [[ "$DRY_RUN" != 1 ]]; then
+  # In the group on disk but not in this login session yet.
+  needs_relogin=1
+fi
+
+# ---------------------------------------------------------------- 4. NVIDIA Container Toolkit
+
+if command -v nvidia-ctk &>/dev/null; then
+  say "4/5 NVIDIA Container Toolkit: already installed."
+else
+  say "4/5 Installing the NVIDIA Container Toolkit."
+  run_sh "curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor --yes -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
+  run_sh "curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null"
+  run sudo apt-get update
+  run sudo apt-get install -y nvidia-container-toolkit
+fi
+# Register the runtime with Docker (idempotent) unless it's already there.
+runtimes="$(docker info --format '{{json .Runtimes}}' 2>/dev/null || true)"
+if [[ -z "$runtimes" && "$DRY_RUN" != 1 ]]; then
+  # Not in the docker group in this session yet: ask the daemon as root.
+  runtimes="$(sudo docker info --format '{{json .Runtimes}}' 2>/dev/null || true)"
+fi
+if grep -q nvidia <<<"$runtimes"; then
+  say "    Docker 'nvidia' runtime: registered."
+else
+  say "    Registering the 'nvidia' runtime with Docker."
+  run sudo nvidia-ctk runtime configure --runtime=docker
+  run sudo systemctl restart docker
+fi
+
+# ---------------------------------------------------------------- 5. smoke test
+
+if ((needs_reboot)); then
+  warn "Reboot now to load the NVIDIA driver, then run: make setup x86"
+  exit 3
+fi
+if ((needs_relogin)); then
+  warn "Log out and back in (or reboot) so the docker group applies, then run: make setup x86"
+  exit 3
+fi
+if [[ "$DRY_RUN" == 1 ]]; then
+  say "5/5 would run: docker run --rm --gpus all ubuntu:24.04 nvidia-smi"
+  exit 0
+fi
+say "5/5 Smoke test: nvidia-smi inside a container."
+if docker run --rm --gpus all ubuntu:24.04 nvidia-smi >/dev/null; then
+  say "Host ready: driver (CUDA $(driver_cuda)), Docker, NVIDIA Container Toolkit."
+else
+  die "docker run --gpus all failed. Check: nvidia-smi on the host, then sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker."
+fi
