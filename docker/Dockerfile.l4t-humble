@@ -49,6 +49,8 @@ RUN apt-get update || true && apt-get install -y --no-install-recommends \
   udev \
   usbutils \
   wget \
+  xauth \
+  xvfb \
   zstd && \
   rm -rf /var/lib/apt/lists/*
 
