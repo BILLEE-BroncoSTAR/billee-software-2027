@@ -44,13 +44,25 @@ if [[ -z "$shadow" ]]; then
   if ip link show vcan0 &>/dev/null; then shadow=true; else shadow=false; fi
 fi
 
+# Docker Desktop passes no USB through, so on the Mac a game pad can only reach
+# ROS through the browser: Foxglove's Joystick panel publishes /joy itself.
+joy_source=device
+if [[ "$BILLEE_PLATFORM" == mac ]]; then
+  joy_source=browser
+fi
+
 echo "sim-up: platform $BILLEE_PLATFORM, Pixi env $BILLEE_PIXI_ENV," \
-  "rviz=$rviz foxglove=$start_foxglove odesc_shadow=$shadow"
+  "rviz=$rviz foxglove=$start_foxglove odesc_shadow=$shadow joy_source=$joy_source"
 if [[ "$start_foxglove" == true ]]; then
   echo "sim-up: Foxglove Studio -> ws://localhost:8765 (or ws://<this-machine-ip>:8765)"
+fi
+if [[ "$joy_source" == browser && "$use_controller" == true ]]; then
+  echo "sim-up: game pad -> add Foxglove's 'Joystick [local]' panel, set Data Source:"
+  echo "sim-up:   Gamepad, Publish Mode: On, Pub Joy Topic: /joy. Hold RB to drive."
 fi
 cd "$BILLEE_WS"
 exec "${wrapper[@]}" pixi run --environment "$BILLEE_PIXI_ENV" \
   ros2 launch chassis_bringup sim_gz.launch.py \
   odesc_shadow:="$shadow" joy_control:="$use_controller" \
+  joy_source:="$joy_source" \
   foxglove:="$start_foxglove" rviz:="$rviz"

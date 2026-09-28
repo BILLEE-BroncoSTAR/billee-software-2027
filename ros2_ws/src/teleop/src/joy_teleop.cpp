@@ -17,6 +17,16 @@
 // Every index and sign is a parameter (see config/joystick.yaml) so a pad or
 // driver that differs is a yaml edit, not a rebuild.
 //
+// A pad reaching us through a browser (Foxglove's Joystick panel) follows the
+// W3C "standard" mapping instead, which has no trigger axes at all - only the
+// two sticks - and puts LT/RT in buttons[6]/[7]:
+//   steer   = axes[0]     left stick X   (right = +1, so invert_steer: true)
+//   reverse = buttons[6]  LT / L2
+//   forward = buttons[7]  RT / R2
+//   deadman = buttons[5]  RB / R1        (same index as Linux)
+// Set throttle_button / reverse_button for that source (see
+// chassis_bringup/config/tele_params_browser.yaml).
+//
 // Class/executable name is historical ("tank drive"); the scheme is arcade now.
 class JoyTankDrive : public rclcpp::Node
 {
@@ -29,6 +39,9 @@ public:
         invertSteer_ = this->declare_parameter("invert_steer", false);
         throttleAxis_ = this->declare_parameter("throttle_axis", 5);
         reverseAxis_ = this->declare_parameter("reverse_axis", 2);
+        // -1 = take the trigger from its axis above; >= 0 = from that button instead.
+        throttleButton_ = this->declare_parameter("throttle_button", -1);
+        reverseButton_ = this->declare_parameter("reverse_button", -1);
         speedScale_ = this->declare_parameter("speed_scale", 2.0);
         triggerRest_ = this->declare_parameter("trigger_rest", 1.0);
         triggerPress_ = this->declare_parameter("trigger_press", -1.0);
@@ -66,13 +79,33 @@ private:
         return i >= 0 && static_cast<size_t>(i) < msg.axes.size();
     }
 
+    // Is the source configured for one trigger present in this message?
+    bool triggerInRange(const sensor_msgs::msg::Joy& msg, int axis, int button) const
+    {
+        return button >= 0 ? static_cast<size_t>(button) < msg.buttons.size()
+                           : axisInRange(msg, axis);
+    }
+
+    // One trigger's 0..1 press amount, from its axis or - when a button index is
+    // configured - from that button. sensor_msgs/Joy stores buttons as int32, so a
+    // button-sourced trigger is on/off, not proportional.
+    double triggerFor(const sensor_msgs::msg::Joy& msg, int axis, int button, bool& seen) const
+    {
+        if (button >= 0)
+        {
+            return msg.buttons[button] != 0 ? 1.0 : 0.0;
+        }
+        return triggerAmount(msg.axes[axis], seen);
+    }
+
     void onJoy(const sensor_msgs::msg::Joy& msg)
     {
         auto twist = geometry_msgs::msg::Twist();
 
         const bool indicesOk =
-            axisInRange(msg, steerAxis_) && axisInRange(msg, throttleAxis_) &&
-            axisInRange(msg, reverseAxis_) && deadmanButton_ >= 0 &&
+            axisInRange(msg, steerAxis_) &&
+            triggerInRange(msg, throttleAxis_, throttleButton_) &&
+            triggerInRange(msg, reverseAxis_, reverseButton_) && deadmanButton_ >= 0 &&
             static_cast<size_t>(deadmanButton_) < msg.buttons.size();
 
         if (!indicesOk)
@@ -88,8 +121,10 @@ private:
 
         if (msg.buttons[deadmanButton_])
         {
-            const double forward = triggerAmount(msg.axes[throttleAxis_], throttleSeen_);
-            const double reverse = triggerAmount(msg.axes[reverseAxis_], reverseSeen_);
+            const double forward =
+                triggerFor(msg, throttleAxis_, throttleButton_, throttleSeen_);
+            const double reverse =
+                triggerFor(msg, reverseAxis_, reverseButton_, reverseSeen_);
             const double steer = (invertSteer_ ? -1.0 : 1.0) * msg.axes[steerAxis_];
 
             twist.linear.x = (forward - reverse) * speedScale_;
@@ -103,6 +138,8 @@ private:
     int steerAxis_;
     int throttleAxis_;
     int reverseAxis_;
+    int throttleButton_;
+    int reverseButton_;
     double steerScale_;
     double speedScale_;
     double triggerRest_;

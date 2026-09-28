@@ -90,6 +90,16 @@ declare_args = [
             description="start the joystick control nodes alongside the sim",
         ),
         DeclareLaunchArgument(
+            "joy_source",
+            default_value="device",
+            description=(
+                "Where /joy comes from: 'device' runs joy_node against a local "
+                "/dev/input pad; 'browser' expects Foxglove's Joystick panel to "
+                "publish /joy instead (the only way in on the Mac, where Docker "
+                "Desktop passes no USB through) and reads the W3C standard mapping."
+            ),
+        ),
+        DeclareLaunchArgument(
             "odesc_shadow",
             default_value="false",
             description=(
@@ -245,23 +255,32 @@ def _launch_description(ctx):
         condition=IfCondition(LaunchConfiguration("odesc_shadow")),
     )
 
-    use_joy = LaunchConfiguration('joy_control')
-    joy_params = os.path.join(get_package_share_directory('chassis_bringup'), 'config', 'tele_params.yaml')
-    teleop_nodes = [
-        Node(
-            package='joy',
-            executable='joy_node',
-            parameters=[joy_params]
-        ),
+    # .perform(ctx): a bare LaunchConfiguration object is always truthy, so
+    # joy_control:=false only takes effect once it is resolved to its string.
+    use_joy = LaunchConfiguration('joy_control').perform(ctx).lower() in ('true', '1')
+    joy_source = LaunchConfiguration('joy_source').perform(ctx).lower()
+    from_browser = joy_source == 'browser'
+    joy_params = os.path.join(
+        get_package_share_directory('chassis_bringup'), 'config',
+        'tele_params_browser.yaml' if from_browser else 'tele_params.yaml')
 
-        Node(
+    teleop_nodes = []
+    if use_joy:
+        # A browser-sourced pad already arrives on /joy over the Foxglove bridge,
+        # so there is no local /dev/input device for joy_node to open.
+        if not from_browser:
+            teleop_nodes.append(Node(
+                package='joy',
+                executable='joy_node',
+                parameters=[joy_params],
+            ))
+        teleop_nodes.append(Node(
             package='teleop',
             executable='joy_tank_drive',
             name='joy_tank_drive',
             parameters=[joy_params],
-            remappings=[('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')]
-        )
-    ] if use_joy else []
+            remappings=[('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')],
+        ))
 
     return set_env + [
             set_resource_path,

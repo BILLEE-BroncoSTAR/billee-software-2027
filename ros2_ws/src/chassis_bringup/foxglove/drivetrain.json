@@ -64,10 +64,23 @@
         "poseEstimateYDeviation": 0.5,
         "poseEstimateThetaDeviation": 0.26
       }
+    },
+    "Teleop!drivetrain": {
+      "topic": "/diff_drive_controller/cmd_vel_unstamped",
+      "publishRate": 15,
+      "upButton": { "field": "linear-x", "value": 1 },
+      "downButton": { "field": "linear-x", "value": -1 },
+      "leftButton": { "field": "angular-z", "value": 1 },
+      "rightButton": { "field": "angular-z", "value": -1 }
     }
   },
   "globalVariables": {},
   "userNodes": {},
   "playbackConfig": { "speed": 1 },
-  "layout": "3D!drivetrain"
+  "layout": {
+    "first": "3D!drivetrain",
+    "second": "Teleop!drivetrain",
+    "direction": "row",
+    "splitPercentage": 75
+  }
 }
