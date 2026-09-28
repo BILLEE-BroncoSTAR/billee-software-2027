@@ -9,6 +9,23 @@ The `teleop` package turns a USB joystick into rover drive commands. Its launch 
 - **`scheme: arcade`** (default) reads the left stick X axis for steering and the two analog triggers for throttle: right trigger forward, left trigger reverse. While the deadman is held it publishes `linear.x = (forward − reverse) · speed_scale` and `angular.z = steer · steer_scale`.
 - **`scheme: tank`** reads one stick per track. While the deadman is held it publishes `linear.x = (left + right)/2 · speed_scale` and `angular.z = (right − left)/track_width · speed_scale` — both sticks forward drives straight, opposite sticks spin in place. `track_width` is the real distance between the tracks in metres; measure it on the rover, because it sets how much stick difference becomes how many rad/s.
 
+A pad can also reach this node from a browser instead of `/dev/input`, via Foxglove's
+Joystick panel over the bridge — the only gamepad path on a Mac, where Docker Desktop
+passes no USB through. Select it with `joy_source:=browser`:
+
+```bash
+ros2 launch teleop teleop.launch.py joy_source:=browser
+```
+
+That skips `joy_node` (there is no local device to open) and loads
+[`config/joystick_browser.yaml`](config/joystick_browser.yaml) instead of
+`joystick.yaml`, because a browser reports pads with a different mapping.
+`tooling/ground-up` and `tooling/sim-up` select it automatically on the Mac. See
+[T4b in docs/RUN_MODES.md](../../../docs/RUN_MODES.md#t4b--real-gamepad-through-the-browser)
+for the mapping differences and the panel to use.
+
+Either way it publishes a `geometry_msgs/msg/Twist` for every received joystick message, and an all-zero one whenever the deadman is not held. The launch remaps its `/cmd_vel` output to `/diff_drive_controller/cmd_vel_unstamped`, the unstamped velocity input expected by the workspace's diff-drive controller.
+
 ### Switching the scheme at runtime
 
 `scheme` has a set-parameters callback, so it is not only a startup value — a change
@@ -38,6 +55,40 @@ Setting parameter failed: scheme must be 'arcade' or 'tank', got 'banana'
 (An invalid value in the *yaml* is different: at startup there is no caller to report
 to, so the node logs a warning and falls back to arcade rather than refusing to run.)
 
+### Silence watchdog
+
+`onJoy()` is the only place a Twist gets published from joystick input, so if `/joy`
+simply **stops** — the Foxglove tab closes, the laptop sleeps, the pad is unplugged —
+this node would publish nothing at all, and the last non-zero Twist would stay the last
+thing on the wire.
+
+A 100 ms timer therefore publishes a zero Twist whenever `/joy` has been quiet for
+longer than `joy_timeout` (default 0.5 s), and keeps publishing zeros until input
+returns. It uses a **steady clock**, not the node clock: `ground_station.launch.py` can
+run with `use_sim_time`, and a frozen `/clock` would silently disable the watchdog.
+
+This is defence in depth, not the only guard — `diff_drive_controller` independently
+halts the wheels `cmd_vel_timeout` (0.25 s) after the last command. The point is that
+the ground side stops *asking*, rather than relying on the rover to stop listening. It
+matters most for `joy_source:=browser`, which has no `joy_node` and therefore no
+autorepeat at all.
+
+**What it cannot catch:** a *hung* pad driver. `joy_node` republishes the last state at
+`autorepeat_rate` (20 Hz), so a frozen driver holding the deadman looks exactly like a
+driver genuinely holding it. Lowering `autorepeat_rate` does not help — at 0 a held
+stick publishes nothing and this watchdog would zero spuriously. The check is physical:
+unplug the pad mid-drive and confirm `/joy` actually stops.
+
+Verify it:
+
+```bash
+ros2 topic pub -r 20 /joy sensor_msgs/msg/Joy \
+  "{axes: [0.0,0.0,1.0,0.0,0.0,-1.0], buttons: [0,0,0,0,0,1]}"     # deadman + RT
+# in another terminal:
+ros2 topic echo /diff_drive_controller/cmd_vel_unstamped
+# Ctrl-C the publisher — linear.x must fall to 0 within ~0.6 s and stay there.
+```
+
 ### Tank is unvalidated
 
 **Tank has never been driven on a rover.** Selecting it logs a warning at startup and on
@@ -60,23 +111,6 @@ The current defaults `left_axis: 1` / `right_axis: 4` (the two sticks' vertical 
 are **inferred from that axis map, not measured on a pad**, and `track_width: 0.67` is
 inherited and unverified. Before driving tank on hardware, check the indices against
 `ros2 topic echo /joy` and measure the actual track width.
-
-A pad can also reach this node from a browser instead of `/dev/input`, via Foxglove's
-Joystick panel over the bridge — the only gamepad path on a Mac, where Docker Desktop
-passes no USB through. Select it with `joy_source:=browser`:
-
-```bash
-ros2 launch teleop teleop.launch.py joy_source:=browser
-```
-
-That skips `joy_node` (there is no local device to open) and loads
-[`config/joystick_browser.yaml`](config/joystick_browser.yaml) instead of
-`joystick.yaml`, because a browser reports pads with a different mapping.
-`tooling/ground-up` and `tooling/sim-up` select it automatically on the Mac. See
-[T4b in docs/RUN_MODES.md](../../../docs/RUN_MODES.md#t4b--real-gamepad-through-the-browser)
-for the mapping differences and the panel to use.
-
-Either way it publishes a `geometry_msgs/msg/Twist` for every received joystick message, and an all-zero one whenever the deadman is not held. The launch remaps its `/cmd_vel` output to `/diff_drive_controller/cmd_vel_unstamped`, the unstamped velocity input expected by the workspace's diff-drive controller.
 
 The package is event-driven: joystick messages trigger the conversion immediately, rather than a timer continuously republishing a command. The supplied `joy` configuration enables a 20 Hz autorepeat rate, so a connected joystick continues to deliver its most recent state and therefore continues to refresh a held command.
 
@@ -232,6 +266,7 @@ The launch reads `config/joystick.yaml`, which is also the file `sim_gz.launch.p
 
   | Name | Code default | Launch value | Description |
   |---|---:|---:|---|
+  | `joy_timeout` | `0.5` | `0.5` | Seconds of `/joy` silence after which a zero Twist is published, and kept published until input returns. See [Silence watchdog](#silence-watchdog). |
   | `scheme` | `arcade` | `arcade` | Control scheme: `arcade` (stick steers, triggers drive) or `tank` (one stick per track, **unvalidated**). **Settable at runtime** — applies on the next `/joy` message. An invalid value at runtime is rejected; an invalid value in the yaml warns and falls back to `arcade`. |
   | `deadman_button` | `5` | `5` | Button (RB / R1) that must be held to send motion. Both schemes. |
   | `speed_scale` | `2.0` | `2.0` | `linear.x` (m/s) at full throttle. Both schemes. |

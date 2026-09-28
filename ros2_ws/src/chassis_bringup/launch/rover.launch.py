@@ -40,6 +40,16 @@ declare_args = [
         "transform. Off means nothing publishes it and the TF tree is broken.",
     ),
     DeclareLaunchArgument(
+        "joy_source",
+        default_value="device",
+        choices=["device", "browser"],
+        description="Where /joy comes from. 'device' = a pad on /dev/input via joy_node "
+        "(needs the `joy` package, which the ROVER environment does not ship). "
+        "'browser' = the pad is plugged into the machine running Foxglove and its "
+        "Joystick panel publishes /joy over the bridge - no joy_node, and the only way "
+        "to drive the real rover from a Mac.",
+    ),
+    DeclareLaunchArgument(
         "joy_control",
         default_value="",
         description="Start gamepad teleop (joy_node + joy_drive) alongside, publishing "
@@ -83,6 +93,7 @@ def _setup(context):
         args = {
             **common,
             "joy_control": joy_control,
+            "joy_source": LaunchConfiguration("joy_source"),
         }
     elif mode == "real":
         target = "real.launch.py"
@@ -91,6 +102,7 @@ def _setup(context):
             "can_interface": LaunchConfiguration("can_interface"),
             "gear_ratio": LaunchConfiguration("gear_ratio"),
             "joy_control": joy_control,
+            "joy_source": LaunchConfiguration("joy_source"),
         }
     else:  # DeclareLaunchArgument(choices=...) already guards this
         raise RuntimeError(f"rover.launch.py: unknown mode {mode!r} (use sim|real)")

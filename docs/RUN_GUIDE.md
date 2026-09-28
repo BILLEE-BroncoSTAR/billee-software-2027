@@ -198,6 +198,73 @@ The Gazebo rover on the Jetson should drive a circle.
 
 ---
 
+## B0. Driving the real rover from a Mac (no ROS on the laptop)
+
+The shortest path from a boxed rover to moving wheels, and the only one that works from
+a Mac: Docker Desktop passes no USB through, so `joy_node` can never see a pad there.
+Instead the pad stays on the Mac, Foxglove Studio publishes `/joy` over the rover's
+WebSocket bridge, and `joy_drive` runs **on the rover**.
+
+Nothing crosses as DDS. You need **no container, no ROS and no repo checkout on the
+Mac** — just Foxglove Studio and the two machines on the same network.
+
+**Prerequisite, once:** install the
+[`foxglove-joystick`](https://github.com/joshnewans/foxglove-joystick) extension in
+Foxglove Studio (Profile menu → Extensions, or a `.foxe` release). Foxglove ships no
+built-in gamepad panel. It appears as **Joystick [local]**.
+
+**1. [rover] host terminal — bring up the CAN bus.** `can-up` acts on the host kernel,
+so run it on the Jetson itself, not inside the container:
+```bash
+~/billee-software-2027/tooling/can-up            # can0 @ 500000 bit/s
+~/billee-software-2027/tooling/can-up status can0
+```
+
+**2. [rover] container — the whole stack, teleop included:**
+```bash
+JOY=browser make rover           # = JOY=browser tooling/rover-up can0
+```
+That starts `controller_manager` + the ODESC plugin, `diff_drive_controller`,
+`joint_state_broadcaster`, the localization EKF, `foxglove_bridge` on `:8765`
+(bound to `0.0.0.0`), and `joy_drive` in browser mode — no `joy_node`, which is why it
+works in the rover environment at all.
+
+No hardware yet? `JOY=browser make rover CAN=mock` runs the same stack on the ODESC mock
+backend, so you can rehearse all of this with no motors connected.
+
+**3. [Mac] Foxglove Studio** → *Open connection* → `ws://<jetson-ip>:8765`.
+
+**4. [Mac] add the Joystick panel**, set *Data Source: Gamepad*, *Publish Mode: On*,
+*Pub Joy Topic: `/joy`*. Plug the pad into the Mac; the browser Gamepad API only sees it
+after you press a button.
+
+**5. Hold RB (deadman) and pull RT.** Watch `/diff_drive_controller/cmd_vel_unstamped`
+and `/odometry/filtered` in Foxglove to confirm the chain before the wheels are on the
+ground.
+
+### Before the first real spin
+
+- **Rover on blocks.** Wheels off the ground for the first run, every time.
+- **Browser mode has no autorepeat.** `joy_node`'s 20 Hz republish does not exist here,
+  so `/joy` stops dead the moment the tab closes, the Mac sleeps or the WiFi drops. Two
+  independent timeouts then stop the rover: `joy_drive` publishes zero after
+  `joy_timeout` (0.5 s), and `diff_drive_controller` halts after `cmd_vel_timeout`
+  (0.25 s) with no command. Both are timeouts, not brakes — at `speed_scale: 2.0` that
+  is still roughly half a metre of travel.
+- **Neither timeout helps if the Jetson itself dies.** If `ros2_control_node` is killed
+  or the Jetson wedges, the ODrives hold the last commanded velocity indefinitely: the
+  ODrive hardware watchdog is not enabled yet, and the thing enforcing `cmd_vel_timeout`
+  is the process that died. Keep a hand on the master power switch.
+- **Turn the speed down first.** `speed_scale` in `teleop/config/joystick_browser.yaml`
+  defaults to `2.0` m/s. Drop it to something walkable for early runs.
+- **Bus-level stop, if ROS is wedged but the Jetson shell answers:**
+  ```bash
+  for id in 002 022 042 062 082 0A2; do cansend can0 ${id}#; done   # ODrive Estop, nodes 0-5
+  ```
+  Latched until cleared; recover by restarting the stack.
+
+---
+
 ## B. Real drivetrain (ODESC over CAN)
 
 **1. [rover] — bring up the real CAN bus** (`can0`)

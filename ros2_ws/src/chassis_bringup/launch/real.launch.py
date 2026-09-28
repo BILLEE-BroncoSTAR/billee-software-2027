@@ -90,6 +90,16 @@ declare_args = [
         "it off if something else is providing odom -> base_link.",
     ),
     DeclareLaunchArgument(
+        "joy_source",
+        default_value="device",
+        choices=["device", "browser"],
+        description="Where /joy comes from. 'device' = a pad on /dev/input via joy_node "
+        "(needs the `joy` package, which the ROVER environment does not ship). "
+        "'browser' = the pad is plugged into the machine running Foxglove and its "
+        "Joystick panel publishes /joy over the bridge - no joy_node, and the only way "
+        "to drive the real rover from a Mac.",
+    ),
+    DeclareLaunchArgument(
         "joy_control",
         default_value="false",
         description="Start gamepad teleop (joy_node + joy_drive) on this machine. Off "
@@ -172,6 +182,7 @@ def _launch_setup(context):
                 [FindPackageShare("teleop"), "launch", "teleop.launch.py"]
             )
         ),
+        launch_arguments={"joy_source": LaunchConfiguration("joy_source")}.items(),
         condition=IfCondition(LaunchConfiguration("joy_control")),
     )
 

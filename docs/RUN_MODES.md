@@ -508,12 +508,24 @@ The pad plugs into the machine running Foxglove and reaches ROS 2 as `/joy` over
 bridge, so `joy_drive` does the mixing exactly as it would on Linux. This is the only
 gamepad path on a Mac, where Docker Desktop passes no USB through.
 
-Add Foxglove's built-in **Joystick [local]** panel, set *Data Source: Gamepad*,
-*Publish Mode: On*, *Pub Joy Topic: `/joy`*, then launch with `joy_source:=browser`:
+**Prerequisite: the [`foxglove-joystick`](https://github.com/joshnewans/foxglove-joystick)
+extension.** Foxglove ships no built-in gamepad panel — joystick panels are community
+extensions. Install it from the Foxglove extension marketplace (Profile menu →
+Extensions) or a `.foxe` release; it appears in the panel list as **Joystick [local]**,
+the `[local]` marking it as a locally installed extension. It is a per-user Studio
+install, so there is nothing to add to this repo — but without it there is no browser
+gamepad path at all, and therefore no way to drive from a Mac.
+
+Add the panel, set *Data Source: Gamepad*, *Publish Mode: On*,
+*Pub Joy Topic: `/joy`*, then launch with `joy_source:=browser`:
 
 ```bash
 ros2 launch chassis_bringup sim_gz.launch.py joy_source:=browser
 #   tooling/sim-up picks this automatically on the Mac
+
+# ...or against the REAL rover, from the Jetson:
+JOY=browser tooling/rover-up can0
+#   see the Mac -> real rover procedure in docs/RUN_GUIDE.md
 ```
 
 `joy_source:=browser` swaps in `teleop/config/joystick_browser.yaml` and
@@ -525,13 +537,18 @@ LT/RT are `buttons[6]`/`[7]`, and stick-right is `+1` where Linux reports `+1` f
 `sensor_msgs/Joy` storing buttons as `int32`, not something the panel can fix. Steering
 stays analog.
 
-For a nicer panel, [`joshnewans/foxglove-joystick`](https://github.com/joshnewans/foxglove-joystick)
-draws a real pad graphic instead of raw axis sliders and adds keyboard and touchscreen
-modes, plus a *Subscribe* mode that visualises whatever `/joy` the rover is actually
-receiving — useful for debugging the ground-station link. Install it from the Foxglove
-extension marketplace or a `.foxe` release; it is a per-user Studio extension, so there
-is nothing to add to this repo. It does **not** lift the trigger limitation above: its
-README lists analog triggers and custom gamepad→`Joy` mapping as planned, not implemented.
+Beyond publishing `/joy`, the same extension draws a real pad graphic instead of raw
+axis sliders and adds keyboard and touchscreen modes, plus a *Subscribe* mode that
+visualises whatever `/joy` the rover is actually receiving — useful for debugging the
+link. It does **not** lift the trigger limitation above: its README lists analog
+triggers and custom gamepad→`Joy` mapping as planned, not implemented.
+
+> **Safety:** browser mode has **no autorepeat.** `joy_node`'s 20 Hz republish does not
+> exist here, so `/joy` stops the instant the tab closes, the laptop sleeps or the WiFi
+> drops. `joy_drive` publishes a zero Twist after `joy_timeout` (0.5 s) of silence, and
+> `diff_drive_controller` independently halts after `cmd_vel_timeout` (0.25 s) without a
+> command. Both are timeouts, not brakes — at `speed_scale: 2.0` that is still roughly
+> half a metre of travel. First runs on blocks.
 
 ### T5 — Scripted
 
@@ -658,7 +675,7 @@ and, where needed, runs inside its container:
 | `make build` | `pixi run -e <env> build` |
 | `make sim` / `tooling/sim-up` | **ground station.** Linux with a display: `ros2 launch chassis_bringup sim_gz.launch.py foxglove:=true rviz:=true`; Mac / headless: `xvfb-run -a ros2 launch chassis_bringup sim_gz.launch.py foxglove:=true`. Adds `odesc_shadow:=true` when `vcan0` exists, and `joy_source:=browser` on the Mac. |
 | `make ground` / `tooling/ground-up` | **ground station.** `ros2 launch chassis_bringup ground_station.launch.py rviz:=<display> foxglove:=true joy_source:=<device\|browser> use_sim_time:=false`. Viewers + game pad against a rover already running on the network — no Gazebo. `SIM_TIME=true` when what you are watching is a sim. |
-| `make rover` / `tooling/rover-up` | **rover (Jetson).** `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=can0 foxglove:=true`. No viewer, no teleop. `make rover CAN=mock` runs the ODESC mock backend; `CAN=vcan0` the virtual bus. Checks the bus is up first. |
+| `make rover` / `tooling/rover-up` | **rover (Jetson).** `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=can0 foxglove:=true`. No viewer. `make rover CAN=mock` runs the ODESC mock backend; `CAN=vcan0` the virtual bus. Checks the bus is up first. Teleop is off by default (the pad lives on a ground station); `JOY=browser make rover` starts `joy_drive` on the rover instead, fed by Foxglove's Joystick panel — the way to drive from a Mac ([procedure](../docs/RUN_GUIDE.md)). There is no `JOY=device`: the rover environment ships no `joy` package. |
 
 `sim-up` and `ground-up` refuse to run on the rover, and `rover-up` refuses to run on a
 ground station; each prints the one you probably wanted. `BILLEE_ROLE=<rover|ground>`
@@ -753,6 +770,15 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 `can_interface` (default `vcan0`), `description_pkg`, `xacro_file`.
 
 **`teleop/launch/teleop.launch.py`** — `joy_source` (`device` | `browser`, default `device`).
+
+`joy_drive` also takes a **`joy_timeout`** parameter (default `0.5` s). If `/joy` stops
+arriving for longer than that, it publishes a zero Twist and keeps publishing zeros
+until input returns — so the ground side stops *asking*, rather than relying on the
+rover to stop listening. This matters most in `browser` mode, which has no `joy_node`
+and therefore no autorepeat: `/joy` stops the instant the Foxglove tab does. It cannot
+detect a *hung* pad driver, because `joy_node` republishes the last state at
+`autorepeat_rate` — a frozen driver holding the deadman is indistinguishable from a
+driver genuinely holding it.
 `device` starts `joy_node` and reads `teleop/config/joystick.yaml`; `browser` skips
 `joy_node` (the pad arrives over the Foxglove bridge) and reads
 `teleop/config/joystick_browser.yaml`. The control scheme is the `scheme:` parameter

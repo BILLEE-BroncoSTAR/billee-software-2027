@@ -96,6 +96,25 @@ public:
         // and the next /joy message is simply mixed the new way.
         paramCb_ = this->add_on_set_parameters_callback(
             std::bind(&JoyDrive::onSetParameters, this, std::placeholders::_1));
+
+        // Watchdog: publish zero when /joy goes SILENT.
+        //
+        // onJoy() is otherwise the only publish site, so if /joy simply stops - the
+        // Foxglove tab is closed, the laptop sleeps, the pad is unplugged - this node
+        // publishes nothing at all, and the last non-zero Twist stays the last thing
+        // on the wire. That is survivable only because diff_drive_controller has its
+        // own cmd_vel_timeout; this makes the ground side stop asking rather than
+        // relying on the rover to stop listening.
+        //
+        // Matters most for joy_source:=browser, which has no joy_node and therefore
+        // no autorepeat at all: /joy stops the instant the browser does.
+        //
+        // Steady clock, not this->now(): ground_station.launch.py can run with
+        // use_sim_time, and a frozen /clock would silently disable this watchdog.
+        joyTimeout_ = this->declare_parameter("joy_timeout", 0.5);
+        lastJoy_ = steadyClock_.now();
+        watchdog_ = this->create_wall_timer(
+            std::chrono::milliseconds(100), std::bind(&JoyDrive::onWatchdog, this));
     }
 
 private:
@@ -201,8 +220,34 @@ private:
             triggerInRange(msg, reverseAxis_, reverseButton_);
     }
 
+    // Zero the command whenever /joy has gone quiet for longer than joy_timeout.
+    // Publishes on every tick while silent rather than once: it is idempotent, and a
+    // live stream of zeros keeps diff_drive_controller fed instead of leaning on its
+    // cmd_vel_timeout as a second mechanism.
+    //
+    // ponytail: this cannot see a HUNG pad. joy_node republishes the last state at
+    // autorepeat_rate (20 Hz), so a frozen driver holding the deadman is
+    // indistinguishable from a driver genuinely holding it. Lowering autorepeat_rate
+    // does not help - at 0 a held stick publishes nothing and this would zero
+    // spuriously. The check is physical: unplug the pad mid-drive and confirm /joy
+    // actually stops.
+    void onWatchdog()
+    {
+        if ((steadyClock_.now() - lastJoy_).seconds() <= joyTimeout_)
+        {
+            return;
+        }
+        RCLCPP_WARN_THROTTLE(
+            this->get_logger(), *this->get_clock(), 2000,
+            "no /joy for more than %.2fs - publishing zero. The pad, the link or the "
+            "Foxglove panel has gone away.",
+            joyTimeout_);
+        twistPub_->publish(geometry_msgs::msg::Twist());  // all zeros
+    }
+
     void onJoy(const sensor_msgs::msg::Joy& msg)
     {
+        lastJoy_ = steadyClock_.now();
         auto twist = geometry_msgs::msg::Twist();
 
         if (!indicesOk(msg))
@@ -260,7 +305,13 @@ private:
     bool throttleSeen_ = false;
     bool reverseSeen_ = false;
 
+    double joyTimeout_;
+    // Steady, so a stopped or rewound /clock cannot disable the watchdog.
+    rclcpp::Clock steadyClock_{RCL_STEADY_TIME};
+    rclcpp::Time lastJoy_;
+
     OnSetParametersCallbackHandle::SharedPtr paramCb_;
+    rclcpp::TimerBase::SharedPtr watchdog_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joySub_;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr twistPub_;
 };
