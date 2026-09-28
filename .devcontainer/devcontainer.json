@@ -22,7 +22,12 @@
     "--hostname=ros-dev",
 	  "--volume", "/tmp/.X11-unix:/tmp/.X11-unix",
 	  "--volume", "/dev:/dev",
-	  "--volume", "/dev/shm:/dev/shm"
+	  "--volume", "/dev/shm:/dev/shm",
+    "--device-cgroup-rule=c 189:* rmw",
+    "--device-cgroup-rule=c 81:* rmw"
+  ],
+  "mounts":[
+        "source=/dev/bus/usb,target=/dev/bus/usb,type=bind"
   ],
 
   "postStartCommand": "cd ros2_ws && pixi install",

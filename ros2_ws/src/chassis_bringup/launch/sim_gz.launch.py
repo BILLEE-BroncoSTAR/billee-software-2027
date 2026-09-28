@@ -255,34 +255,21 @@ def _launch_description(ctx):
         condition=IfCondition(LaunchConfiguration("odesc_shadow")),
     )
 
-    # .perform(ctx): a bare LaunchConfiguration object is always truthy, so
-    # joy_control:=false only takes effect once it is resolved to its string.
-    use_joy = LaunchConfiguration('joy_control').perform(ctx).lower() in ('true', '1')
-    joy_source = LaunchConfiguration('joy_source').perform(ctx).lower()
-    from_browser = joy_source == 'browser'
-    # Both configs live in the teleop package, so sim_gz and teleop.launch.py read
-    # the same files and cannot drift. Local device vs browser pad differ in mapping.
-    joy_params = os.path.join(
-        get_package_share_directory('teleop'), 'config',
-        'joystick_browser.yaml' if from_browser else 'joystick.yaml')
-
-    teleop_nodes = []
-    if use_joy:
-        # A browser-sourced pad already arrives on /joy over the Foxglove bridge,
-        # so there is no local /dev/input device for joy_node to open.
-        if not from_browser:
-            teleop_nodes.append(Node(
-                package='joy',
-                executable='joy_node',
-                parameters=[joy_params],
-            ))
-        teleop_nodes.append(Node(
-            package='teleop',
-            executable='joy_drive',
-            name='joy_drive',
-            parameters=[joy_params],
-            remappings=[('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')],
-        ))
+    # Start joystick teleop through the teleop package's own launch file rather than
+    # re-declaring its nodes here, so sim_gz and `ros2 launch teleop teleop.launch.py`
+    # cannot drift. IfCondition, not a Python `if`: a bare LaunchConfiguration object
+    # is always truthy, so `if LaunchConfiguration(...)` would ignore joy_control:=false.
+    # joy_source passes straight through - teleop.launch.py skips joy_node and loads the
+    # browser mapping when it is 'browser' (the only pad path on a Mac).
+    teleop = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare("teleop"), "launch", "teleop.launch.py"
+            ])
+        ),
+        launch_arguments={"joy_source": LaunchConfiguration("joy_source")}.items(),
+        condition=IfCondition(LaunchConfiguration("joy_control")),
+    )
 
     return set_env + [
             set_resource_path,
@@ -292,9 +279,9 @@ def _launch_description(ctx):
             robot_state_publisher,
             spawn_entity,
             diff_drive_controller_spawner,
+            teleop,
             odesc_shadow,
             viz,
-            *teleop_nodes
         ]
 
 def generate_launch_description():

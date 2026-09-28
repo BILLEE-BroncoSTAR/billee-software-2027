@@ -1,7 +1,8 @@
 # Initial shell configuration, which should be run as the user after dependencies have been loaded
 
 # Resolve the workspace + Pixi environment (set by `make setup <platform>`, else detected).
-# The Dockerfiles copy tooling/billee-env.sh here.
+# The Dockerfiles copy tooling/billee-env.sh here. Resolved rather than hardcoded so the
+# same script works in every image and at any mount point.
 if [ -f /usr/local/lib/billee/billee-env.sh ]; then
   source /usr/local/lib/billee/billee-env.sh
 fi
@@ -13,8 +14,10 @@ if [ -n "$BILLEE_WS" ]; then
   # Initialize colcon autocomplete from the Pixi environment
   [ -f "$_billee_env_dir/share/colcon_argcomplete/hook/colcon-argcomplete.bash" ] &&
     source "$_billee_env_dir/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
-  # Source the local workspace overlay to enable autocomplete
-  [ -f "$BILLEE_WS/install/setup.bash" ] && source "$BILLEE_WS/install/setup.bash"
+  # Source the workspace overlay with local_setup.bash, not setup.bash: the overlay's
+  # setup.bash replays whatever underlay the build recorded, which is wrong when that
+  # build happened on a different platform. local_setup.bash is workspace packages only.
+  [ -f "$BILLEE_WS/install/local_setup.bash" ] && source "$BILLEE_WS/install/local_setup.bash"
   unset _billee_env_dir
   # Navigate to ros2_ws
   cd "$BILLEE_WS" || true
