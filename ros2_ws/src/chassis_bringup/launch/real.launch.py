@@ -82,8 +82,11 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "joy_control",
-        default_value="true",
-        description="Start joy_node and joy_tank_drive for local real-rover control.",
+        default_value="false",
+        description="Start gamepad teleop (joy_node + joy_drive) on this machine. Off "
+        "by default: this is the real-rover path, and the rover environment has no "
+        "`joy` package - the operator's pad is on the ground station. Only turn it on "
+        "where a pad is actually plugged in.",
     ),
 ]
 

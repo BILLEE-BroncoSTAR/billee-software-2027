@@ -35,9 +35,12 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "joy_control",
-        default_value="true",
-        description="Start joy_node and joy_tank_drive, with commands "
-        "sent to /diff_drive_controller/cmd_vel_unstamped.",
+        default_value="",
+        description="Start gamepad teleop (joy_node + joy_drive) alongside, publishing "
+        "to /diff_drive_controller/cmd_vel_unstamped. Left empty the default follows "
+        "mode: true for sim (a ground station, which has the pad and the joy package) "
+        "and false for real (the rover, which has neither - drive it from a ground "
+        "station over DDS). Pass true/false to force it.",
     ),
     DeclareLaunchArgument(
         "can_interface",
@@ -57,11 +60,19 @@ def _setup(context):
     mode = LaunchConfiguration("mode").perform(context)
     common = {"foxglove": "true", "rviz": LaunchConfiguration("rviz")}
 
+    # The operator's pad lives on the ground station, so the rover environment ships
+    # no `joy` package at all (ros2_ws/pixi.toml, feature.rover). Starting teleop on
+    # mode:=real would abort the whole launch with "package 'joy' not found", so the
+    # default is off there and on for the sim, which runs on a ground station.
+    joy_control = LaunchConfiguration("joy_control").perform(context)
+    if joy_control == "":
+        joy_control = "true" if mode == "sim" else "false"
+
     if mode == "sim":
         target = "sim_gz.launch.py"
         args = {
             **common,
-            "joy_control": LaunchConfiguration("joy_control"),
+            "joy_control": joy_control,
         }
     elif mode == "real":
         target = "real.launch.py"
@@ -69,7 +80,7 @@ def _setup(context):
             **common,
             "can_interface": LaunchConfiguration("can_interface"),
             "gear_ratio": LaunchConfiguration("gear_ratio"),
-            "joy_control": LaunchConfiguration("joy_control"),
+            "joy_control": joy_control,
         }
     else:  # DeclareLaunchArgument(choices=...) already guards this
         raise RuntimeError(f"rover.launch.py: unknown mode {mode!r} (use sim|real)")
