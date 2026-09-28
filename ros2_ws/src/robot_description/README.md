@@ -4,23 +4,30 @@
 
 `robot_description` is a ROS 2 description package, not a ROS node package. It supplies the BILLEE rover's Xacro/URDF model, visual and collision meshes, Gazebo sensor/control plugins, and the ROS 2 controller configuration that other packages consume. Its primary entry point is `urdf/robot.urdf.xacro`; expanding that file produces a six-wheel rover with a fixed ZED 2i camera frame.
 
-The model starts with a mass-bearing `base_link` connected to a massless `base_footprint`, then defines two fixed suspension assemblies and six continuous wheel joints. `robot_gz.urdf.xacro` adds the simulation-specific pieces: an RGB-D camera sensor on `/depth_cam`, the Gazebo Sensors system, and the `ign_ros2_control` system plugin. `ros2_control.urdf.xacro` exposes velocity command and position/velocity state interfaces for all six wheels.
+The model starts with a mass-bearing `base_link` connected to a massless `base_footprint`, then defines two fixed suspension assemblies and six continuous wheel joints. `robot_gz.urdf.xacro` adds the simulation-specific pieces: an RGB-D camera sensor on `/depth_cam`, the Gazebo Sensors system, and the `ign_ros2_control` system plugin. `ros2_control.urdf.xacro` exposes velocity command and position/velocity state interfaces for all six wheels and selects the hardware backend: `ign_ros2_control/IgnitionSystem` in Gazebo, or `odesc/OdescSystemHardware` (the real ODESC CAN drives) when expanded with `use_sim:=false`.
 
-This package does not launch or publish anything by itself. `chassis_bringup` expands the primary Xacro, passes it to `robot_state_publisher`, and spawns the same XML into Gazebo. The Gazebo control plugin then loads `config/controllers.yaml`, where a differential-drive controller maps one linear/angular command into the six wheel velocities.
+This package does not launch or publish anything by itself. `chassis_bringup` expands the primary Xacro and passes it to `robot_state_publisher`. In simulation (`sim_gz.launch.py`) it spawns the same XML into Gazebo, whose control plugin loads `config/controllers.yaml`; on hardware (`real.launch.py`) it expands with `use_sim:=false` and hands the description plus `controllers.yaml` to a standalone `ros2_control_node`. Either way, a differential-drive controller maps one linear/angular command into the six wheel velocities.
 
 ## 2. Technologies Behind It
 
 - **ROS distro:** ROS 2 Humble (the workspace Pixi channels and dependencies are Humble).
 - **Language(s) / core libraries:** XML/Xacro for the robot model; Python packaging through `setuptools`; standard ROS 2 description conventions and `robot_state_publisher` as the consumer.
-- **External dependencies:** Xacro, Gazebo / Ignition Gazebo 6 compatibility stack, `ign_ros2_control` / `gz_ros2_control`, `controller_manager`, `diff_drive_controller`, and STL/OBJ mesh rendering.
-- **Build system / target platform(s):** `ament_python`, built with `colcon`; the workspace’s default Pixi environment targets Linux with CUDA, with a CPU-only Linux-aarch64 environment for Apple-Silicon Docker development.
+- **External dependencies:** Xacro, Gazebo / Ignition Gazebo 6 compatibility stack, `ign_ros2_control` / `gz_ros2_control`, `controller_manager`, `diff_drive_controller`, the workspace's `odesc` hardware plugin (real backend), and STL/OBJ mesh rendering.
+- **Build system / target platform(s):** `ament_python`, built with `colcon`; Pixi environments `default` (Linux x86-64 + CUDA), `mac-cpu` (CPU-only linux-aarch64: Apple-Silicon Docker and native ARM64 Linux) and `l4t` (Jetson).
 - **Middleware / networking notes:** No DDS or network settings are declared here. The model specifies simulation time through the consuming launch and exposes Gazebo camera data that `ros_gz_bridge` can bridge to ROS 2.
 
 ## 3. How It Was Written
 
 The description is intentionally split by concern. `robot.urdf.xacro` is the composition point; `robot_core.urdf.xacro` owns the physical link, joint, inertia, collision, and mesh definitions; `camera.urdf.xacro` adds the fixed camera transform; and `robot_gz.urdf.xacro` contains Gazebo-only material, sensor, and plugin tags. This lets consumers choose the top-level model while keeping simulator-specific details out of the chassis geometry file.
 
-The rover uses six independently modeled continuous wheel joints, but the controller treats them as two drive sides: `joint_wheel_l1`–`joint_wheel_l3` and `joint_wheel_r1`–`joint_wheel_r3`. `controllers.yaml` encodes the kinematic values currently used by simulation: 0.67 m wheel separation, 0.11 m wheel radius, a 30 Hz controller-manager update rate, and a 50 Hz controller publish rate. The `use_sim` Xacro property is hard-coded to `true` in `robot.urdf.xacro`, so the only implemented hardware backend is `ign_ros2_control/IgnitionSystem`; the non-simulation branch is explicitly a TODO.
+The rover uses six independently modeled continuous wheel joints, but the controller treats them as two drive sides: `joint_wheel_l1`–`joint_wheel_l3` and `joint_wheel_r1`–`joint_wheel_r3`. `controllers.yaml` encodes the kinematic values currently used by simulation: 0.67 m wheel separation, 0.11 m wheel radius, a 30 Hz controller-manager update rate, and a 50 Hz controller publish rate. `robot.urdf.xacro` declares `use_sim` as a Xacro argument (default `true`) and mirrors it into a property, so every downstream `${use_sim}` reference follows the launch file's choice:
+
+| Xacro args | Backend in the `<hardware>` block | Used by |
+|---|---|---|
+| `use_sim:=true` (default) | `ign_ros2_control/IgnitionSystem` — Gazebo physics | `chassis_bringup/sim_gz.launch.py` |
+| `use_sim:=false can_interface:=can0 gear_ratio:=48.0` | `odesc/OdescSystemHardware` — six ODESC/ODrive drives over SocketCAN; `can_interface:=vcan0` for a virtual bus, `mock`/`none` for a no-CAN loopback | `chassis_bringup/real.launch.py`, `odesc_shadow.launch.py` |
+
+With `use_sim:=false` each wheel joint also gets its CAN `node_id` (0–5), transcribed from the canonical `odesc/config/node_map.yaml` (the left side is numbered rear→front, the right side front→rear — keep the two in sync). `gear_ratio` (motor turns per wheel turn) is applied only inside the ODESC plugin, so `controllers.yaml` is identical for both backends. `robot_gz.urdf.xacro` stays included in both cases: its `<gazebo>` blocks are ignored outside Gazebo.
 
 The RGB-D camera model in `robot_gz.urdf.xacro` is configured at 1280×720 with a 120° horizontal field of view and a 10 Hz update rate. The camera intrinsics are calculated in `macros.xacro`. The package includes basic copyright, flake8, and PEP 257 test scaffolding, but no model-specific automated simulation or hardware-in-the-loop tests.
 
@@ -38,11 +45,13 @@ graph TD
     C --> G[camera_link and camera_link_optical]
     D --> H[Gazebo RGB-D sensor /depth_cam]
     D --> I[ign_ros2_control plugin]
-    E --> I
+    E -->|use_sim:=true| I
+    E -->|use_sim:=false| O[odesc/OdescSystemHardware\ncan_interface, gear_ratio, node_id per wheel]
     J[config/controllers.yaml] --> I
+    J --> O
 ```
 
-### 4b. Runtime interface graph when used by `chassis_bringup`
+### 4b. Runtime interface graph in simulation (`sim_gz.launch.py`)
 
 ```mermaid
 graph LR
@@ -58,39 +67,42 @@ graph LR
     G -->|/depth_cam/points sensor_msgs/PointCloud2| B
 ```
 
+On hardware (`real.launch.py`) the Gazebo entity and camera bridge are absent: a standalone `ros2_control_node` loads `OdescSystemHardware`, which exchanges wheel velocity commands and encoder state with the ODESCs over CAN, and the same `diff_drive_controller` / `joint_state_broadcaster` run on top.
+
 ## 5. How to Run It
 
 ### Prerequisites
 
 - Run from `ros2_ws` with the workspace Pixi environment installed.
 - Have the ROS 2 Humble, Gazebo, `ros_gz`, and `ign_ros2_control` dependencies supplied by `pixi.toml` available.
-- For simulator use, use a host/container capable of rendering Gazebo; no physical-drive hardware plugin is implemented.
+- For simulator use, a host/container capable of rendering Gazebo (or `xvfb-run -a` when headless). For the real backend, the `odesc` package built in the same workspace and a CAN interface (`can0`), or `can_interface:=mock`.
 
 ### Build
 
 ```bash
 cd ros2_ws
-pixi run build
-source install/setup.bash
+pixi run -e <env> build        # or `make build` from the repo root
 ```
 
 ### Validate the model
 
 ```bash
 cd ros2_ws
-pixi run xacro src/robot_description/urdf/robot.urdf.xacro > /tmp/billee_robot.urdf
+pixi run -e <env> xacro src/robot_description/urdf/robot.urdf.xacro > /tmp/billee_sim.urdf
+pixi run -e <env> xacro src/robot_description/urdf/robot.urdf.xacro \
+  use_sim:=false can_interface:=mock > /tmp/billee_real.urdf
 ```
 
-The command should finish without Xacro errors and produce a URDF containing the six `joint_wheel_*` joints and the `camera_link` frames.
+Both should finish without Xacro errors and produce a URDF containing the six `joint_wheel_*` joints and the `camera_link` frames. The first names `ign_ros2_control/IgnitionSystem` as the hardware plugin; the second names `odesc/OdescSystemHardware` and carries a `node_id` on every wheel joint.
 
 ### Launch
 
-This package has no launch file. Launch it through the simulation bring-up:
+This package has no launch file. Use it through `chassis_bringup` (from `make shell`, or prefix `pixi run -e <env>`):
 
 ```bash
-cd ros2_ws
-source install/setup.bash
-ros2 launch chassis_bringup sim_gz.launch.py
+ros2 launch chassis_bringup sim_gz.launch.py                          # Gazebo backend
+ros2 launch chassis_bringup real.launch.py can_interface:=mock        # ODESC backend, no hardware
+ros2 launch chassis_bringup real.launch.py                            # ODESC backend on can0
 ```
 
 ### Verify it's running
@@ -102,8 +114,8 @@ ros2 launch chassis_bringup sim_gz.launch.py
 ### Common issues
 
 - **Gazebo cannot find meshes or the control plugin:** launch through `chassis_bringup`; it sets the Gazebo resource and `ign_ros2_control` plugin paths.
-- **Running on hardware:** there is no real hardware plugin in `ros2_control.urdf.xacro`; implement and select one before setting `use_sim` false.
-- **No drive/odometry motion in ROS:** this package configures the controller, but the active bridge configuration does not bridge command or odometry topics. See `chassis_bringup/README.md`.
+- **Hardware backend fails to activate:** `real.launch.py` expands with `use_sim:=false`; if `ros2 control list_controllers` shows the controllers inactive, the ODESC plugin could not open the CAN interface — bring it up with `tooling/can-up`, or use `can_interface:=mock`. See `odesc/README.md`.
+- **No drive/odometry motion in ROS:** commands go to `/diff_drive_controller/cmd_vel_unstamped` and odometry comes from `/diff_drive_controller/odom`, both owned by the controller (no Gazebo bridge involved). Check the controllers are active and something publishes the command topic. See `chassis_bringup/README.md`.
 
 ## 6. Subnode Breakdown
 
@@ -145,9 +157,9 @@ ros2 launch chassis_bringup sim_gz.launch.py
 
 - **Depends on:** Gazebo Sensors system plugin and a rendering engine (`ogre2`).
 
-### `ign_ros2_control` system and configured controllers
+### `ros2_control` hardware backend and configured controllers
 
-- **Package:** `ign_ros2_control` plus `controller_manager` / `ros2_controllers`
+- **Package:** `ign_ros2_control` (sim) or `odesc` (hardware), plus `controller_manager` / `ros2_controllers`
 - **Purpose:** Exposes the six wheel joints to ROS 2 control and loads the differential-drive and joint-state broadcaster controllers from `config/controllers.yaml`.
 - **Publishes:** Controller-specific ROS 2 state interfaces after the model is spawned; topic names are owned by the upstream controller plugins, not declared in this package.
 - **Subscribes:** Wheel velocity command interfaces from `diff_drive_controller`; the configuration sets `use_stamped_vel: false`.
@@ -163,4 +175,4 @@ ros2 launch chassis_bringup sim_gz.launch.py
   | `wheel_radius` | `0.11` | Wheel radius in metres. |
   | `cmd_vel_timeout` | `0.25` | Seconds before a stale drive command times out. |
 
-- **Depends on:** A spawned Gazebo model, `libign_ros2_control-system.so`, and `controllers.yaml`.
+- **Depends on:** `controllers.yaml`, and either a spawned Gazebo model with `libign_ros2_control-system.so` (sim) or a standalone `ros2_control_node` with the `odesc` plugin and its CAN interface (hardware). `real.launch.py` overrides `controller_manager.use_sim_time` to `false` for the hardware case.

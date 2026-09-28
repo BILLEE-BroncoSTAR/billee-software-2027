@@ -6,7 +6,7 @@ This guide details how to run the gazebo simulator for the software stack.
 
 ## Prerequisites
 
-1. The devcontainer is up and running on your machine
+1. `make setup <platform>` has been run, and the devcontainer is up (not needed for `linux-aarch64`, which runs natively)
 2. You have a controller connected
 3. You have a foxglove account or the foxglove desktop app
 4. (CAN Sim Only): `kmod` and `can-utils` are installed on your host computer
@@ -21,14 +21,17 @@ On your host machine:
 
 1. run `./tooling/sim-up`
     - this will start the gazebo simulator with the foxglove bridge and controller by default
-    - the controls are currently left stick for left speed and right stick for right speed of drivetrain with the right bumper as the safety button. without the safety button pressed, the robot will not drive
+    - `make sim` from the repo root does the same, inside the platform's container where there is one
+    - it uses the Pixi environment for the platform you ran `make setup <platform>` with (see the top-level README → Setup); override with `BILLEE_PLATFORM=<mac|linux-aarch64|l4t|x86> ./tooling/sim-up`
+    - viewer: on Linux with a display it also opens **RViz** (`RVIZ=false` to skip); on the Mac, and anywhere without a display, Gazebo runs under `xvfb-run -a` and you view in Foxglove (force with `HEADLESS=1`)
+    - the ODESC shadow on `vcan0` is added automatically when `vcan0` exists (`SHADOW=true|false` to force)
+    - controls: hold the right bumper (RB) as the safety button, then right trigger (RT) drives forward, left trigger (LT) reverses and the left stick steers left/right. Without RB held, the robot will not drive. Triggers read as released until they are pulled once
     - if you would like to remap this please edit `chassis_bringup/config/tele_params.yaml`
 2. Go to your foxglove web dashboard or desktop app:
     1. Select "Open New Connection"
     2. Select "Foxglove Websocket"
     3. Leave the default URL
     4. Select "Open"
-3. In foxglove:
-    1. On the 3D Panel Settings, under "Custom Layers" open the 3 dots and click "Add URDF"
-    2. For source select "Topic" and then for the topic select "robot_description"
-    3. The model will probably be rendered weird so under "Scene" change the Mesh-up axis to "z-up"
+3. In foxglove: Layouts → Import from file → `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json`
+    - it already has the grid, TF, odometry trail and the robot model from the `robot_description` topic, with the mesh up-axis set to z-up
+    - to drive without a gamepad (e.g. on a Mac), add a Teleop panel publishing to `/diff_drive_controller/cmd_vel_unstamped`

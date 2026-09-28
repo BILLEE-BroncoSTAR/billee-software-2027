@@ -22,18 +22,13 @@ Command form: `pixi run --environment <env> <cmd>` — `<env>` is `l4t` on **[ro
 
 ### Mac (Apple Silicon)
 
-An Apple-Silicon Mac runs as a **headless** ground station / self-contained sim host in the
-`mac-cpu` devcontainer (`--environment mac-cpu`). No RViz (no X); view in **Foxglove
-Studio** (the macOS app) → `ws://localhost:8765`. Differences from `[ground]` above:
-
-- **Sim**: wrap in `xvfb-run -a`, e.g.
-  `xvfb-run -a pixi run --environment mac-cpu ros2 launch chassis_bringup rover.launch.py mode:=sim`.
-- **View**: `... ros2 launch chassis_bringup ground_station.launch.py rviz:=false joystick:=false`
-  (just the bridge), or rely on the bridge that `rover.launch.py` already starts.
-- **Drive** (own terminal — reads stdin):
-  `pixi run --environment mac-cpu ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel_unstamped`
-- **No USB gamepad**, **no DDS to a remote rover** — for a remote rover, point Foxglove
-  Studio at `ws://<rover-ip>:8765` and drive from its Teleop panel. See `README.md`.
+An Apple-Silicon Mac runs the sim **headless** in the `mac-cpu` container and views it in
+**Foxglove Studio** on the Mac (`ws://localhost:8765`) — no RViz, gamepad or DDS to other
+machines. Full walkthrough: [README → Apple-Silicon Mac](../README.md#apple-silicon-mac-mac);
+short version: `make setup mac` → `make sim` → Foxglove `ws://localhost:8765` → import
+`drivetrain.json` → drive with the Teleop panel or `teleop_twist_keyboard`. For a remote
+rover, point Foxglove at `ws://<rover-ip>:8765` and drive from its Teleop panel. All the
+modes: [RUN_MODES.md](RUN_MODES.md).
 
 ---
 
@@ -143,7 +138,7 @@ create the virtual bus once on the Linux host, then launch ROS in the container:
 
 ```bash
 # Linux host (outside the container)
-cd /path/to/URC-2027
+cd ~/billee-software-2027
 ./tooling/can-up vcan0
 
 # Devcontainer
@@ -348,6 +343,8 @@ unaffected by it.
   `reverse_axis 2` (LT/L2), `steer_scale 1.5`, `speed_scale 2.0`.
   `linear.x = (fwd−rev)·speed_scale`, `angular.z = steer·steer_scale`; all-zero unless the
   deadman is held. Every index/sign is a param — retune in the yaml, no rebuild.
+  The sim starts its own copy of these nodes with `chassis_bringup/config/tele_params.yaml`
+  (same values — keep the two in sync).
 - **`xvfb-run`** is only for headless Gazebo on the rover. Never needed for RViz — RViz runs
   on **[ground]** with a real display.
 - **RT warning** `Could not enable FIFO RT scheduling policy` from `ros2_control_node` is
