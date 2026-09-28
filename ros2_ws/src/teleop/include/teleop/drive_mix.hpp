@@ -3,9 +3,19 @@
 #define TELEOP__DRIVE_MIX_HPP_
 
 #include <algorithm>
+#include <string>
 
 namespace teleop
 {
+
+// The control schemes joy_drive accepts. Kept here rather than in the node so the
+// validation that guards runtime `scheme` changes is testable without a ROS graph:
+// rejecting a bad value is what stops a typo in a UI silently changing how the rover
+// drives.
+inline bool isValidScheme(const std::string& scheme)
+{
+    return scheme == "arcade" || scheme == "tank";
+}
 
 struct DriveCmd
 {

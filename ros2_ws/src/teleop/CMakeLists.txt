@@ -16,11 +16,14 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+# joy_teleop.cpp includes rcl_interfaces headers directly, for the scheme parameter's
+# descriptor and the result type of its set-parameters callback.
+find_package(rcl_interfaces REQUIRED)
 
 # Game-pad teleop node; the control scheme is the `scheme` parameter (arcade/tank).
 add_executable(joy_drive src/joy_teleop.cpp)
 target_include_directories(joy_drive PRIVATE include)
-ament_target_dependencies(joy_drive rclcpp std_msgs sensor_msgs geometry_msgs)
+ament_target_dependencies(joy_drive rclcpp std_msgs sensor_msgs geometry_msgs rcl_interfaces)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

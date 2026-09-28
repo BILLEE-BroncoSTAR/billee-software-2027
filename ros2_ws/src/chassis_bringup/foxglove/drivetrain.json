@@ -72,6 +72,10 @@
       "downButton": { "field": "linear-x", "value": -1 },
       "leftButton": { "field": "angular-z", "value": 1 },
       "rightButton": { "field": "angular-z", "value": -1 }
+    },
+    "Parameters!scheme": {
+      "title": "Control scheme",
+      "nodeName": "/joy_drive"
     }
   },
   "globalVariables": {},
@@ -79,7 +83,12 @@
   "playbackConfig": { "speed": 1 },
   "layout": {
     "first": "3D!drivetrain",
-    "second": "Teleop!drivetrain",
+    "second": {
+      "first": "Teleop!drivetrain",
+      "second": "Parameters!scheme",
+      "direction": "column",
+      "splitPercentage": 55
+    },
     "direction": "row",
     "splitPercentage": 75
   }

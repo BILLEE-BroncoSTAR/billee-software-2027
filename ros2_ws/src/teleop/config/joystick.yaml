@@ -6,10 +6,19 @@ joy_node:
 
 joy_drive:
   ros__parameters:
-    # Which control scheme to run: "arcade" or "tank". Switching is a yaml edit
-    # and a relaunch - both schemes live in the same node.
-    #   arcade  left stick steers, RT drives forward, LT reverses
+    # Which control scheme to run - both live in the same node.
+    #   arcade  left stick steers, RT drives forward, LT reverses   <- what we drive
     #   tank    left stick drives the left track, right stick the right track
+    #
+    # This is the startup value. It is also settable at RUNTIME, and takes effect on
+    # the next /joy message - no relaunch:
+    #   ros2 param set /joy_drive scheme tank
+    # or the Parameters panel in chassis_bringup/foxglove/drivetrain.json. An invalid
+    # value is rejected, so a typo cannot quietly change how the rover drives.
+    #
+    # WARNING: tank has never been driven on hardware. Its axis defaults below are
+    # inferred from the axis map, not measured, and track_width is a placeholder.
+    # Selecting it logs a warning. Verify against `ros2 topic echo /joy` first.
     scheme: arcade
 
     # Xbox and PlayStation pads share these indices through joy_node on Linux.

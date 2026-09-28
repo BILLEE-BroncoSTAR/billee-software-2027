@@ -1,6 +1,10 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
+
+#include "rcl_interfaces/msg/parameter_descriptor.hpp"
+#include "rcl_interfaces/msg/set_parameters_result.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joy.hpp"
@@ -38,8 +42,16 @@ class JoyDrive : public rclcpp::Node
 public:
     JoyDrive() : Node("joy_drive")
     {
-        scheme_ = this->declare_parameter("scheme", std::string("arcade"));
-        if (scheme_ != "arcade" && scheme_ != "tank")
+        // Declared with an explicit constraint string so a UI that reads parameter
+        // descriptors (Foxglove's Parameters panel, rqt) shows the valid values.
+        rcl_interfaces::msg::ParameterDescriptor schemeDesc;
+        schemeDesc.description =
+            "Control scheme: 'arcade' (left stick steers, triggers drive) or 'tank' "
+            "(one stick per track). Settable at runtime - the change applies to the "
+            "next /joy message, no relaunch.";
+        schemeDesc.additional_constraints = "one of: arcade, tank";
+        scheme_ = this->declare_parameter("scheme", std::string("arcade"), schemeDesc);
+        if (!teleop::isValidScheme(scheme_))
         {
             RCLCPP_WARN(
                 this->get_logger(), "unknown scheme '%s'; using arcade.", scheme_.c_str());
@@ -68,15 +80,74 @@ public:
         // many rad/s, so a wrong value makes every turn the wrong rate.
         trackWidth_ = this->declare_parameter("track_width", 0.67);
 
-        RCLCPP_INFO(this->get_logger(), "control scheme: %s", scheme_.c_str());
+        // Announced here, not at the top of the constructor: the experimental
+        // warning quotes track_width, which is only declared above.
+        warnIfExperimental(scheme_);
 
         // depth 1: a fresh Joy packet immediately supersedes the previous one
         joySub_ = this->create_subscription<sensor_msgs::msg::Joy>(
             "/joy", 1, std::bind(&JoyDrive::onJoy, this, std::placeholders::_1));
         twistPub_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 1);
+
+        // Live scheme switching. Without this the member below is only ever read in
+        // this constructor, so `ros2 param set` (and Foxglove's Parameters panel,
+        // which goes through the same service) would appear to succeed and change
+        // nothing. Switching mid-drive is safe: the deadman still gates all motion
+        // and the next /joy message is simply mixed the new way.
+        paramCb_ = this->add_on_set_parameters_callback(
+            std::bind(&JoyDrive::onSetParameters, this, std::placeholders::_1));
     }
 
 private:
+    // ponytail: tank is selectable but has never been driven on the rover; the warning
+    // is the cheap guard. Drop it once someone has verified the mapping on hardware.
+    void warnIfExperimental(const std::string& scheme) const
+    {
+        if (scheme == "tank")
+        {
+            RCLCPP_WARN(
+                this->get_logger(),
+                "scheme 'tank' is UNVALIDATED on hardware: its axis defaults were "
+                "inferred, not measured, and track_width (%.3f m) is a placeholder that "
+                "sets the turn rate. Check both against `ros2 topic echo /joy` before "
+                "driving.",
+                trackWidth_);
+        }
+        else
+        {
+            RCLCPP_INFO(this->get_logger(), "control scheme: %s", scheme.c_str());
+        }
+    }
+
+    // Rejects an invalid scheme rather than silently falling back, so a typo in a UI
+    // surfaces as a failed parameter set instead of the rover driving the wrong way.
+    rcl_interfaces::msg::SetParametersResult onSetParameters(
+        const std::vector<rclcpp::Parameter>& params)
+    {
+        rcl_interfaces::msg::SetParametersResult result;
+        result.successful = true;
+        for (const auto& p : params)
+        {
+            if (p.get_name() != "scheme")
+            {
+                continue;
+            }
+            const std::string requested = p.as_string();
+            if (!teleop::isValidScheme(requested))
+            {
+                result.successful = false;
+                result.reason = "scheme must be 'arcade' or 'tank', got '" + requested + "'";
+                return result;
+            }
+            if (requested != scheme_)
+            {
+                scheme_ = requested;
+                warnIfExperimental(scheme_);
+            }
+        }
+        return result;
+    }
+
     bool axisInRange(const sensor_msgs::msg::Joy& msg, int i) const
     {
         return i >= 0 && static_cast<size_t>(i) < msg.axes.size();
@@ -189,6 +260,7 @@ private:
     bool throttleSeen_ = false;
     bool reverseSeen_ = false;
 
+    OnSetParametersCallbackHandle::SharedPtr paramCb_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joySub_;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr twistPub_;
 };

@@ -4,10 +4,62 @@
 
 The `teleop` package turns a USB joystick into rover drive commands. Its launch file starts the ROS 2 `joy` driver, which reads the selected Linux joystick device and publishes `sensor_msgs/msg/Joy` messages on `/joy`. It also starts this package's `joy_drive` executable, named `joy_drive` at launch.
 
-`joy_drive` runs one of two control schemes, chosen by the `scheme` parameter in [`config/joystick.yaml`](config/joystick.yaml); changing it is a yaml edit and a relaunch, not a rebuild.
+`joy_drive` runs one of two control schemes, chosen by the `scheme` parameter in [`config/joystick.yaml`](config/joystick.yaml). **Arcade is the scheme the team drives; tank is selectable but has never been run on hardware** (see [Tank is unvalidated](#tank-is-unvalidated) below). Changing it never needs a rebuild, and can be done live on a running node — `ros2 param set /joy_drive scheme tank`, or the Parameters panel in the Foxglove `drivetrain.json` layout. The change applies to the next `/joy` message; an invalid value is rejected rather than silently ignored.
 
 - **`scheme: arcade`** (default) reads the left stick X axis for steering and the two analog triggers for throttle: right trigger forward, left trigger reverse. While the deadman is held it publishes `linear.x = (forward − reverse) · speed_scale` and `angular.z = steer · steer_scale`.
 - **`scheme: tank`** reads one stick per track. While the deadman is held it publishes `linear.x = (left + right)/2 · speed_scale` and `angular.z = (right − left)/track_width · speed_scale` — both sticks forward drives straight, opposite sticks spin in place. `track_width` is the real distance between the tracks in metres; measure it on the rover, because it sets how much stick difference becomes how many rad/s.
+
+### Switching the scheme at runtime
+
+`scheme` has a set-parameters callback, so it is not only a startup value — a change
+applies to the **next `/joy` message**, with no relaunch. Switching mid-drive is safe:
+the deadman still gates all motion, and the next message is simply mixed the new way.
+
+```bash
+ros2 param set /joy_drive scheme tank      # takes effect immediately
+ros2 param get /joy_drive scheme
+```
+
+The Foxglove layout [`chassis_bringup/foxglove/drivetrain.json`](../chassis_bringup/foxglove/drivetrain.json)
+includes a **Parameters** panel bound to `/joy_drive` for exactly this. Foxglove renders
+it as an editable text field, not a dropdown — its Parameters panel has no enum widget —
+but the valid values are published in the parameter's descriptor
+(`additional_constraints: "one of: arcade, tank"`), which descriptor-aware UIs display.
+
+An invalid value is **rejected**, not silently coerced. The node keeps its current
+scheme and the call reports why, so a typo in a UI cannot quietly change how the rover
+drives:
+
+```
+$ ros2 param set /joy_drive scheme banana
+Setting parameter failed: scheme must be 'arcade' or 'tank', got 'banana'
+```
+
+(An invalid value in the *yaml* is different: at startup there is no caller to report
+to, so the node logs a warning and falls back to arcade rather than refusing to run.)
+
+### Tank is unvalidated
+
+**Tank has never been driven on a rover.** Selecting it logs a warning at startup and on
+every switch, and that warning is earned:
+
+```
+[WARN] [joy_drive]: scheme 'tank' is UNVALIDATED on hardware: its axis defaults were
+  inferred, not measured, and track_width (0.670 m) is a placeholder that sets the turn
+  rate. Check both against `ros2 topic echo /joy` before driving.
+```
+
+The scheme arrived in 6d5b3ce with `left_axis: 0` and `right_axis: 2`. On the Linux
+`joy_node` mapping this package documents — `steer_axis 0` (left stick X),
+`reverse_axis 2` (LT), `throttle_axis 5` (RT) — those are the left stick's *horizontal*
+axis and the *left trigger*. Neither is a tank input; tank needs each stick's *vertical*
+axis. It also defaulted `max_vel` to `0.0`, and both outputs multiplied by it, so every
+Twist it published was identically zero. It cannot ever have moved a rover.
+
+The current defaults `left_axis: 1` / `right_axis: 4` (the two sticks' vertical axes)
+are **inferred from that axis map, not measured on a pad**, and `track_width: 0.67` is
+inherited and unverified. Before driving tank on hardware, check the indices against
+`ros2 topic echo /joy` and measure the actual track width.
 
 A pad can also reach this node from a browser instead of `/dev/input`, via Foxglove's
 Joystick panel over the bridge — the only gamepad path on a Mac, where Docker Desktop
@@ -180,7 +232,7 @@ The launch reads `config/joystick.yaml`, which is also the file `sim_gz.launch.p
 
   | Name | Code default | Launch value | Description |
   |---|---:|---:|---|
-  | `scheme` | `arcade` | `arcade` | Control scheme: `arcade` (stick steers, triggers drive) or `tank` (one stick per track). An unknown value warns and falls back to `arcade`. |
+  | `scheme` | `arcade` | `arcade` | Control scheme: `arcade` (stick steers, triggers drive) or `tank` (one stick per track, **unvalidated**). **Settable at runtime** — applies on the next `/joy` message. An invalid value at runtime is rejected; an invalid value in the yaml warns and falls back to `arcade`. |
   | `deadman_button` | `5` | `5` | Button (RB / R1) that must be held to send motion. Both schemes. |
   | `speed_scale` | `2.0` | `2.0` | `linear.x` (m/s) at full throttle. Both schemes. |
   | `steer_axis` | `0` | `0` | Left stick X axis for steering. Arcade only. |

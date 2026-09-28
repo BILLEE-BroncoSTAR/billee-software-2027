@@ -387,8 +387,12 @@ T3, T4 or T4b there.
 
 #### Choosing the control scheme (arcade or tank)
 
-`joy_drive` runs either scheme; it is a parameter, not a separate node, so switching is
-a yaml edit and a relaunch — no rebuild. Edit `scheme:` in
+**Arcade is the scheme the team drives.** Tank is selectable but has never been run on
+hardware — see the warning below before choosing it.
+
+`joy_drive` runs either scheme; it is a parameter, not a separate node, so switching
+never needs a rebuild, and can be done **live on a running node**. To change the
+default, edit `scheme:` in
 [`teleop/config/joystick.yaml`](../ros2_ws/src/teleop/config/joystick.yaml) (the same
 file `sim_gz.launch.py` reads, so the sim and the real rover stay in step):
 
@@ -406,22 +410,58 @@ joy_drive:
 | `angular.z` | `steer · steer_scale` | `(right − left)/track_width · speed_scale` |
 | Tuning params | `steer_axis`, `steer_scale`, `invert_steer`, `throttle_axis`, `reverse_axis`, `trigger_rest`, `trigger_press` | `left_axis`, `right_axis`, `track_width` |
 
-Both gate on `deadman_button` and share `speed_scale`. An unknown `scheme:` logs a
-warning and falls back to arcade.
+Both gate on `deadman_button` and share `speed_scale`.
 
-For tank, **`track_width` must be the real distance between the tracks in metres** —
-it converts stick difference into rad/s, so a wrong value makes every turn the wrong
-rate. The checked-in `0.67` is inherited and unverified; measure it on the rover.
+##### Switching live, from Foxglove or the CLI
 
-Or override for one run without touching the file:
+`scheme` has a set-parameters callback, so a change applies to the **next `/joy`
+message** — no relaunch. Switching mid-drive is safe: the deadman still gates all
+motion, and the next message is simply mixed the new way.
+
+In **Foxglove**, the `drivetrain.json` layout includes a **Parameters** panel bound to
+`/joy_drive`; set `scheme` there and it takes effect immediately. (Foxglove renders it
+as an editable text field rather than a dropdown — the panel has no enum widget. The
+valid values are published in the parameter's descriptor, and anything else is
+rejected.)
+
+From a terminal:
+
+```bash
+ros2 param set /joy_drive scheme tank
+ros2 param get /joy_drive scheme
+```
+
+An invalid value is **rejected**, not silently ignored — the node keeps its current
+scheme and the call reports why, so a typo in a UI cannot quietly change how the rover
+drives:
+
+```
+$ ros2 param set /joy_drive scheme banana
+Setting parameter failed: scheme must be 'arcade' or 'tank', got 'banana'
+```
+
+Or start with a scheme, without touching any file:
 
 ```bash
 ros2 run teleop joy_drive --ros-args -p scheme:=tank -p left_axis:=1 -p right_axis:=4 \
   -r /cmd_vel:=/diff_drive_controller/cmd_vel_unstamped
 ```
 
-`scheme` is read once at startup, so `ros2 param set /joy_drive scheme ...` on a running
-node has no effect — relaunch to change it.
+##### ⚠️ Tank is unvalidated
+
+Selecting it logs a warning, and it earns one. The scheme arrived in 6d5b3ce with
+`left_axis: 0` and `right_axis: 2` — on the Linux mapping that is the left stick's
+*horizontal* axis and the *left trigger*, neither of which is a tank input — and with
+`max_vel` defaulting to `0.0`, so every Twist it published was identically zero. It
+cannot ever have moved a rover. The current defaults (`left_axis: 1`, `right_axis: 4`,
+the two sticks' vertical axes) are **inferred from the axis map, not measured**.
+
+**`track_width` must be the real distance between the tracks in metres** — it converts
+stick difference into rad/s, so a wrong value makes every turn the wrong rate. The
+checked-in `0.67` is inherited and unverified.
+
+Before driving tank on hardware, check both against `ros2 topic echo /joy` and measure
+the track width.
 
 ### T2 — Gamepad at a ground station
 

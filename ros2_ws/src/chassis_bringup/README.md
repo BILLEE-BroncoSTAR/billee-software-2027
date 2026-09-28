@@ -23,6 +23,13 @@ The bridges are deliberately data-driven: `config/config.yaml` currently bridges
 
 Viewer configs live alongside: `rviz/drivetrain.rviz` for RViz2 and `foxglove/drivetrain.json` for Foxglove Studio (import via Layouts → Import from file). Both show the same content — grid, TF, robot model from `/robot_description`, and the `/diff_drive_controller/odom` trail, fixed frame `odom` — and are loaded by `launch/viz.launch.py` (`rviz:=` / `foxglove:=`).
 
+The Foxglove layout carries two interactive panels beside the 3D view: a **Teleop**
+panel publishing to `/diff_drive_controller/cmd_vel_unstamped`, and a **Parameters**
+panel bound to `/joy_drive` for switching the gamepad control scheme (`arcade` / `tank`)
+without a relaunch — see [teleop's README](../teleop/README.md#switching-the-scheme-at-runtime).
+Note the robot frame here is `base_link`, which is published by the localization EKF;
+if the 3D panel cannot place the robot, that filter is not running.
+
 ## 2. Technologies Behind It
 
 - **ROS distro:** ROS 2 Humble.

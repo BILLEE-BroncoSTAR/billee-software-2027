@@ -5,6 +5,7 @@
 #include "teleop/drive_mix.hpp"
 
 using teleop::arcadeMix;
+using teleop::isValidScheme;
 using teleop::tankMix;
 using teleop::triggerAmount;
 
@@ -57,4 +58,16 @@ TEST(TankMix, IsSymmetric)
     const auto b = tankMix(0.75, 0.25, 0.67, 2.0);
     EXPECT_DOUBLE_EQ(a.linear, b.linear);
     EXPECT_DOUBLE_EQ(a.angular, -b.angular);
+}
+
+TEST(SchemeValidation, AcceptsOnlyTheTwoSchemes)
+{
+    EXPECT_TRUE(isValidScheme("arcade"));
+    EXPECT_TRUE(isValidScheme("tank"));
+    // Anything else must be refused, so a typo in a UI cannot silently change how the
+    // rover drives. The node rejects the parameter set rather than coercing it.
+    EXPECT_FALSE(isValidScheme("banana"));
+    EXPECT_FALSE(isValidScheme(""));
+    EXPECT_FALSE(isValidScheme("Arcade"));   // case-sensitive on purpose
+    EXPECT_FALSE(isValidScheme("arcade "));  // no silent trimming
 }
