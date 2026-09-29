@@ -3,7 +3,7 @@ ARG UBUNTU_MINOR=04
 
 FROM ubuntu:${UBUNTU_MAJOR}.${UBUNTU_MINOR}
 
-ARG PIXI_VERSION=0.76.1
+ARG PIXI_VERSION
 ARG DEBIAN_FRONTEND=noninteractive
 
 ENV TZ=Europe/Paris
@@ -32,7 +32,8 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
       zstd && \
     rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
+RUN : "${PIXI_VERSION:?build through docker/compose.yaml}" && \
+    curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
 
 # Headless GL for Gazebo Fortress on Apple-Silicon Docker (no GPU passthrough):
 # xvfb provides the throwaway X display for `xvfb-run`, and a mesa new enough
@@ -45,13 +46,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends software-proper
       libgl1 libgl1-mesa-dri libglx-mesa0 libglu1-mesa libegl1 libgles2 \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /root/ros2_ws
+# Same path docker/compose.yaml mounts the repo at. The repo mount hides this
+# environment at run time, but installing it here fills Pixi's package cache in the
+# image, so tooling/container-init installs the real one without downloading it again.
+WORKDIR /workspaces/billee-software-2027/ros2_ws
 
 COPY ros2_ws/pixi.toml ros2_ws/pixi.lock ./
 RUN pixi install --environment mac-cpu
-
-COPY ros2_ws ./
-RUN if [ -d src ]; then pixi run --environment mac-cpu build; fi
 
 # Install autocomplete dependencies as root
 RUN apt-get update && apt-get install -y \

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # install-x86-host — prepare an x86-64 Ubuntu machine with an NVIDIA GPU to run the
-# BILLEE desktop image (docker/Dockerfile.desktop.humble). Run by `make setup x86`.
+# BILLEE desktop image (docker/Dockerfile.desktop.humble). Run by `make setup x86`, and
+# by `make setup wsl`, where it only checks (see "WSL2" below).
 #
 # Installs, each step skipped when already done:
 #   1. base packages      curl, gnupg, make, can-utils, kmod, xhost (x11-xserver-utils)
@@ -16,6 +17,11 @@
 #   DRY_RUN=1               print the install commands instead of running them
 #   NVIDIA_DRIVER_BRANCH=N  install that driver branch (ubuntu-drivers install nvidia:N)
 #                           instead of Ubuntu's recommended one
+#
+# WSL2: the NVIDIA driver belongs to Windows and Docker comes from Docker Desktop, so
+# nothing is installed. It checks that the Windows driver supports the image's CUDA
+# version, that Docker Desktop's WSL integration is on for this distro, and that a
+# container sees the GPU.
 #
 # Exit codes: 0 ready · 1 error · 3 reboot or re-login needed, then re-run.
 set -euo pipefail
@@ -39,9 +45,6 @@ run_sh() {
 
 [[ "$(uname -s)" == Linux && "$(uname -m)" == x86_64 ]] ||
   die "needs x86-64 Linux (this is $(uname -s)/$(uname -m))."
-[[ -r /etc/os-release ]] && . /etc/os-release
-[[ "${ID:-}" == ubuntu ]] ||
-  die "automatic install supports Ubuntu (this is ${PRETTY_NAME:-unknown}). Install the NVIDIA driver, Docker Engine and the NVIDIA Container Toolkit by hand, then run: make setup x86 SKIP_APT=1"
 [[ $EUID -ne 0 ]] || die "run as your normal user (it uses sudo where needed), not as root."
 
 # CUDA version the image needs, from the Dockerfile's ARGs (single source of truth).
@@ -51,9 +54,48 @@ cuda_minor="$(sed -n 's/^ARG CUDA_MINOR=\([0-9]*\).*/\1/p' "$dockerfile" | head 
 need_cuda="$cuda_major.$cuda_minor"
 
 # Does the running driver support at least CUDA $need_cuda? (nvidia-smi reports the
-# highest CUDA version the driver supports.)
-driver_cuda() { nvidia-smi 2>/dev/null | sed -n 's/.*CUDA Version: *\([0-9]*\.[0-9]*\).*/\1/p' | head -1; }
+# highest CUDA version the driver supports: "CUDA Version: x.y", or "CUDA UMD Version:
+# x.y" on newer drivers and under WSL.)
+driver_cuda() {
+  nvidia-smi 2>/dev/null | sed -En 's/.*CUDA (UMD )?Version: *([0-9]+\.[0-9]+).*/\2/p' | head -1
+}
 version_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
+
+# ---------------------------------------------------------------- WSL2: checks only
+
+if [[ "$(uname -r)" == *[Mm]icrosoft* ]]; then
+  say "WSL2: the NVIDIA driver comes from Windows and Docker from Docker Desktop - checking only."
+  # WSL puts the Windows driver's tools here; it's not always on PATH.
+  PATH="$PATH:/usr/lib/wsl/lib"
+
+  current="$(driver_cuda || true)"
+  if [[ -z "$current" ]]; then
+    die "1/3 nvidia-smi doesn't work in WSL. Install the NVIDIA driver on Windows (not inside WSL), then run: wsl --shutdown, and make setup wsl again."
+  elif ! version_ge "$current" "$need_cuda"; then
+    die "1/3 the Windows NVIDIA driver supports CUDA $current; the image needs >= $need_cuda. Update the driver on Windows, then run: wsl --shutdown, and make setup wsl again."
+  fi
+  say "1/3 Windows NVIDIA driver: OK (supports CUDA $current)."
+
+  docker_bin="$(command -v docker || true)"
+  if [[ -z "$docker_bin" || "$docker_bin" == /mnt/* ]] || ! docker info &>/dev/null; then
+    die "2/3 Docker isn't reachable from this WSL distro. In Docker Desktop: Settings -> Resources -> WSL integration -> enable '${WSL_DISTRO_NAME:-this distro}' -> Apply & restart. Then open a new terminal and run make setup wsl again."
+  fi
+  say "2/3 Docker: OK ($(docker --version 2>/dev/null | cut -d, -f1))."
+
+  if [[ "$DRY_RUN" == 1 ]]; then
+    say "3/3 would run: docker run --rm --gpus all ubuntu:24.04 nvidia-smi"
+    exit 0
+  fi
+  say "3/3 Smoke test: nvidia-smi inside a container."
+  docker run --rm --gpus all ubuntu:24.04 nvidia-smi >/dev/null ||
+    die "docker run --gpus all failed. Update Docker Desktop and the Windows NVIDIA driver, and check that Docker Desktop uses the WSL 2 engine."
+  say "Host ready: Windows driver (CUDA $current), Docker Desktop."
+  exit 0
+fi
+
+[[ -r /etc/os-release ]] && . /etc/os-release
+[[ "${ID:-}" == ubuntu ]] ||
+  die "automatic install supports Ubuntu (this is ${PRETTY_NAME:-unknown}). Install the NVIDIA driver, Docker Engine and the NVIDIA Container Toolkit by hand, then run: make setup x86 SKIP_APT=1"
 
 needs_reboot=0
 needs_relogin=0

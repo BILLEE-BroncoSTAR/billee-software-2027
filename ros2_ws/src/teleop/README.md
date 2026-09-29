@@ -11,7 +11,7 @@ The `teleop` package turns a USB joystick into rover drive commands. Its launch 
 
 A pad can also reach this node from a browser instead of `/dev/input`, via Foxglove's
 Joystick panel over the bridge — the only gamepad path on a Mac, where Docker Desktop
-passes no USB through. Select it with `joy_source:=browser`:
+passes no USB through, and on WSL2, whose stock kernel has no joystick driver. Select it with `joy_source:=browser`:
 
 ```bash
 ros2 launch teleop teleop.launch.py joy_source:=browser
@@ -20,7 +20,8 @@ ros2 launch teleop teleop.launch.py joy_source:=browser
 That skips `joy_node` (there is no local device to open) and loads
 [`config/joystick_browser.yaml`](config/joystick_browser.yaml) instead of
 `joystick.yaml`, because a browser reports pads with a different mapping.
-`tooling/ground-up` and `tooling/sim-up` select it automatically on the Mac. See
+`tooling/ground-up` and `tooling/sim-up` select it automatically on the Mac and WSL2
+(`JOY_SOURCE=device|browser` overrides). See
 [T4b in docs/RUN_MODES.md](../../../docs/RUN_MODES.md#t4b--real-gamepad-through-the-browser)
 for the mapping differences and the panel to use.
 

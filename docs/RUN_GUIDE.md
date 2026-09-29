@@ -5,16 +5,16 @@
 | tag | machine | Pixi env | runs |
 |-----|---------|----------|------|
 | **[rover]** | Jetson, headless | `l4t` | bring-up (sim/real), `controller_manager` + controllers, `foxglove_bridge` |
-| **[ground]** | x86 Linux laptop/desktop, has a monitor | `default` | teleop (gamepad plugged in here), RViz, Foxglove Studio |
+| **[ground]** | x86 Linux (or WSL2) laptop/desktop, has a monitor | `default` | teleop (gamepad plugged in here), RViz, Foxglove Studio |
 
 Both machines: same repo at `~/billee-software-2027/ros2_ws`, same LAN, same `ROS_DOMAIN_ID`
 (pinned to `42` in `ros2_ws/pixi.toml` — see [Cross-machine ROS 2](#cross-machine-ros-2)).
 
-Every terminal, first:
+Every command below runs inside the machine's container, which has Pixi on its path and
+opens in `ros2_ws`. For each terminal, from the repo root on the host:
 
 ```bash
-cd ~/billee-software-2027/ros2_ws
-export PATH="$HOME/.pixi/bin:$PATH"
+make shell        # or: tooling/desktop-ros2 shell, or a VS Code devcontainer terminal
 ```
 
 Command form: `pixi run --environment <env> <cmd>` — `<env>` is `l4t` on **[rover]**,

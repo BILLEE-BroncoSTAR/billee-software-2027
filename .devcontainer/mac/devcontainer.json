@@ -1,37 +1,22 @@
 {
+  // Apple-Silicon Mac (Docker Desktop) ground station. Container settings (CPU rendering,
+  // published Foxglove port, mounts) live in docker/compose.yaml, service `mac`, shared
+  // with `make`.
   "name": "desktop-roshumble-mac-cpu",
-  "build": {
-    "dockerfile": "../../docker/Dockerfile.desktop.mac.humble",
-    "context": "../.."
-  },
+  "dockerComposeFile": ["../../docker/compose.yaml"],
+  "service": "mac",
+  "runServices": ["mac"],
+  "workspaceFolder": "/workspaces/billee-software-2027",
+
+  "postStartCommand": "tooling/container-init",
 
   "containerUser": "root",
   "remoteUser": "root",
 
-  // The container's entrypoint is PID 1 here (no --pid host like the Linux
-  // devcontainers), which breaks xvfb-run's SIGUSR1 readiness handshake and
-  // hangs sim-up forever; --init (tini) fixes PID-1 signal handling.
-  "runArgs": ["--init"],
-
-  "workspaceMount": "source=${localWorkspaceFolder}/ros2_ws,target=/root/ros2_ws,type=bind",
-  "workspaceFolder": "/root/ros2_ws",
-  // tooling/ (sim-up, billee-env.sh) beside the workspace, like the full-repo mounts on Linux.
-  "mounts": ["source=${localWorkspaceFolder}/tooling,target=/root/tooling,type=bind,readonly"],
-  "postStartCommand": "if ! grep -Fq \"'exec' /root/ros2_ws/.pixi/envs/mac-cpu/bin/python\" .pixi/envs/mac-cpu/bin/ros2 2>/dev/null; then pixi clean --environment mac-cpu || true; pixi install --environment mac-cpu; fi",
-
   // Foxglove Studio on the macOS host connects to the container's foxglove_bridge here.
-  // There is no host networking on Docker Desktop, so this forward is how :8765 gets out.
   "forwardPorts": [8765],
   "portsAttributes": {
     "8765": { "label": "Foxglove bridge" }
-  },
-
-  "containerEnv": {
-    "ROS_DISTRO": "humble",
-    // No GPU passthrough on Apple Silicon Docker — force the mesa llvmpipe software
-    // renderer so Gazebo (under xvfb-run) does not probe for a nonexistent GPU.
-    "LIBGL_ALWAYS_SOFTWARE": "1",
-    "GALLIUM_DRIVER": "llvmpipe"
   },
 
   "customizations": {

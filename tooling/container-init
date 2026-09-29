@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# container-init - make sure this container's Pixi environment is installed and current.
+#
+# Run on every container start: by the devcontainers' postStartCommand and by
+# tooling/desktop-ros2 before each command. A no-op when the environment is already up to
+# date. The repo is bind-mounted over the image, which hides any environment baked into
+# it, so the environment lives in the host's ros2_ws/.pixi and is (re)installed here.
+set -euo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/billee-env.sh"
+if [[ -z "$BILLEE_WS" ]]; then
+  echo "container-init: can't find ros2_ws" >&2
+  exit 1
+fi
+cd "$BILLEE_WS"
+
+# Pixi environments embed their absolute path in script shebangs. One installed under
+# another mount point (e.g. the old Mac /root/ros2_ws) runs the wrong interpreter, so
+# remove it and install afresh.
+ros2="$BILLEE_WS/.pixi/envs/$BILLEE_PIXI_ENV/bin/ros2"
+if [[ -f "$ros2" ]] && ! grep -Fq "$BILLEE_WS/.pixi/envs/$BILLEE_PIXI_ENV/bin/python" "$ros2"; then
+  echo "container-init: $BILLEE_PIXI_ENV was installed at another path - reinstalling"
+  pixi clean --environment "$BILLEE_PIXI_ENV" || true
+fi
+
+pixi install --environment "$BILLEE_PIXI_ENV"

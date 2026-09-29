@@ -1,34 +1,148 @@
+# One service per platform: the single definition of how each BILLEE container is built
+# and started. The VS Code devcontainers (.devcontainer/<platform>/), `make` and
+# tooling/desktop-ros2 all use these services, so a flag changed here applies everywhere.
+#
+#   docker compose -f docker/compose.yaml up -d <x86|wsl|mac|rover>    # or: make up
+#   docker compose -f docker/compose.yaml exec <service> bash          # or: make shell
+#   docker compose -f docker/compose.yaml stop <service>               # or: make down
+#
+# Services stay up (`sleep infinity`); every shell and launch execs into the running one.
+# Paths are relative to this file, so `..` is the repo root.
+
+name: billee
+
+# ------------------------------------------------------------------ shared pieces
+
+# Build context and the one copy of the Pixi version every image installs.
+x-build-args: &build-args
+  PIXI_VERSION: "0.76.1"
+
+# The repo is mounted at the same fixed path on every platform: the Pixi environment and
+# colcon's install/ embed absolute paths, so make, the CLI and VS Code must agree on it.
+x-workspace: &workspace
+  working_dir: /workspaces/billee-software-2027/ros2_ws
+  init: true            # tini as PID 1: xvfb-run's SIGUSR1 handshake hangs without it
+  command: sleep infinity
+  stdin_open: true
+  tty: true
+
+x-env: &env
+  ROS_DISTRO: humble
+
+x-nvidia-env: &nvidia-env
+  NVIDIA_VISIBLE_DEVICES: all
+  NVIDIA_DRIVER_CAPABILITIES: all
+
+# Linux hosts: share the host's network (DDS, can0/vcan0), processes, devices and X server.
+x-linux-host: &linux-host
+  privileged: true
+  network_mode: host
+  pid: host
+  ipc: host
+
+x-gpu: &gpu
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: all
+          capabilities: [gpu]
+
 services:
-  rover:
-    build:
-      dockerfile: Dockerfile.l4t-humble
-    image: rover-ros-humble:l4t-aarch64
-    container_name: rover
-    hostname: rover
-    user: root
-
-    privileged: true
-
-    # JetPack 6 (Orin): use the nvidia runtime, NOT "--gpus all" (unreliable on JP6,
-    # and Orin under JP6 doesn't expose the same GPU device semantics as Thor/JP7 did).
-    runtime: nvidia
-
-    network_mode: host
-    pid: host
-    ipc: host
-
+  # x86-64 Linux + NVIDIA GPU (ground station).
+  x86:
+    <<: [*workspace, *linux-host]
+    build: &desktop-build
+      context: ..
+      dockerfile: docker/Dockerfile.desktop.humble
+      args: *build-args
+    image: billee-desktop:latest
+    hostname: ros-dev
+    user: ros_user
+    deploy: *gpu
+    device_cgroup_rules:
+      - "c 189:* rmw"   # USB devices
+      - "c 81:* rmw"    # video4linux (ZED)
     environment:
-      ROS_DISTRO: humble
-      NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: all
-      DISPLAY: ${DISPLAY}
-
+      <<: [*env, *nvidia-env]
+      DISPLAY: ${DISPLAY:-}
+      __GLX_VENDOR_LIBRARY_NAME: nvidia
+      __NV_PRIME_RENDER_OFFLOAD: "1"
     volumes:
-      - /dev:/dev
-      - /dev/shm:/dev/shm
-      # kept only for optional local debugging on a Jetson with a display attached
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - ../:/workspaces/URC-2027
+      - &repo ..:/workspaces/billee-software-2027
+      - &dev /dev:/dev
+      - &shm /dev/shm:/dev/shm
+      - &x11 /tmp/.X11-unix:/tmp/.X11-unix
 
-    stdin_open: true
-    tty: true
+  # x86-64 Windows + WSL2 + NVIDIA (ground station). Same image as x86; the GPU comes from
+  # the Windows driver through /usr/lib/wsl, and windows go to WSLg. OpenGL runs on mesa's
+  # d3d12 driver (on the NVIDIA GPU), so the NVIDIA GLX variables of x86 are left out.
+  wsl:
+    <<: [*workspace, *linux-host]
+    build: *desktop-build
+    image: billee-desktop:latest
+    hostname: ros-dev
+    user: ros_user
+    deploy: *gpu
+    environment:
+      <<: [*env, *nvidia-env]
+      DISPLAY: ${DISPLAY:-:0}
+      WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-wayland-0}
+      XDG_RUNTIME_DIR: /mnt/wslg/runtime-dir
+      PULSE_SERVER: /mnt/wslg/PulseServer
+      LD_LIBRARY_PATH: /usr/lib/wsl/lib
+      GALLIUM_DRIVER: d3d12
+    volumes:
+      - *repo
+      - *dev
+      - *shm
+      - *x11
+      - /mnt/wslg:/mnt/wslg
+      - /usr/lib/wsl:/usr/lib/wsl:ro
+
+  # Apple-Silicon Mac, Docker Desktop (ground station). No GPU, no host networking and no
+  # USB passthrough: Gazebo renders on the CPU under xvfb-run, and the Foxglove bridge port
+  # is published to the Mac.
+  mac:
+    <<: *workspace
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.desktop.mac.humble
+      args: *build-args
+    image: billee-mac-cpu:latest
+    platform: linux/arm64   # the mac-cpu environment is linux-aarch64 only
+    user: root
+    ports:
+      - "8765:8765"   # foxglove_bridge -> Foxglove Studio on the Mac
+    environment:
+      <<: *env
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      GALLIUM_DRIVER: llvmpipe
+    volumes:
+      - *repo
+
+  # NVIDIA Jetson on JetPack 6 / L4T r36.x (the rover). Headless.
+  rover:
+    <<: [*workspace, *linux-host]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.l4t-humble
+      args:
+        <<: *build-args
+        # Picks the ZED SDK build; must match the Jetson's L4T (cat /etc/nv_tegra_release).
+        L4T_MAJOR: "36"
+        L4T_MINOR: "4"
+    image: rover-ros2:latest
+    platform: linux/arm64
+    hostname: rover
+    user: ros_user
+    # JetPack 6: use the nvidia runtime, not a GPU device reservation.
+    runtime: nvidia
+    environment:
+      <<: [*env, *nvidia-env]
+      DISPLAY: ${DISPLAY:-}   # only for local debugging with a display attached
+    volumes:
+      - *repo
+      - *dev
+      - *shm
+      - *x11

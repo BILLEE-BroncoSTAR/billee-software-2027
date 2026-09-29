@@ -2,8 +2,8 @@
 #
 # Source it (don't execute it). Sets:
 #   BILLEE_WS         absolute path to ros2_ws
-#   BILLEE_PLATFORM   mac | linux-aarch64 | l4t | x86
-#   BILLEE_PIXI_ENV   mac-cpu | linux-aarch64 | l4t | default
+#   BILLEE_PLATFORM   x86 | wsl | mac | l4t
+#   BILLEE_PIXI_ENV   default (x86, wsl) | mac-cpu | l4t
 #   BILLEE_ROLE       rover (l4t) | ground (everything else)
 #
 # BILLEE_ROLE is the deployment split: the Jetson runs the rover stack (real
@@ -14,10 +14,11 @@
 # The platform comes from, first match wins:
 #   1. $BILLEE_PLATFORM, if already set (per-command override)
 #   2. $BILLEE_WS/.billee-platform, written by `make setup <platform>`
-#   3. detection: x86_64 -> x86; aarch64 -> l4t on a Jetson, else linux-aarch64
+#   3. detection: x86_64 -> wsl under WSL2, else x86; aarch64 -> l4t on a Jetson,
+#      else mac (the only other ARM64 platform is the Mac's Linux container)
 #
-# Used by docker/terminal_config.sh (copied into every image), tooling/sim-up and
-# tooling/desktop-ros2. Safe to source from an interactive shell: no `set -e`/`exit`.
+# Used by docker/terminal_config.sh (copied into every image), tooling/sim-up,
+# tooling/container-init and tooling/desktop-ros2. Safe to source from an interactive shell: no `set -e`/`exit`.
 
 _billee_find_ws() {
   local here dir
@@ -34,17 +35,18 @@ _billee_find_ws() {
     if [[ -f "$dir/ros2_ws/pixi.toml" ]]; then echo "$dir/ros2_ws"; return; fi
     dir="$(dirname "$dir")"
   done
-  # Container mount points (Mac devcontainer, VS Code devcontainers).
-  for dir in "$HOME/ros2_ws" /root/ros2_ws /workspaces/*/ros2_ws; do
+  # The containers' mount point (docker/compose.yaml).
+  for dir in /workspaces/*/ros2_ws; do
     if [[ -f "$dir/pixi.toml" ]]; then echo "$dir"; return; fi
   done
 }
 
 _billee_detect_platform() {
   case "$(uname -m)" in
-    x86_64) echo x86 ;;
+    x86_64)
+      if [[ "$(uname -r)" == *[Mm]icrosoft* ]]; then echo wsl; else echo x86; fi ;;
     aarch64 | arm64)
-      if [[ -f /etc/nv_tegra_release ]]; then echo l4t; else echo linux-aarch64; fi ;;
+      if [[ -f /etc/nv_tegra_release ]]; then echo l4t; else echo mac; fi ;;
     *) echo unknown ;;
   esac
 }
@@ -58,7 +60,6 @@ BILLEE_PLATFORM="${BILLEE_PLATFORM:-$(_billee_detect_platform)}"
 
 case "$BILLEE_PLATFORM" in
   mac) BILLEE_PIXI_ENV=mac-cpu ;;
-  linux-aarch64) BILLEE_PIXI_ENV=linux-aarch64 ;;
   l4t) BILLEE_PIXI_ENV=l4t ;;
   *) BILLEE_PIXI_ENV=default ;;
 esac
@@ -68,11 +69,5 @@ if [[ -z "${BILLEE_ROLE:-}" ]]; then
   if [[ "$BILLEE_PLATFORM" == l4t ]]; then BILLEE_ROLE=rover; else BILLEE_ROLE=ground; fi
 fi
 
-# A native `make setup linux-aarch64` installs pixi to ~/.pixi/bin; pick it up even
-# before the user's shell has re-read ~/.bashrc.
-if ! command -v pixi >/dev/null 2>&1 && [[ -x "$HOME/.pixi/bin/pixi" ]]; then
-  PATH="$HOME/.pixi/bin:$PATH"
-fi
-
-export BILLEE_WS BILLEE_PLATFORM BILLEE_PIXI_ENV BILLEE_ROLE PATH
+export BILLEE_WS BILLEE_PLATFORM BILLEE_PIXI_ENV BILLEE_ROLE
 unset -f _billee_find_ws _billee_detect_platform

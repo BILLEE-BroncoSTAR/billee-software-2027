@@ -6,9 +6,10 @@
 #   ./sim-up true false  - same, without the gamepad nodes
 #
 # Args: [foxglove=true] [joystick=true]. Environment overrides:
-#   BILLEE_PLATFORM=<mac|linux-aarch64|x86>  Pixi env (default: from `make setup`, see tooling/billee-env.sh)
+#   BILLEE_PLATFORM=<x86|wsl|mac>  Pixi env (default: from `make setup`, see tooling/billee-env.sh)
 #   BILLEE_ROLE=ground     bypass the rover guard below
-#   RVIZ=true|false        default: true on Linux with a display, false on mac / headless
+#   RVIZ=true|false        default: true on Linux/WSL with a display, false on mac / headless
+#   JOY_SOURCE=device|browser  default: browser on mac and wsl (no USB pad there), else device
 #   SHADOW=true|false      ODESC shadow on vcan0; default: true when vcan0 exists
 #                          (create it on the host with `tooling/can-up vcan0`)
 #   HEADLESS=1             force `xvfb-run -a` (automatic when there is no display)
@@ -53,11 +54,15 @@ if [[ -z "$shadow" ]]; then
   if ip link show vcan0 &>/dev/null; then shadow=true; else shadow=false; fi
 fi
 
-# Docker Desktop passes no USB through, so on the Mac a game pad can only reach
-# ROS through the browser: Foxglove's Joystick panel publishes /joy itself.
-joy_source=device
-if [[ "$BILLEE_PLATFORM" == mac ]]; then
-  joy_source=browser
+# Docker Desktop on the Mac passes no USB through, and the stock WSL2 kernel has no
+# joystick driver, so there a game pad can only reach ROS through the browser:
+# Foxglove's Joystick panel publishes /joy itself. JOY_SOURCE=device|browser overrides.
+joy_source="${JOY_SOURCE:-}"
+if [[ -z "$joy_source" ]]; then
+  case "$BILLEE_PLATFORM" in
+    mac | wsl) joy_source=browser ;;
+    *) joy_source=device ;;
+  esac
 fi
 
 echo "sim-up: platform $BILLEE_PLATFORM, Pixi env $BILLEE_PIXI_ENV," \

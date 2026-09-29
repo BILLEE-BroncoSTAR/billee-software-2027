@@ -6,10 +6,10 @@ This guide details how to run the gazebo simulator for the software stack.
 
 ## Prerequisites
 
-1. `make setup <platform>` has been run, and the devcontainer is up (not needed for `linux-aarch64`, which runs natively)
+1. `make setup <platform>` has been run (it builds the platform's container)
 2. You have a controller connected
 3. You have a foxglove account or the foxglove desktop app
-4. (CAN Sim Only): `kmod` and `can-utils` are installed on your host computer
+4. (CAN Sim Only, x86 Linux): `kmod` and `can-utils` are installed on your host computer (`make setup x86` does it)
 
 ## Getting the CAN interface set up
 
@@ -19,11 +19,11 @@ On your host machine:
 
 ## Running the Simulator
 
-1. run `./tooling/sim-up`
-    - this will start the gazebo simulator with the foxglove bridge and controller by default
-    - `make sim` from the repo root does the same, inside the platform's container where there is one
-    - it uses the Pixi environment for the platform you ran `make setup <platform>` with (see the top-level README → Setup); override with `BILLEE_PLATFORM=<mac|linux-aarch64|l4t|x86> ./tooling/sim-up`
-    - viewer: on Linux with a display it also opens **RViz** (`RVIZ=false` to skip); on the Mac, and anywhere without a display, Gazebo runs under `xvfb-run -a` and you view in Foxglove (force with `HEADLESS=1`)
+1. run `make sim` from the repo root on the host
+    - this will start the gazebo simulator with the foxglove bridge and controller by default, inside the platform's container
+    - in a container terminal (e.g. VS Code in the devcontainer), `make sim` or `tooling/sim-up` from the repo root does the same
+    - it uses the Pixi environment for the platform you ran `make setup <platform>` with (see the top-level README → Setup); override with `BILLEE_PLATFORM=<x86|wsl|mac> make sim`
+    - viewer: on Linux or WSL2 with a display it also opens **RViz** (`RVIZ=false` to skip); on the Mac, and anywhere without a display, Gazebo runs under `xvfb-run -a` and you view in Foxglove (force with `HEADLESS=1`)
     - the ODESC shadow on `vcan0` is added automatically when `vcan0` exists (`SHADOW=true|false` to force)
     - controls: hold the right bumper (RB) as the safety button, then right trigger (RT) drives forward, left trigger (LT) reverses and the left stick steers left/right. Without RB held, the robot will not drive. Triggers read as released until they are pulled once
     - if you would like to remap this please edit `teleop/config/joystick.yaml` (the same file teleop.launch.py uses); `scheme: arcade` or `scheme: tank` picks the control scheme

@@ -97,14 +97,13 @@ There is no `/cmd_vel` or `/odom` bridge edge by design: `diff_drive_controller`
 
 ### Prerequisites
 
-- Set up the machine once from the repo root with `make setup <mac|linux-aarch64|l4t>` (see the top-level `README.md` → *Setup*), or open the matching devcontainer. This installs the Pixi environment (ROS 2 Humble, Gazebo Fortress, `ros_gz`, `ros2_control`, `foxglove_bridge`) and builds the workspace.
-- Every command below runs from `ros2_ws` through Pixi. Pick the environment for your machine:
+- Set up the machine once from the repo root with `make setup <x86|wsl|mac|l4t>` (see the top-level `README.md` → *Setup*), or open the matching devcontainer. This installs the Pixi environment (ROS 2 Humble, Gazebo Fortress, `ros_gz`, `ros2_control`, `foxglove_bridge`) and builds the workspace.
+- Every command below runs from `ros2_ws` through Pixi, inside the platform's container (`make shell`). Pick the environment for your machine:
 
   | Machine | `-e` / `--environment` |
   |---|---|
-  | x86-64 + NVIDIA (default devcontainer) | `default` (may be omitted) |
+  | x86-64 Linux or WSL2 + NVIDIA | `default` (may be omitted) |
   | Apple-Silicon Mac container | `mac-cpu` |
-  | Native ARM64 Linux | `linux-aarch64` |
   | Jetson rover | `l4t` |
 
   `pixi run` activates the environment, sources `install/setup.sh` and sets `ROS_DOMAIN_ID=42`; a plain shell must do both itself.

@@ -25,10 +25,9 @@ numpy = "*"
 empy = "*"
 lark = "*"
 
-# CPU-only aarch64. Shared by three environments with two different roles:
-#   - `mac-cpu`       : Apple-Silicon Docker Desktop containers (.devcontainer/mac/) - ground
-#   - `linux-aarch64` : ARM64 Linux run natively                                     - ground
-#   - `l4t`           : NVIDIA Jetson (L4T / JetPack)          (.devcontainer/l4t/)  - ROVER
+# CPU-only aarch64. Shared by two environments with different roles:
+#   - `mac-cpu` : Apple-Silicon Docker Desktop containers (.devcontainer/mac/) - ground
+#   - `l4t`     : NVIDIA Jetson (L4T / JetPack)          (.devcontainer/l4t/)  - ROVER
 [feature.aarch64-cpu]
 platforms = ["linux-aarch64"]
 
@@ -55,7 +54,7 @@ platforms = ["linux-aarch64"]
 [feature.rover.dependencies]
 ros-humble-ros-base = ">=0.10.0,<0.11"
 
-# GROUND STATION - x86 Linux, native ARM64 Linux, or the Mac container. Viewers,
+# GROUND STATION - x86 Linux, WSL2, or the Mac container. Viewers,
 # game pad, and the Gazebo sim, which runs here rather than on the rover.
 [feature.ground-station]
 
@@ -76,12 +75,11 @@ flake8-docstrings = "*"
 pytest-cov = "*"
 
 [environments]
+# default: x86 Linux and WSL2 ground stations (same image, same environment).
 default = { features = ["linux-cuda", "ground-station"]}
-# mac-cpu and linux-aarch64 share a solve-group, so the Mac container and a native
-# ARM64 Linux machine lock identical package versions. l4t (the rover) is solved on
-# its own so it only changes when it is deliberately updated and tested on the Jetson.
 mac-cpu = { features = ["aarch64-cpu", "ground-station"], solve-group = "aarch64-desktop" }
-linux-aarch64 = { features = ["aarch64-cpu", "ground-station"], solve-group = "aarch64-desktop" }
+# l4t (the rover) is solved on its own so it only changes when it is deliberately
+# updated and tested on the Jetson.
 l4t = { features = ["aarch64-cpu", "rover"]}
 
 # Shared by BOTH roles: the build toolchain, and the robot itself (URDF -> TF ->

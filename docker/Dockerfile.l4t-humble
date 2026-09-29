@@ -1,15 +1,14 @@
-# NVIDIA Jetson (L4T) rover image.
+# NVIDIA Jetson (L4T) rover image, for JetPack 6 / L4T r36.x.
 #
 # Structural mirror of docker/Dockerfile.desktop.humble: a CUDA-capable base ->
-# apt basics -> non-root `ros_user` -> (optional ZED SDK) -> pixi in /opt/pixi ->
+# apt basics -> non-root `ros_user` -> ZED SDK -> pixi in /opt/pixi ->
 # `CMD ["pixi", "shell"]`. ROS 2 Humble itself comes from pixi / RoboStack (see
-# ros2_ws/pixi.toml, environment `l4t`)
-#
-# Running on jetpack v6.x
+# ros2_ws/pixi.toml, environment `l4t`). Build it through docker/compose.yaml
+# (service `rover`), which passes PIXI_VERSION and the L4T version.
 
 FROM nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_4c0c55dddd2bbcc3e8d5f9753bee634c
 
-ARG PIXI_VERSION=0.76.1
+ARG PIXI_VERSION
 
 # create a non-root user (matches Dockerfile.desktop.humble)
 ARG USERNAME=ros_user
@@ -20,8 +19,10 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 ARG ZED_SDK_MAJOR=5
 ARG ZED_SDK_MINOR=4
-ARG L4T_MAJOR=39
-ARG L4T_MINOR=2
+# The ZED SDK is built per L4T release: these must match the Jetson's
+# (cat /etc/nv_tegra_release). Set in docker/compose.yaml.
+ARG L4T_MAJOR
+ARG L4T_MINOR
 
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 
@@ -49,8 +50,8 @@ RUN apt-get update || true && apt-get install -y --no-install-recommends \
   zstd && \
   rm -rf /var/lib/apt/lists/*
 
-# Ubuntu 24.04 base images (incl. nvcr.io/nvidia/l4t-jetpack:r39.x) ship a default
-# 'ubuntu' user at UID/GID 1000 — remove it so ros_user can own 1000.
+# Some base images ship a default 'ubuntu' user at UID/GID 1000 — remove it so
+# ros_user can own 1000.
 RUN userdel -r ubuntu 2>/dev/null || true; \
   groupadd --gid ${USER_GID} ${USERNAME} && \
   useradd --uid ${USER_UID} --gid ${USER_GID} -m -s /bin/bash ${USERNAME} && \
@@ -60,19 +61,29 @@ RUN userdel -r ubuntu 2>/dev/null || true; \
   echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
   chmod 0440 /etc/sudoers.d/${USERNAME}
 
-RUN apt-get update || true && apt-get install -y --no-install-recommends \
+# Stereolabs answers an L4T release it has no build for with a redirect to its homepage
+# (HTTP 200, HTML), so check that what arrived is the self-extracting installer, and let
+# a failed install fail the build.
+RUN : "${L4T_MAJOR:?build through docker/compose.yaml}" "${L4T_MINOR:?}" && \
+    apt-get update || true && apt-get install -y --no-install-recommends \
       libusb-1.0-0-dev zlib1g-dev libgeographic-dev && \
     rm -rf /var/lib/apt/lists/* && \
-    wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run \
-      "https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}/l4t${L4T_MAJOR}.${L4T_MINOR}/jetsons" && \
+    zed_url="https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}/l4t${L4T_MAJOR}.${L4T_MINOR}/jetsons" && \
+    echo "ZED SDK: $zed_url" && \
+    wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run "$zed_url" && \
+    if [ "$(head -c 2 ZED_SDK_Linux_JP.run)" != '#!' ]; then \
+      echo "No ZED SDK ${ZED_SDK_MAJOR}.${ZED_SDK_MINOR} for L4T ${L4T_MAJOR}.${L4T_MINOR} at $zed_url" >&2; \
+      exit 1; \
+    fi && \
     chmod +x ZED_SDK_Linux_JP.run && \
-    ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda || true && \
+    ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda && \
     rm -rf ZED_SDK_Linux_JP.run /usr/local/zed/resources/*
 
 # pixi -> provides ROS 2 Humble + colcon via the `l4t` environment in ros2_ws/pixi.toml
 ENV PIXI_HOME=/opt/pixi
 ENV PATH=${PIXI_HOME}/bin:${PATH}
-RUN curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
+RUN : "${PIXI_VERSION:?build through docker/compose.yaml}" && \
+    curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
 
 # Autocomplete machinery for the colcon argcomplete hook that terminal_config.sh sources.
 USER root

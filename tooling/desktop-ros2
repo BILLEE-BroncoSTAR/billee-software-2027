@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Build and run this machine's ROS 2 dev image without VS Code / Dev Containers.
+# Build, start and enter this machine's ROS 2 container without VS Code.
 #
-# The image, GPU flags and mount point follow the platform recorded by
-# `make setup <platform>` (see tooling/billee-env.sh), and match the corresponding
-# .devcontainer/*/devcontainer.json so Pixi environments work in both. Override for
-# one command with BILLEE_PLATFORM=<mac|l4t|x86>.
+# A thin wrapper over docker/compose.yaml, which defines every platform's image, GPU
+# flags, devices and mounts. The service follows the platform recorded by
+# `make setup <platform>` (see tooling/billee-env.sh); override for one command with
+# BILLEE_PLATFORM=<x86|wsl|mac|l4t>.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -12,22 +12,23 @@ source "$repo_root/tooling/billee-env.sh"
 
 usage() {
   cat <<'EOF'
-Usage: tooling/desktop-ros2 <build|run|shell> [arguments...]
+Usage: tooling/desktop-ros2 <build|up|down|run|shell> [arguments...]
 
-  build  Build this platform's image. Extra arguments go to `docker build`
-         (e.g. --build-arg L4T_VERSION=r38.2.0).
-  run    Start the image with the same host, GPU, device, X11, and workspace
-         settings as the platform's devcontainer, after making sure the Pixi
-         environment is installed. Extra arguments replace the default command
-         (`pixi shell -e <env>`).
+  build  Build this platform's image. Extra arguments go to `docker compose build`
+         (e.g. --no-cache).
+  up     Start the platform's container in the background (no-op when it is running).
+  down   Stop it.
+  run    Start it if needed, make sure the Pixi environment is installed, then run a
+         command in it. Extra arguments replace the default (`pixi shell -e <env>`).
   shell  Same, but open a plain Bash shell.
 
-  Platform  Dockerfile                          Image                  Workspace in container
-  x86       docker/Dockerfile.desktop.humble      billee-desktop:latest  /workspaces/<repo>/ros2_ws
-  mac       docker/Dockerfile.desktop.mac.humble  billee-mac-cpu:latest  /root/ros2_ws (+ /root/tooling)
-  l4t       docker/Dockerfile.l4t-humble          rover-ros2:latest      /workspaces/<repo>/ros2_ws
+  Platform  Compose service  Image                  Dockerfile
+  x86       x86              billee-desktop:latest  docker/Dockerfile.desktop.humble
+  wsl       wsl              billee-desktop:latest  docker/Dockerfile.desktop.humble
+  mac       mac              billee-mac-cpu:latest  docker/Dockerfile.desktop.mac.humble
+  l4t       rover            rover-ros2:latest      docker/Dockerfile.l4t-humble
 
-  linux-aarch64 has no container: `make setup linux-aarch64` builds natively.
+  Every service mounts the repo at /workspaces/billee-software-2027.
 
 Examples:
   tooling/desktop-ros2 build
@@ -37,102 +38,56 @@ Examples:
 EOF
 }
 
-action="${1:-}"
-if [[ $# -gt 0 ]]; then
-  shift
-fi
-
-repo_mount="/workspaces/$(basename "$repo_root")"
-# Host-integration flags shared by the Linux-host devcontainers.
-linux_host_args=(
-  --privileged
-  --network host
-  --pid host
-  --ipc host
-  --volume /dev:/dev
-  --volume /dev/shm:/dev/shm
-  --volume /tmp/.X11-unix:/tmp/.X11-unix
-  --env "DISPLAY=${DISPLAY:-}"
-)
-
 case "$BILLEE_PLATFORM" in
-  x86)
-    dockerfile="docker/Dockerfile.desktop.humble"
-    image="billee-desktop:latest"
-    container_ws="$repo_mount/ros2_ws"
-    platform_args=(
-      "${linux_host_args[@]}"
-      --hostname ros-dev
-      --gpus all
-      --env NVIDIA_VISIBLE_DEVICES=all
-      --env NVIDIA_DRIVER_CAPABILITIES=all,graphics
-      --env __GLX_VENDOR_LIBRARY_NAME=nvidia
-      --env __NV_PRIME_RENDER_OFFLOAD=1
-      --mount "type=bind,source=$repo_root,target=$repo_mount"
-    )
-    ;;
-  mac)
-    dockerfile="docker/Dockerfile.desktop.mac.humble"
-    image="billee-mac-cpu:latest"
-    container_ws="/root/ros2_ws"
-    # Docker Desktop has no host networking or /dev passthrough: publish the
-    # Foxglove bridge port instead, and render on the CPU. Unlike the Linux
-    # platforms (--pid host), this container's entrypoint is PID 1, which
-    # breaks xvfb-run's SIGUSR1 readiness handshake and hangs sim-up forever;
-    # --init (tini) fixes PID-1 signal handling.
-    platform_args=(
-      --init
-      --publish 8765:8765
-      --env LIBGL_ALWAYS_SOFTWARE=1
-      --env GALLIUM_DRIVER=llvmpipe
-      --mount "type=bind,source=$repo_root/ros2_ws,target=$container_ws"
-      --mount "type=bind,source=$repo_root/tooling,target=/root/tooling,readonly"
-    )
-    ;;
-  l4t)
-    dockerfile="docker/Dockerfile.l4t-humble"
-    image="rover-ros2:latest"
-    container_ws="$repo_mount/ros2_ws"
-    # JetPack 7 (Thor/Orin): use the nvidia runtime, NOT "--gpus all" (unreliable on JP7).
-    platform_args=(
-      "${linux_host_args[@]}"
-      --hostname rover
-      --runtime nvidia
-      --env NVIDIA_VISIBLE_DEVICES=all
-      --env NVIDIA_DRIVER_CAPABILITIES=all
-      --mount "type=bind,source=$repo_root,target=$repo_mount"
-    )
-    ;;
-  linux-aarch64)
-    echo "desktop-ros2: linux-aarch64 runs natively, not in a container." >&2
-    echo "  Build:  make setup linux-aarch64" >&2
-    echo "  Run:    cd ros2_ws && pixi run -e $BILLEE_PIXI_ENV ros2 launch ...   (or tooling/sim-up)" >&2
-    exit 2
-    ;;
+  x86 | wsl | mac) service="$BILLEE_PLATFORM" ;;
+  l4t) service=rover ;;
   *)
     echo "desktop-ros2: unknown platform '$BILLEE_PLATFORM' - run 'make setup <platform>'" >&2
     exit 2
     ;;
 esac
 
+container_ws=/workspaces/billee-software-2027/ros2_ws
+compose=(docker compose --file "$repo_root/docker/compose.yaml")
+
+is_running() {
+  [[ -n "$("${compose[@]}" ps --quiet --status running "$service" 2>/dev/null)" ]]
+}
+
+# Start the service unless it is already running. Not re-running `up` on a running
+# service matters: VS Code starts the same service with its own override file, and a
+# second `up` without it would recreate the container under the open editor.
+ensure_up() {
+  is_running && return 0
+  # Let the container open X11 windows (RViz, Gazebo) - the Linux devcontainers'
+  # initializeCommand does the same.
+  if [[ "$BILLEE_PLATFORM" != mac && -n "${DISPLAY:-}" ]] && command -v xhost >/dev/null; then
+    xhost +local: >/dev/null || true
+  fi
+  "${compose[@]}" up --detach "$service"
+}
+
+action="${1:-}"
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+
 case "$action" in
   build)
-    exec docker build \
-      --file "$repo_root/$dockerfile" \
-      --tag "$image" \
-      "$@" \
-      "$repo_root"
+    exec "${compose[@]}" build "$@" "$service"
+    ;;
+  up)
+    ensure_up
+    ;;
+  down)
+    exec "${compose[@]}" stop "$service"
     ;;
   run|shell)
-    # Let the container open X11 windows (RViz, Gazebo) - the devcontainers'
-    # initializeCommand does the same.
-    if [[ "$BILLEE_PLATFORM" != mac && -n "${DISPLAY:-}" ]] && command -v xhost >/dev/null; then
-      xhost +local: >/dev/null || true
-    fi
+    ensure_up
 
-    tty_args=(--interactive)
-    if [[ -t 0 && -t 1 ]]; then
-      tty_args+=(--tty)
+    tty_args=()
+    if [[ ! -t 0 || ! -t 1 ]]; then
+      tty_args+=(--no-TTY)
     fi
 
     if [[ "$action" == shell ]]; then
@@ -143,23 +98,12 @@ case "$action" in
       cmd=(pixi shell --environment "$BILLEE_PIXI_ENV")
     fi
 
-    # One container per platform: a second `run`/`shell` (e.g. keyboard teleop while
-    # `make sim` runs) joins it instead of starting another - on the Mac that would
-    # clash on the published :8765 and sit on a different network.
-    name="billee-$BILLEE_PLATFORM"
-    if [[ -n "$(docker ps --quiet --filter "name=^${name}\$")" ]]; then
-      exec docker exec "${tty_args[@]}" --workdir "$container_ws" "$name" "${cmd[@]}"
-    fi
-
-    # Same job as the devcontainers' postStartCommand: the bind mount hides any env
-    # baked into the image, so (re)install it - a no-op when it's already current.
-    exec docker run --rm --name "$name" "${tty_args[@]}" \
-      "${platform_args[@]}" \
-      --env ROS_DISTRO=humble \
+    # ${a[@]+...}: an empty array is an unbound variable to macOS's bash 3.2 under set -u.
+    exec "${compose[@]}" exec ${tty_args[@]+"${tty_args[@]}"} \
       --env "BILLEE_PLATFORM=$BILLEE_PLATFORM" \
       --workdir "$container_ws" \
-      "$image" \
-      bash -c 'pixi install --environment "$0" && exec "$@"' "$BILLEE_PIXI_ENV" "${cmd[@]}"
+      "$service" \
+      bash -c '../tooling/container-init && exec "$@"' bash "${cmd[@]}"
     ;;
   -h|--help|help)
     usage

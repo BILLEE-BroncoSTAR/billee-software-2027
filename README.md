@@ -2,14 +2,15 @@
 
 ROS 2 Humble software for the BILLEE rover (URC 2027): the drivetrain control stack,
 Gazebo simulation, teleop and ground-station tooling. One workspace (`ros2_ws/`) runs on
-the rover (NVIDIA Jetson), on x86 and ARM64 Linux machines, and on Apple-Silicon Macs.
+the rover (NVIDIA Jetson), on x86 Linux and Windows (WSL2) machines with an NVIDIA GPU,
+and on Apple-Silicon Macs. Every machine runs it in a container.
 
 ## Quick start
 
 ```sh
 git clone https://github.com/BILLEE-BroncoSTAR/billee-software-2027.git
 cd billee-software-2027
-make setup <l4t | x86 | linux-aarch64 | mac>   # once per machine - see Setup below
+make setup <l4t | x86 | wsl | mac>             # once per machine - see Setup below
 make sim                                       # simulated rover + this machine's viewer
 #   ...or, against a real rover: `make ground` here, `make rover` on the Jetson
 ```
@@ -25,12 +26,13 @@ Then drive it (see [Run modes](#run-modes)). `make help` lists every command.
 | `make ground` | Ground station against a real rover: viewers + game pad, no Gazebo |
 | `make rover` | Jetson only: real drivetrain over CAN + Foxglove bridge, no viewer |
 
-All of them follow the platform you set up: natively on ARM64 Linux, through the
-platform's Docker image everywhere else.
+All of them follow the platform you set up and run inside that platform's container,
+defined in [`docker/compose.yaml`](docker/compose.yaml) (`make up` / `make down` start and
+stop it; see [docs/docker.md](docs/docker.md)).
 
 **Two deployments.** The **Jetson is the rover** — real drivetrain over CAN, headless,
 no Gazebo and no RViz in its environment. **Everything else is a ground station** (x86
-Linux, native ARM64 Linux, or the Mac container) and runs the viewers, the game pad and
+Linux, WSL2, or the Mac container) and runs the viewers, the game pad and
 the Gazebo sim. `make rover` only works on the Jetson; `make sim` / `make ground` only
 work on a ground station, and each tells you which one you wanted. Full breakdown of
 what runs where: [Deployment split](docs/RUN_MODES.md#deployment-split-rover-vs-ground-station).
@@ -43,14 +45,17 @@ Pick your machine. Each section is the whole process, top to bottom.
 |---|---|---|---|
 | [`l4t`](#nvidia-jetson-rover-l4t) | NVIDIA Jetson rover | Docker container (`l4t` env) | Foxglove / RViz on the ground station |
 | [`x86`](#x86-64-linux--nvidia-x86) | x86-64 Linux + NVIDIA GPU (ground station) | Docker container (`default` env) | RViz (+ Foxglove) |
-| [`linux-aarch64`](#arm64-linux-linux-aarch64) | ARM64 Linux, no NVIDIA GPU (e.g. a Linux VM on a Mac) | natively (`linux-aarch64` env) | RViz (+ Foxglove) |
+| [`wsl`](#windows--wsl2--nvidia-wsl) | Windows + WSL2 + NVIDIA GPU (ground station) | Docker container (`default` env) | RViz on WSLg (+ Foxglove) |
 | [`mac`](#apple-silicon-mac-mac) | Apple-Silicon Mac | Docker container (`mac-cpu` env) | Foxglove Studio |
 
 Need `make` first? `xcode-select --install` (Mac) or `sudo apt install -y make` (Linux).
 
 ### NVIDIA Jetson rover (`l4t`)
 
-The rover itself: a Jetson (Orin-family or Thor) on **JetPack 6.0 / L4T r36.3.x**.
+The rover itself: an Orin-family Jetson on **JetPack 6 (L4T r36.x)**. The image installs
+the ZED SDK built for the L4T release set in `docker/compose.yaml` (`L4T_MAJOR`/`L4T_MINOR`,
+default 36.4 — ZED SDK 5.4 publishes no 36.3 build). Check it against the Jetson with
+`cat /etc/nv_tegra_release`; a release with no ZED build fails the image build.
 
 **Needs:** the one-time host prep below (**already done on the current BILLEE Orin Nano**).
 
@@ -71,7 +76,8 @@ The rover itself: a Jetson (Orin-family or Thor) on **JetPack 6.0 / L4T r36.3.x*
 The ground-station setup: GPU-accelerated Gazebo, RViz, the gamepad and F' GDS.
 
 **Needs:** Ubuntu 24.04 or newer, an NVIDIA GPU, `sudo`, and `make`
-(`sudo apt install -y make`). Everything else is installed for you. Optionally VS Code +
+(`sudo apt install -y make`). Everything else is installed for you. On Windows/WSL2, use
+[`wsl`](#windows--wsl2--nvidia-wsl) instead (`make setup x86` refuses to run there). Optionally VS Code +
 Remote Development extensions.
 
 1. **Set up:**
@@ -103,29 +109,37 @@ Remote Development extensions.
      and only checks that Docker and the `nvidia` runtime work.
 2. **Run:** `make sim` (Gazebo + **RViz**), or `make shell` and e.g.
    `ros2 launch chassis_bringup ground_station.launch.py` to operate the real rover.
-3. **VS Code (optional):** **Reopen in Container → desktop-roshumble_dev-x862** shares
-   the same image and environment. Python interpreter `ros2_ws/.pixi/envs/default/bin/python3`.
+3. **VS Code (optional):** **Reopen in Container → desktop-roshumble_dev-x862** starts
+   the same compose service, image and environment. Python interpreter `ros2_ws/.pixi/envs/default/bin/python3`.
 
-### ARM64 Linux (`linux-aarch64`)
+### Windows + WSL2 + NVIDIA (`wsl`)
 
-Runs natively (no Docker), so the gamepad, `vcan0` and RViz/Gazebo windows just work.
-Everything renders on the CPU, so the sim is slower than on an NVIDIA machine.
+A Windows PC with an NVIDIA GPU as the ground station. It uses the same image and Pixi
+environment as `x86`. The GPU comes from the Windows driver, and Gazebo/RViz windows open
+through WSLg.
 
-**Needs:** a recent 64-bit ARM Linux with `curl` and `sudo`.
+**Needs:** Windows 11 (or 10 with WSLg), an Ubuntu WSL2 distro, the NVIDIA driver
+**installed on Windows** (never inside WSL), Docker Desktop with **Settings → Resources →
+WSL integration** turned on for your distro, and `make` in the distro
+(`sudo apt install -y make`). Nothing else is installed on the host.
 
-1. **Set up:** apt-installs `can-utils kmod xvfb` (only what's missing), installs Pixi
-   to `~/.pixi`, then installs and builds the `linux-aarch64` environment in `ros2_ws/.pixi`:
+1. **Set up** (from the repo inside the WSL filesystem, e.g. `~/billee-software-2027`,
+   not `/mnt/c/...`):
    ```sh
-   make setup linux-aarch64
+   make setup wsl
    ```
-2. **Run:** `make sim` opens Gazebo and **RViz** and also serves Foxglove on :8765.
-   Plug in a gamepad to drive (hold RB; RT forward, LT reverse, left stick steers). For the ODESC
-   shadow, run `tooling/can-up vcan0` first and `make sim` picks it up.
-3. **Without make:** `cd ros2_ws && pixi shell -e linux-aarch64` gives a ROS 2 terminal for
-   every command in [docs/RUN_MODES.md](docs/RUN_MODES.md).
-4. **VS Code Python:** interpreter `ros2_ws/.pixi/envs/linux-aarch64/bin/python3`.
+   It only checks the host: that the Windows driver supports the image's CUDA version,
+   that Docker is reachable from WSL, and that a container sees the GPU. Each failure says
+   what to fix. Then it builds `billee-desktop:latest` and the `default` env inside it.
+2. **Run:** `make sim` (Gazebo + **RViz** on WSLg + Foxglove on :8765), or `make shell`.
+3. **VS Code (optional):** **Reopen in Container → desktop-roshumble_dev-wsl**; interpreter
+   `ros2_ws/.pixi/envs/default/bin/python3`.
 
-In a VM, use bridged networking if it should talk DDS to the rover or another machine.
+**Limits of WSL2:** the stock WSL kernel has no `vcan` and no joystick driver. That means
+no ODESC shadow or vCAN bench, and the game pad drives through Foxglove's
+**Joystick** panel (`sim-up`/`ground-up` pick `joy_source:=browser` on `wsl`; see
+[RUN_MODES → T4b](docs/RUN_MODES.md#t4b--real-gamepad-through-the-browser)). DDS to other
+machines needs WSL's mirrored networking (`networkingMode=mirrored` in `.wslconfig`).
 
 ### Apple-Silicon Mac (`mac`)
 
@@ -135,7 +149,7 @@ The Mac runs the simulation headless in a container and you view and drive it in
 **Needs:** Docker Desktop, [Foxglove Studio](https://foxglove.dev/download) (free
 account), and optionally VS Code + the Dev Containers extension.
 
-1. **Set up** (builds the `billee-mac-cpu` image with the workspace pre-built; the first
+1. **Set up** (builds the `billee-mac-cpu` image, then the workspace inside it; the first
    run takes a while):
    ```sh
    make setup mac
@@ -145,9 +159,9 @@ account), and optionally VS Code + the Dev Containers extension.
    make sim
    ```
    or in VS Code: **Dev Containers: Reopen in Container → desktop-roshumble-mac-cpu**
-   (reuses the image from step 1), then in a container terminal:
+   (the same compose service and image as step 1), then in a container terminal:
    ```sh
-   ../tooling/sim-up
+   make sim
    ```
    Both run Gazebo headless (`xvfb-run`) with the `foxglove_bridge` on port **8765**,
    which is published to the Mac (`make sim`: Docker port mapping; VS Code: the
@@ -179,24 +193,28 @@ drivetrain: `ros2 launch chassis_bringup rover.launch.py mode:=real can_interfac
 - `make setup <platform>` records the platform in `ros2_ws/.billee-platform`
   (gitignored). `make build/shell/sim`, `tooling/sim-up`, `tooling/desktop-ros2` and the
   container shell config all read it through `tooling/billee-env.sh`, so nothing has to be
-  edited per machine. Without the file they detect it (x86-64 → `x86`, Jetson → `l4t`,
-  other ARM64 → `linux-aarch64`); `BILLEE_PLATFORM=<platform>` overrides one command.
+  edited per machine. Without the file they detect it (x86-64 → `x86`, or `wsl` under
+  WSL2; Jetson → `l4t`; other ARM64 → `mac`); `BILLEE_PLATFORM=<platform>` overrides one
+  command.
 - Each platform has its own Pixi environment, named after it except where noted:
 
   | Platform | Pixi environment | Packages |
   |---|---|---|
   | `l4t` | `l4t` | same package list, locked separately so the rover only changes when tested on it |
-  | `x86` | `default` | linux-64 + CUDA 13 |
-  | `linux-aarch64` | `linux-aarch64` | same set as `mac-cpu`, locked to identical versions (shared solve-group) |
+  | `x86`, `wsl` | `default` | linux-64 + CUDA 13 (both use the `billee-desktop` image) |
   | `mac` | `mac-cpu` | linux-aarch64, CPU-only (runs in the Mac's Linux container) |
 
   Switching a checkout to another environment is safe: `make setup`/`make build` notice a
   build made with a different environment and rebuild from scratch.
-- Containers mount the workspace at the same path as their VS Code devcontainer, so the
-  Pixi env and `install/` work from both. `tooling/desktop-ros2 build|run|shell` is the
-  no-VS-Code way in (`tooling/rover-ros2` = the same, pinned to `l4t`).
-- One checkout = one platform. The Pixi env and colcon `install/` embed absolute paths,
-  so switching a checkout between a native build and a container means a reinstall.
+- Each platform's container is one service in [`docker/compose.yaml`](docker/compose.yaml)
+  (`x86`, `wsl`, `mac`, `rover`), which holds every build and run setting. `make`,
+  `tooling/desktop-ros2 build|up|down|run|shell` and the VS Code devcontainers all start
+  that same service, which mounts the repo at `/workspaces/billee-software-2027`, so the
+  Pixi env and `install/` work from all of them (`tooling/rover-ros2` = `desktop-ros2`
+  pinned to `l4t`). Details: [docs/docker.md](docs/docker.md).
+- One checkout = one platform. The Pixi env and colcon `install/` are built for one
+  platform's container, so switching a checkout to another platform means a reinstall
+  (`make setup <platform>` does it).
 - `SKIP_APT=1` skips the apt step. More on Pixi: [cheat sheet](docs/PixiCheatSheet.md),
   [Pixi in VS Code](https://pixi.prefix.dev/latest/integration/editor/vscode/#python-extension).
 
@@ -235,11 +253,12 @@ Viewers: **Foxglove Studio** at `ws://<host>:8765` with
 ```
 billee-software-2027/
 ├── Makefile                  make setup/build/shell/sim - start here
-├── .devcontainer/            VS Code devcontainers: default (x86+NVIDIA), mac/, l4t/
-├── docker/                   Dockerfiles per platform + shell config baked into the images
+├── .devcontainer/            VS Code devcontainers: x86/, wsl/, mac/, l4t/ (compose services)
+├── docker/                   compose.yaml (every platform's container), Dockerfiles, shell config
 ├── tooling/
 │   ├── billee-env.sh         resolves platform -> workspace + Pixi env + role (sourced by the rest)
-│   ├── desktop-ros2          build/run/shell the platform's image without VS Code
+│   ├── desktop-ros2          build/up/down/run/shell the platform's compose service without VS Code
+│   ├── container-init        installs the Pixi env on container start (make + devcontainers)
 │   ├── rover-ros2            desktop-ros2 pinned to l4t
 │   ├── install-x86-host      x86 host prep: NVIDIA driver, Docker, NVIDIA Container Toolkit
 │   ├── sim-up                [ground] sim with the platform's viewer (+ ODESC shadow if vcan0 exists)
@@ -270,8 +289,8 @@ Each package has its own README with its nodes, topics and parameters.
 | Layer | Technology |
 |---|---|
 | Middleware | ROS 2 Humble (from [RoboStack](https://robostack.github.io/) via Pixi, not apt), Fast DDS, `ROS_DOMAIN_ID=42` |
-| Environments | [Pixi](https://pixi.sh) 0.76.1 — `default` (linux-64 + CUDA 13), `mac-cpu` / `linux-aarch64` / `l4t` (linux-aarch64, CPU). Role features: `ground-station` (`ros-humble-desktop` + Gazebo) on all but `l4t`, which gets `rover` (`ros-humble-ros-base`, no GUI) |
-| Containers | Ubuntu 22.04 + CUDA 13.2 + ZED SDK (x86), Ubuntu 22.04 + mesa llvmpipe + xvfb (Mac), JetPack L4T r36.3 + ZED SDK (Jetson) |
+| Environments | [Pixi](https://pixi.sh) 0.76.1 (pinned in `docker/compose.yaml`) — `default` (linux-64 + CUDA 13; x86 and WSL), `mac-cpu` / `l4t` (linux-aarch64, CPU). Role features: `ground-station` (`ros-humble-desktop` + Gazebo) on all but `l4t`, which gets `rover` (`ros-humble-ros-base`, no GUI) |
+| Containers | one `docker/compose.yaml` service each: Ubuntu 22.04 + CUDA 13.2 + ZED SDK (x86, WSL), Ubuntu 22.04 + mesa llvmpipe + xvfb (Mac), Isaac ROS Humble (JetPack 6, L4T r36.x) + ZED SDK (Jetson) |
 | Build | `colcon` + `ament_cmake` / `ament_python`, `ruff` for Python (`pixi run fmt`) |
 | Control | `ros2_control`: `diff_drive_controller` + `joint_state_broadcaster`, swappable hardware plugin |
 | Localization | `robot_localization` EKF (`odom` -> `base_link`); inputs are additive — wheel odometry required, VIO and IMU optional |
@@ -377,14 +396,17 @@ display). Canonical CAN node-ID ↔ wheel map: `ros2_ws/src/odesc/config/node_ma
 
 One-time host prep (**already done on the current BILLEE Orin Nano**):
 
+JetPack 6 (L4T r36.x):
+
 ```sh
-sudo apt install -y nvidia-container curl   # JetPack 7.2: pulls nvidia-container-toolkit
-                                            # and runs nv-install-docker.service (installs
-                                            # Docker CE + wires the nvidia runtime)
+sudo apt update && sudo apt install -y nvidia-container curl   # NVIDIA Container Toolkit
+curl -fsSL https://get.docker.com | sh && sudo systemctl --now enable docker
+sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
 # then, for GPU access at build time too:
 #   /etc/docker/daemon.json -> "default-runtime": "nvidia"
 sudo usermod -aG docker "$USER"   # then log out / back in
-docker run --rm --runtime nvidia ubuntu:24.04 nvidia-smi   # smoke test
+docker info --format '{{json .Runtimes}}' | grep -q nvidia && echo "nvidia runtime OK"
+cat /etc/nv_tegra_release         # must match L4T_MAJOR/L4T_MINOR in docker/compose.yaml
 ```
 
 ## More docs
@@ -392,5 +414,6 @@ docker run --rm --runtime nvidia ubuntu:24.04 nvidia-smi   # smoke test
 - [docs/RUN_MODES.md](docs/RUN_MODES.md) — every chassis/teleop/viewer mode, per-platform support, recipes
 - [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) — rover + ground-station procedure, CAN backend, cross-machine DDS, troubleshooting
 - [docs/Simulation_Run_Guide.md](docs/Simulation_Run_Guide.md) — `sim-up` + Foxglove quick guide
+- [docs/docker.md](docs/docker.md) — the compose services behind every container, `make up`/`down`, devcontainers
 - [docs/UsefulCommands.md](docs/UsefulCommands.md), [docs/Debugging.md](docs/Debugging.md), [docs/gazebo.md](docs/gazebo.md), [docs/PixiCheatSheet.md](docs/PixiCheatSheet.md)
 - Package READMEs under `ros2_ws/src/*/README.md`

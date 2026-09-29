@@ -1,12 +1,14 @@
 {
-  // NVIDIA Jetson rover (JetPack 6 / L4T r36.x). Container settings (nvidia runtime,
-  // devices, mounts) live in docker/compose.yaml, service `rover`, shared with `make`.
-  "name": "rover-roshumble_l4t-aarch64",
+  // Windows + WSL2 + NVIDIA ground station. Container settings (GPU through /usr/lib/wsl,
+  // WSLg display, mounts) live in docker/compose.yaml, service `wsl`, shared with `make`.
+  "name": "desktop-roshumble_dev-wsl",
   "dockerComposeFile": ["../../docker/compose.yaml"],
-  "service": "rover",
-  "runServices": ["rover"],
+  "service": "wsl",
+  "runServices": ["wsl"],
   "workspaceFolder": "/workspaces/billee-software-2027",
 
+  // Let the container open X11 windows on WSLg (RViz, Gazebo).
+  "initializeCommand": "xhost +local: || true",
   "postStartCommand": "tooling/container-init",
 
   "containerUser": "ros_user",

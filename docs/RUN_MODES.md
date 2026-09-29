@@ -25,13 +25,13 @@ refuse the wrong role (override with `BILLEE_ROLE=` if you really mean it).
 
 | | **Rover** | **Ground station** |
 |---|---|---|
-| Machine | NVIDIA Jetson, only | x86 + NVIDIA · ARM64 Linux (native) · Apple-Silicon Mac |
-| `BILLEE_PLATFORM` | `l4t` | `x86` · `linux-aarch64` · `mac` |
-| Pixi env | `l4t` | `default` · `linux-aarch64` · `mac-cpu` |
+| Machine | NVIDIA Jetson, only | x86 + NVIDIA · Windows + WSL2 + NVIDIA · Apple-Silicon Mac |
+| `BILLEE_PLATFORM` | `l4t` | `x86` · `wsl` · `mac` |
+| Pixi env | `l4t` | `default` · `default` · `mac-cpu` |
 | Pixi role feature | `rover` | `ground-station` |
 | ROS variant | `ros-humble-ros-base` (no GUI) | `ros-humble-desktop` |
 | Run it with | `make rover` (`tooling/rover-up`) | `make ground` / `make sim` |
-| Image | `docker/Dockerfile.l4t-humble` | `Dockerfile.desktop.humble` / `.mac.humble`, or native |
+| Compose service (image) | `rover` (`Dockerfile.l4t-humble`) | `x86` / `wsl` (`Dockerfile.desktop.humble`) · `mac` (`.mac.humble`) |
 
 **What runs where**
 
@@ -139,20 +139,23 @@ environment activated from `ros2_ws/`. Activation puts ROS 2 Humble on the path,
 `install/setup.sh` (the built workspace) and sets `ROS_DOMAIN_ID=42`. Each extra
 terminal you open (e.g. for keyboard teleop) needs the same step.
 
-| Platform | Pixi env | Get a ROS 2 terminal |
+Every platform runs in its container (a `docker/compose.yaml` service). The quickest
+way in is `make shell` from the repo root on the host: it starts the container if needed
+and opens a ROS 2 terminal. Running it again opens another terminal in the same container.
+
+| Platform | Pixi env | Get a ROS 2 terminal in VS Code |
 |---|---|---|
-| ARM64 Linux (native) | `linux-aarch64` | `cd ~/billee-software-2027/ros2_ws && pixi shell -e linux-aarch64` |
-| Mac | `mac-cpu` | VS Code terminal in the **desktop-roshumble-mac-cpu** devcontainer (opens in `/root/ros2_ws`), then `pixi shell -e mac-cpu` |
-| x86 + NVIDIA | `default` | VS Code terminal in the **desktop-roshumble_dev-x862** devcontainer, then `cd ros2_ws && pixi shell` |
-| Jetson | `l4t` | VS Code terminal in the **rover-roshumble_l4t-aarch64** devcontainer, then `cd ros2_ws && pixi shell -e l4t` |
+| x86 + NVIDIA | `default` | terminal in the **desktop-roshumble_dev-x862** devcontainer, then `cd ros2_ws && pixi shell` |
+| WSL2 + NVIDIA | `default` | terminal in the **desktop-roshumble_dev-wsl** devcontainer, then `cd ros2_ws && pixi shell` |
+| Mac | `mac-cpu` | terminal in the **desktop-roshumble-mac-cpu** devcontainer, then `cd ros2_ws && pixi shell -e mac-cpu` |
+| Jetson | `l4t` | terminal in the **rover-roshumble_l4t-aarch64** devcontainer, then `cd ros2_ws && pixi shell -e l4t` |
 
-Without VS Code, the containers are started with `tooling/desktop-ros2 shell` from the
-repo root on the host (Jetson: `tooling/rover-ros2 shell`). It opens in the container's
-`ros2_ws`; run `pixi shell -e <env>` there. Running it again while that container is up
-opens another terminal in the same container.
+Without make or VS Code: `tooling/desktop-ros2 shell` from the repo root (Jetson:
+`tooling/rover-ros2 shell`) opens Bash in the container's `ros2_ws`; run
+`pixi shell -e <env>` there.
 
-**One-off commands** don't need a shell: from `ros2_ws`, prefix them with
-`pixi run -e <env>`, e.g. `pixi run -e linux-aarch64 ros2 topic list`.
+**One-off commands** don't need a shell: from `ros2_ws` in the container, prefix them
+with `pixi run -e <env>`, e.g. `pixi run -e mac-cpu ros2 topic list`.
 
 **Build** (first time, and after changing code), from `ros2_ws` in that environment:
 
@@ -171,13 +174,14 @@ pixi run -e l4t colcon build --symlink-install --parallel-workers 2 --executor s
 **Host-side commands.** `tooling/can-up` (creates `can0`/`vcan0`) and `candump`/`cansend`
 act on the host kernel's network interfaces: run them in a normal terminal on the host
 (Linux or Jetson), from the repo root, not inside a container. The Linux containers use
-host networking, so they see the interfaces the host created.
+host networking, so they see the interfaces the host created. (The stock WSL2 kernel has
+no `vcan`, so the vCAN modes are Linux-only.)
 
 **Where the sim runs.** Gazebo runs on the base station, not on the rover — the Jetson
 runs the real drivetrain against real hardware, so the Jetson image ships no X server at
 all. On a base station without a display (the Mac container, a headless Linux box) Gazebo
 still needs one, so put `xvfb-run -a` in front of any launch that starts the sim;
-`xvfb-run` is in the Mac image and is installed by `make setup linux-aarch64`.
+`xvfb-run` is in the Mac image. WSL2 has a display (WSLg).
 
 ---
 
@@ -379,11 +383,11 @@ ros2 topic echo /joy                     # buttons[5] = 1 with RB held; axes[0/2
 ros2 topic echo /diff_drive_controller/cmd_vel_unstamped   # non-zero only with RB held
 ```
 
-Works on Linux (x86 container, ARM64 Linux) — ground stations. **Not** on the Jetson:
+Works on Linux (the x86 container) — the ground station. **Not** on the Jetson:
 the `l4t` environment has no `joy` package, because the operator's pad belongs on the
 ground station (see [Deployment split](#deployment-split-rover-vs-ground-station)). Not
-in the Mac container either (Docker Desktop cannot pass a USB gamepad through) — use
-T3, T4 or T4b there.
+in the Mac container either (Docker Desktop cannot pass a USB gamepad through), nor on
+WSL2 (the stock WSL kernel has no joystick driver) — use T3, T4 or T4b there.
 
 #### Choosing the control scheme (arcade or tank)
 
@@ -482,8 +486,8 @@ ros2 topic list                          # must show /diff_drive_controller/*, /
 ```
 
 Details: [RUN_GUIDE → Cross-machine ROS 2](RUN_GUIDE.md#cross-machine-ros-2). Needs a
-real LAN path between the machines: not from the Mac container, and a Linux VM needs
-bridged networking.
+real LAN path between the machines: not from the Mac container, and WSL2 needs mirrored
+networking (`networkingMode=mirrored` in `%UserProfile%\.wslconfig`).
 
 ### T3 — Keyboard
 
@@ -619,7 +623,7 @@ for that machine.
 
 ### Develop on a Mac (headless sim + Foxglove)
 
-1. Mac devcontainer terminal: `pixi shell -e mac-cpu`, then
+1. Mac devcontainer terminal (or `make shell` on the Mac): `pixi shell -e mac-cpu`, then
    `xvfb-run -a ros2 launch chassis_bringup rover.launch.py`
 2. Foxglove Studio on the Mac: `ws://localhost:8765`, import the layout ([V1](#v1--foxglove-studio)).
 3. Drive with a Foxglove Teleop panel ([T4](#t4--foxglove-teleop-panel)), or a second
@@ -688,19 +692,19 @@ overrides the check.
 Role: the first three columns are **ground stations**, the Jetson is the **rover**
 (see [Deployment split](#deployment-split-rover-vs-ground-station)).
 
-| | x86 + NVIDIA | ARM64 Linux (native) | Mac container | Jetson (`l4t`) |
+| | x86 + NVIDIA | WSL2 + NVIDIA | Mac container | Jetson (`l4t`) |
 |---|---|---|---|---|
-| C1 Simulation | ✅ GPU | ✅ CPU (slower) | ✅ headless, `xvfb-run` | ❌ no Gazebo in the `l4t` env, no X server in the image |
-| C2 Sim + ODESC shadow | ✅ | ✅ | ❌ no host `vcan0` | ❌ needs Gazebo |
-| C5 vCAN bench | ✅ | ✅ | ❌ no host `vcan0` | ✅ no Gazebo needed |
-| C3 Real drivetrain | with a USB-CAN adapter | with a USB-CAN adapter | ❌ | ✅ `can0` — this is the rover's job |
+| C1 Simulation | ✅ GPU | ✅ GPU, windows on WSLg | ✅ headless, `xvfb-run` | ❌ no Gazebo in the `l4t` env, no X server in the image |
+| C2 Sim + ODESC shadow | ✅ | ❌ no `vcan` in the WSL kernel | ❌ no host `vcan0` | ❌ needs Gazebo |
+| C5 vCAN bench | ✅ | ❌ no `vcan` in the WSL kernel | ❌ no host `vcan0` | ✅ no Gazebo needed |
+| C3 Real drivetrain | with a USB-CAN adapter | ❌ | ❌ | ✅ `can0` — this is the rover's job |
 | C4 Mock | ✅ | ✅ | ✅ | ✅ |
-| T1 Gamepad | ✅ | ✅ | ❌ use T4b | ❌ no `joy` in the `l4t` env |
-| T2 Ground station (DDS) | ✅ | ✅ (VM: bridged net) | ✅ via T4b | — (it's the rover) |
+| T1 Gamepad | ✅ | ❌ use T4b | ❌ use T4b | ❌ no `joy` in the `l4t` env |
+| T2 Ground station (DDS) | ✅ | ✅ with mirrored networking (untested) | ✅ via T4b | — (it's the rover) |
 | T3 keyboard / T5 scripted | ✅ | ✅ | ✅ | ❌ drive from a ground station |
 | T4 / T4b Foxglove | ✅ | ✅ | ✅ | — (connect *to* the rover's bridge) |
 | V1 Foxglove bridge | ✅ | ✅ | ✅ | ✅ serves :8765 |
-| V2 RViz window | ✅ | ✅ | ❌ | ❌ no RViz in the `l4t` env |
+| V2 RViz window | ✅ | ✅ WSLg | ❌ | ❌ no RViz in the `l4t` env |
 
 ---
 

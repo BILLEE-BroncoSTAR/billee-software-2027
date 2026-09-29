@@ -9,5 +9,5 @@
     "remote.otherPortsAttributes": {
         "onAutoForward": "ignore"
     },
-    "cmake.sourceDirectory": "/workspaces/URC-2027/ros2_ws/src/chassis_bringup"
+    "cmake.sourceDirectory": "/workspaces/billee-software-2027/ros2_ws/src/chassis_bringup"
 }

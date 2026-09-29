@@ -13,7 +13,7 @@ This package does not launch or publish anything by itself. `chassis_bringup` ex
 - **ROS distro:** ROS 2 Humble (the workspace Pixi channels and dependencies are Humble).
 - **Language(s) / core libraries:** XML/Xacro for the robot model; Python packaging through `setuptools`; standard ROS 2 description conventions and `robot_state_publisher` as the consumer.
 - **External dependencies:** Xacro, Gazebo / Ignition Gazebo 6 compatibility stack, `ign_ros2_control` / `gz_ros2_control`, `controller_manager`, `diff_drive_controller`, the workspace's `odesc` hardware plugin (real backend), and STL/OBJ mesh rendering.
-- **Build system / target platform(s):** `ament_python`, built with `colcon`; Pixi environments `default` (Linux x86-64 + CUDA), `mac-cpu` (CPU-only linux-aarch64, Apple-Silicon Docker), `linux-aarch64` (same packages, native ARM64 Linux) and `l4t` (Jetson).
+- **Build system / target platform(s):** `ament_python`, built with `colcon`; Pixi environments `default` (Linux x86-64 + CUDA; x86 Linux and WSL2), `mac-cpu` (CPU-only linux-aarch64, Apple-Silicon Docker) and `l4t` (Jetson).
 - **Middleware / networking notes:** No DDS or network settings are declared here. The model specifies simulation time through the consuming launch and exposes Gazebo camera data that `ros_gz_bridge` can bridge to ROS 2.
 
 ## 3. How It Was Written

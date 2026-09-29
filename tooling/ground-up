@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # ground-up - bring up the ground station for this platform: viewers + teleop.
 #
-# The ground station is everything that is NOT the rover: an x86 Linux box, a native
-# ARM64 Linux machine, or a Mac container. It runs RViz / the Foxglove bridge and the
+# The ground station is everything that is NOT the rover: an x86 Linux box, a Windows
+# machine under WSL2, or a Mac container. It runs RViz / the Foxglove bridge and the
 # game pad, and talks to the rover (or to a sim on another machine) over DDS.
 #
 #   ./ground-up              - RViz (where there's a display) + Foxglove bridge + game pad
 #   ./ground-up true false   - same, view only (no teleop nodes)
 #
 # Args: [foxglove=true] [joystick=true]. Environment overrides:
-#   BILLEE_PLATFORM=<mac|linux-aarch64|x86>   Pixi env (default: from `make setup`)
+#   BILLEE_PLATFORM=<x86|wsl|mac>             Pixi env (default: from `make setup`)
 #   BILLEE_ROLE=ground                        bypass the rover guard below
-#   RVIZ=true|false      default: true on Linux with a display, false on mac / headless
+#   RVIZ=true|false      default: true on Linux/WSL with a display, false on mac / headless
+#   JOY_SOURCE=device|browser  default: browser on mac and wsl (no USB pad there), else device
 #   SIM_TIME=true|false  default false (real rover). Set true when the thing you are
 #                        watching is a Gazebo sim, so RViz and the bridge follow /clock.
 #
@@ -30,7 +31,7 @@ fi
 
 if [[ "$BILLEE_ROLE" == rover ]]; then
   echo "ground-up: this is the rover ($BILLEE_PLATFORM) - the ground station runs on a" >&2
-  echo "ground-up:   separate machine (x86 Linux, ARM64 Linux, or a Mac container)." >&2
+  echo "ground-up:   separate machine (x86 Linux, WSL2, or a Mac container)." >&2
   echo "ground-up:   On the Jetson you want: tooling/rover-up" >&2
   echo "ground-up:   To override anyway: BILLEE_ROLE=ground tooling/ground-up" >&2
   exit 1
@@ -46,11 +47,15 @@ fi
 rviz="${RVIZ:-$has_display}"
 sim_time="${SIM_TIME:-false}"
 
-# Docker Desktop passes no USB through, so on the Mac a game pad can only reach
-# ROS through the browser: Foxglove's Joystick panel publishes /joy itself.
-joy_source=device
-if [[ "$BILLEE_PLATFORM" == mac ]]; then
-  joy_source=browser
+# Docker Desktop on the Mac passes no USB through, and the stock WSL2 kernel has no
+# joystick driver, so there a game pad can only reach ROS through the browser:
+# Foxglove's Joystick panel publishes /joy itself. JOY_SOURCE=device|browser overrides.
+joy_source="${JOY_SOURCE:-}"
+if [[ -z "$joy_source" ]]; then
+  case "$BILLEE_PLATFORM" in
+    mac | wsl) joy_source=browser ;;
+    *) joy_source=device ;;
+  esac
 fi
 
 echo "ground-up: platform $BILLEE_PLATFORM, Pixi env $BILLEE_PIXI_ENV," \
