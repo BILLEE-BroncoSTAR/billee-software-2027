@@ -6,7 +6,10 @@
 # ros2_ws/pixi.toml, environment `l4t`). Build it through docker/compose.yaml
 # (service `rover`), which passes PIXI_VERSION and the L4T version.
 
-FROM nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_4c0c55dddd2bbcc3e8d5f9753bee634c
+ARG L4T_VERSION=r36.4.0
+ARG IMAGE_NAME=nvcr.io/nvidia/l4t-jetpack:${L4T_VERSION}
+
+FROM ${IMAGE_NAME}
 
 ARG PIXI_VERSION
 
