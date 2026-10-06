@@ -32,25 +32,50 @@ controller_server:
       plugin: "dwb_core::DWBLocalPlanner"
       goal_checker_id: "goal_checker"
       critics: ["BaseObstacleCritic", "GoalDistCritic", "ObstacleFootprintCritic", "PreferForwardCritic", "PathDistCritic"]
+      # Explicitly define DWB's feasible motion envelope. Without these limits
+      # and sample counts, the controller can generate zero trajectories.
+      min_vel_x: 0.0
+      max_vel_x: 0.5
+      min_vel_y: 0.0
+      max_vel_y: 0.0
+      max_vel_theta: 1.0
+      min_speed_xy: 0.0
+      max_speed_xy: 0.5
+      min_speed_theta: 0.0
+      acc_lim_x: 0.5
+      acc_lim_y: 0.0
+      acc_lim_theta: 1.0
+      decel_lim_x: -0.5
+      decel_lim_y: 0.0
+      decel_lim_theta: -1.0
+      vx_samples: 20
+      vy_samples: 1
+      vtheta_samples: 20
+      sim_time: 1.7
 
-#global_costmap:
-#  global_costmap:
-#    ros__parameters:
-#      update_frequency: 1.0
-#      publish_frequency: 1.0
-#      global_frame: odom          # Set to odom or map
-#      robot_base_frame: base_link
-#      use_sim_time: True
-#      footprint: "[[0.65, 0.50], [0.65, -0.50], [-0.65, -0.50], [-0.65, 0.50]]"
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: odom          # Set to odom or map
+      robot_base_frame: base_link
+      use_sim_time: True
+      footprint: "[[0.65, 0.50], [0.65, -0.50], [-0.65, -0.50], [-0.65, 0.50]]"
       
-#      # make this mapless (don't use global costmap)
-#      rolling_window: true        # Keeps the costmap centered on the robot
-#      width: 3
-#      height: 3
-#      resolution: 0.1             # Larger resolution saves memory
+      # make this mapless (don't use global costmap)
+      rolling_window: true        # Keeps the costmap centered on the robot
+      width: 3
+      height: 3
+      resolution: 0.1             # Larger resolution saves memory
       
-#      #No layers = entirely empty/free spaceatic map layers
-#      plugins: []                 
+      #No layers = entirely empty/free spaceatic map layers
+      plugins: ["inflation_layer"]
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
 
 local_costmap:
   # ControllerServer creates the child as /local_costmap/local_costmap.

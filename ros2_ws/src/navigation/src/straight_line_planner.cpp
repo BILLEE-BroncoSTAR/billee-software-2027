@@ -43,7 +43,7 @@
 #include <memory>
 #include "nav2_util/node_utils.hpp"
 
-#include "include/navigation/straight_line_planner.hpp"
+#include "navigation/straight_line_planner.hpp"
 
 namespace nav2_straightline_planner
 {
