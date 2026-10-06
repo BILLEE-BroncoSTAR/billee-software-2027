@@ -5,6 +5,9 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+find_package(pluginlib REQUIRED)
+pluginlib_export_plugin_description_file(nav2_core global_planner_plugin.xml)
+
 install(DIRECTORY config launch
   DESTINATION share/${PROJECT_NAME}
 )

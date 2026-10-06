@@ -71,8 +71,25 @@ def generate_launch_description():
             output="screen",
             parameters=[costmap_params_file, {'use_sim_time': use_sim}],
             # The diff-drive controller accepts geometry_msgs/Twist on this
-            # topic. Nav2 uses TwistStamped by default on recent ROS releases.
             remappings=[('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')],
+        ),
+        Node(
+            package="nav2_planner",
+            executable="planner_server",
+            name="planner_server",
+            output="screen",
+            parameters=[costmap_params_file, {'use_sim_time': use_sim}],
+        ),
+        # auto start planner server via a lifecycle node
+        Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_planner',
+            output='screen',
+            parameters=[{
+                'autostart': True,
+                'node_names': ['planner_server']
+            }]
         ),
         Node(
             package="nav2_lifecycle_manager",

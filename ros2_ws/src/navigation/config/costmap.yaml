@@ -1,3 +1,9 @@
+planner_server:
+  ros__parameters:
+    plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_straightline_planner::StraightLine"
+      interpolation_resolution: 0.1
 controller_server:
   ros__parameters:
     # Keep Nav2 compatible with this project's unstamped diff-drive command
@@ -23,28 +29,28 @@ controller_server:
       yaw_goal_tolerance: 0.25
       stateful: true
     FollowPath:
-      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.50
-      lookahead_dist: 0.60
-      min_lookahead_dist: 0.30
-      max_lookahead_dist: 0.90
-      lookahead_time: 1.50
-      transform_tolerance: 0.20
-      use_velocity_scaled_lookahead_dist: false
-      use_regulated_linear_velocity_scaling: true
-      use_cost_regulated_linear_velocity_scaling: true
-      cost_scaling_dist: 0.60
-      cost_scaling_gain: 1.0
-      inflation_cost_scaling_factor: 3.0
-      regulated_linear_scaling_min_radius: 0.90
-      regulated_linear_scaling_min_speed: 0.10
-      use_collision_detection: true
-      max_allowed_time_to_collision_up_to_carrot: 1.0
-      use_rotate_to_heading: true
-      rotate_to_heading_angular_vel: 1.0
-      rotate_to_heading_min_angle: 0.785
-      max_angular_accel: 3.2
-      allow_reversing: false
+      plugin: "dwb_core::DWBLocalPlanner"
+      goal_checker_id: "goal_checker"
+      critics: ["BaseObstacleCritic", "GoalDistCritic", "ObstacleFootprintCritic", "PreferForwardCritic", "PathDistCritic"]
+
+#global_costmap:
+#  global_costmap:
+#    ros__parameters:
+#      update_frequency: 1.0
+#      publish_frequency: 1.0
+#      global_frame: odom          # Set to odom or map
+#      robot_base_frame: base_link
+#      use_sim_time: True
+#      footprint: "[[0.65, 0.50], [0.65, -0.50], [-0.65, -0.50], [-0.65, 0.50]]"
+      
+#      # make this mapless (don't use global costmap)
+#      rolling_window: true        # Keeps the costmap centered on the robot
+#      width: 3
+#      height: 3
+#      resolution: 0.1             # Larger resolution saves memory
+      
+#      #No layers = entirely empty/free spaceatic map layers
+#      plugins: []                 
 
 local_costmap:
   # ControllerServer creates the child as /local_costmap/local_costmap.
