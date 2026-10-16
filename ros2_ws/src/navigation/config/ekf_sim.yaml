@@ -1,5 +1,5 @@
-### ekf config file ###
-ekf_filter_node:
+### ekf local filter file ###
+ekf_filter_node_odom:
     ros__parameters:
         frequency: 30.0
 
@@ -21,12 +21,15 @@ ekf_filter_node:
         base_link_frame: base_link  # Defaults to "base_link" if unspecified
         world_frame: odom           # Defaults to the value of odom_frame if unspecified
 
-        odom0: /odom
+        #odom 0 = wheel odometry
+        odom0: /diff_drive_controller/odom
         odom0_config: [true, true, false,
                       false, false, true,
                       true, true, false,
                       false, false, true,
                       false, false, false]
+
+        #odom 1 = visual odometry
         odom1: /depth_cam/vio/odom
         odom1_config: [true,  true,  true,  # X, Y, Z
                     true,  true,  true,  # Roll, Pitch, Yaw
@@ -37,3 +40,58 @@ ekf_filter_node:
         odom1_differential: false
         odom1_relative: true
         odom1_queue_size: 2
+
+### ekf configuration for the global EKF filter ###
+ekf_filter_node_map:
+    ros__parameters:
+        frequency: 30.0
+
+        two_d_mode: true
+        publish_acceleration: true
+        publish_tf: true
+
+        #Same as the local EKF filter, except the world frame is set to the map frame
+        #global pushes map -> odom, ensuring that the local EKF filter can continue to provide smooth odometry updates
+        map_frame: map
+        odom_frame: odom
+        base_link_frame: base_link
+        world_frame: map
+
+        #odom 0 = GPS odometry
+        odom0: /odometry/gps
+        odom0_config: [true,  true,  false,  # x, y, z
+                    false, false, false,  # roll, pitch, yaw
+                    false, false, false,  # linear velocity
+                    false, false, false,  # angular velocity
+                    false, false, false] # acceleration
+
+        odom0_differential: false
+        odom0_relative: false
+        odom0_queue_size: 2
+
+        #odom 1 = wheel odometry velocities
+        #initializes the filter before GPS arrives (navsat needs /odometry/global to start) and supplies yaw until an IMU is fused
+        odom1: /diff_drive_controller/odom
+        odom1_config: [false, false, false,  # x, y, z
+                    false, false, false,  # roll, pitch, yaw
+                    true,  true,  false,  # vx, vy, vz
+                    false, false, true,   # vroll, vpitch, vyaw
+                    false, false, false] # ax, ay, az
+        odom1_differential: false
+        odom1_relative: false
+        odom1_queue_size: 2
+
+### Navsat configuration ###
+#converts coordinates to map frame odometry, and the global estimate back to the gps
+navsat_transform_node:
+    ros__parameters:
+        frequency: 30.0
+        # wait for the global EKF to publish before computing the GPS -> map transform
+        delay: 3.0
+        # matches the 2D global filter
+        zero_altitude: true
+        # no IMU yet: take heading from /odometry/global (relative to spawn, which faces east in sim)
+        # set to false once an IMU publishes /imu/data
+        use_odometry_yaw: true
+        publish_filtered_gps: true
+        use_sim_time: true

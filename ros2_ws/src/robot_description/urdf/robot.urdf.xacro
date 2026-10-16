@@ -15,5 +15,6 @@
          risks the confirmed-working sim expansion. -->
     <xacro:include filename="robot_gz.urdf.xacro"/>
     <xacro:include filename="camera.urdf.xacro"/>
+    <xacro:include filename="gps.urdf.xacro"/>
     <xacro:include filename="ros2_control.urdf.xacro"/>
 </robot>

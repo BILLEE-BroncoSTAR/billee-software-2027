@@ -48,12 +48,12 @@ def generate_launch_description():
             ],
         ),
     )
-
+    # local EKF filter for odometry node
     launch_nodes.append( 
         Node(
             package='robot_localization',
             executable='ekf_node',
-            name='ekf_filter_node',
+            name='ekf_filter_node_odom',
             output='screen',
             parameters=[
                 os.path.join(pkg_share, 'config/ekf_sim.yaml'),
@@ -61,7 +61,42 @@ def generate_launch_description():
             ],
         )
     )
+    # global EKF filter for map node
+    launch_nodes.append(
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node_map',
+            output='screen',
+            parameters=[
+                os.path.join(pkg_share, 'config/ekf_sim.yaml'),
+                {'use_sim_time': use_sim},
+            ],
+            remappings=[('odometry/filtered', '/odometry/global')],
 
+        )
+    )
+    # Navsat transform node
+    launch_nodes.append(
+        Node(
+            package='robot_localization',
+            executable='navsat_transform_node',
+            name='navsat_transform_node',
+            output='screen',
+            parameters=[
+                os.path.join(pkg_share, 'config/ekf_sim.yaml'),
+                {'use_sim_time': use_sim},
+            ],
+            remappings=[
+            ('imu', '/imu/data'),
+            ('gps/fix', '/gps'),
+            ('odometry/filtered', '/odometry/global'),
+            ('odometry/gps', '/odometry/gps'),
+            ('gps/filtered', '/gps/filtered'),],
+
+
+        )
+    )
     # ControllerServer owns the local_costmap.
     launch_nodes.extend([
         Node(

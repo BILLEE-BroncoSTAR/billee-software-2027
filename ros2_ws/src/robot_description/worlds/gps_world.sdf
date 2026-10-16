@@ -1,0 +1,95 @@
+<?xml version="1.0" ?>
+<!--
+  Flat GPS test world for the global EKF / navsat_transform pipeline.
+  Based on the Fortress empty.sdf, with the NavSat system and a geodetic origin added
+  (see https://docs.nav2.org/tutorials/docs/navigation2_with_gps.html).
+
+  The origin is the center of the URC testing ground, the Utah state-owned square mile
+  between (38.411 N, -110.786 E) and (38.425 N, -110.768 E), near MDRS in Hanksville, UT.
+  ENU with heading 0: Gazebo +X = East, +Y = North, so a robot spawned at yaw 0 faces East.
+-->
+<sdf version="1.6">
+  <world name="gps_world">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin
+      filename="ignition-gazebo-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="ignition-gazebo-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+      filename="ignition-gazebo-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin
+      filename="ignition-gazebo-contact-system"
+      name="gz::sim::systems::Contact">
+    </plugin>
+    <!-- NavSat system: required for navsat sensors to publish. Fortress uses the
+         ignition- filename; the tutorial's gz-sim-navsat-system is the Garden+ name.
+         Unlike the systems above, this plugin registers no gz:: alias in Fortress,
+         so it must use the ignition:: name. -->
+    <plugin
+      filename="ignition-gazebo-navsat-system"
+      name="ignition::gazebo::systems::NavSat">
+    </plugin>
+
+    <!-- Geodetic origin of the world frame: center of the testing ground square mile. -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>38.418</latitude_deg>
+      <longitude_deg>-110.777</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- 2 km plane covers the whole ~1.6 km testing ground from the origin. -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2000 2000</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2000 2000</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

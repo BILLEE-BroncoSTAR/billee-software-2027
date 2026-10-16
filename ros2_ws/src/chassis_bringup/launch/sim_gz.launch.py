@@ -66,7 +66,7 @@ declare_args = [
 
         DeclareLaunchArgument(
             "world_file",
-            default_value="empty.sdf",
+            default_value="worlds/gps_world.sdf",
             description="Path to the robot world file (relative to the description package share).",
         ),
         DeclareLaunchArgument("x", default_value="0.0", description="Spawn X (m)."),
@@ -152,8 +152,7 @@ def _launch_description(ctx):
         # gz launch always declares gz_args as a string and PathJoinSubstiution is lazily 
         # evaluated at runtime so  we must eval here to pass as a gz_arg
         launch_arguments={
-            #"gz_args": f"-r -v 4 {world_path.perform(ctx)}",
-            "gz_args": f"-r -v 4 empty.sdf",
+            "gz_args": f"-r -v 4 {world_path.perform(ctx)}",
             "extra_gz_args": f"--ros-args --params-file {gazebo_params_file}",
             "on_exit_shutdown": "true",
         }.items(),

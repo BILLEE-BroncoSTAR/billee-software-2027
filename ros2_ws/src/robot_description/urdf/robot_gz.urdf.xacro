@@ -90,6 +90,17 @@
         </sensor>
     </gazebo>
 
+    <!-- GPS: needs the NavSat system and <spherical_coordinates> in the world (worlds/gps_world.sdf).
+         No noise block yet, so fixes are exact; add noise from the receiver spec before tuning. -->
+    <gazebo reference="gps_link">
+        <sensor name="navsat" type="navsat">
+            <ignition_frame_id>gps_link</ignition_frame_id>
+            <always_on>1</always_on>
+            <update_rate>1</update_rate>
+            <topic>/navsat</topic>
+        </sensor>
+    </gazebo>
+
     <gazebo>
         <!-- Render and publish camera / GPU sensor data for this spawned model. -->
         <plugin name="ignition::gazebo::systems::Sensors" filename="libignition-gazebo-sensors-system.so">
