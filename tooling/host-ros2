@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# host-ros2 - run a command in the ros2_ws pixi env directly on a Linux host (no Docker).
+#
+#   tooling/host-ros2 build                                        # pixi task
+#   tooling/host-ros2 ros2 launch chassis_bringup sim_gz.launch.py foxglove:=true rviz:=true
+#   tooling/host-ros2 ros2 topic echo /joy
+#
+# Strips a system ROS install (e.g. `source /opt/ros/humble/setup.bash` in ~/.bashrc):
+# its paths leak into the pixi env and Gazebo then loads /opt/ros plugins built against
+# other library versions and aborts on spawn. Also mocks the CUDA virtual package so
+# the `default` env resolves on machines without an NVIDIA GPU (the devcontainer image
+# sets the same CONDA_OVERRIDE_CUDA).
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+pixi_bin="$(command -v pixi || echo "$HOME/.pixi/bin/pixi")"
+
+if [[ $# -eq 0 ]]; then
+  sed -n '2,6p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  exit 2
+fi
+
+unset AMENT_PREFIX_PATH COLCON_PREFIX_PATH CMAKE_PREFIX_PATH PYTHONPATH LD_LIBRARY_PATH \
+  IGN_GAZEBO_RESOURCE_PATH IGN_GAZEBO_MODEL_PATH GZ_SIM_RESOURCE_PATH ROS_LOCALHOST_ONLY
+export CONDA_OVERRIDE_CUDA="${CONDA_OVERRIDE_CUDA:-13.2}"
+
+cd "$repo_root/ros2_ws"
+exec "$pixi_bin" run --environment default "$@"

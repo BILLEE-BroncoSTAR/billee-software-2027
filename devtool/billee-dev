@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: billee-dev [--port N] [--no-browser]
+
+  --port N       serve on port N (default 7700)
+  --no-browser   start the server without opening a browser
+
+Ctrl-C stops the tool and everything it started.
+EOF
+}
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+port=7700
+open_browser=1
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --port) port="$2"; shift 2 ;;
+    --no-browser) open_browser=0; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "billee-dev: unknown option $1 (try --help)" >&2; exit 2 ;;
+  esac
+done
+
+command -v python3 >/dev/null || { echo "billee-dev: python3 not found" >&2; exit 1; }
+
+python3 "$here/server.py" --port "$port" &
+server=$!
+trap 'kill -TERM "$server" 2>/dev/null || true; wait "$server" 2>/dev/null || true' EXIT INT TERM
+
+url="http://localhost:$port"
+for _ in $(seq 1 50); do
+  kill -0 "$server" 2>/dev/null || exit 1
+  python3 -c "import urllib.request,sys; urllib.request.urlopen(sys.argv[1], timeout=1)" "$url/api/info" \
+    2>/dev/null && break
+  sleep 0.1
+done
+
+if [[ "$open_browser" == 1 ]]; then
+  if command -v xdg-open >/dev/null; then
+    xdg-open "$url" >/dev/null 2>&1 || true
+  elif command -v open >/dev/null; then
+    open "$url"
+  else
+    echo "billee-dev: open $url in your browser"
+  fi
+fi
+
+wait "$server"

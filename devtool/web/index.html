@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Billee Dev Tool</title>
+<style>
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #353833;
+  font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+a:link, a:visited { color: #4A6782; text-decoration: none; }
+a:hover { color: #bb7a2a; }
+code, pre, input, select { font-family: 'DejaVu Sans Mono', monospace; }
+code { font-size: 14px; }
+.block { font-family: 'DejaVu Serif', Georgia, "Times New Roman", Times, serif; font-size: 14px; }
+
+.topNav {
+  background: #4D7A97;
+  color: #ffffff;
+  font-size: 12px;
+  padding: 10px 10px 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 18px;
+}
+.topNav .brand { font-weight: bold; text-transform: uppercase; }
+.topNav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 2px; }
+.topNav li { padding: 5px 6px 7px; text-transform: uppercase; }
+.topNav li a:link, .topNav li a:visited { color: #ffffff; }
+.topNav li a:hover { color: #bb7a2a; }
+.topNav li.current { background: #F8981D; color: #253441; }
+.topNav .env { margin-left: auto; }
+.subNav {
+  background: #dee3e9;
+  font-size: 12px;
+  padding: 6px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  border-bottom: 1px solid #c4cbd3;
+}
+.subNav .groups { margin-right: auto; }
+.subNav .groups a { text-transform: uppercase; }
+.subNav label { white-space: nowrap; }
+.subNav input[type="text"] { font-size: 12px; padding: 2px 4px; width: 200px; border: 1px solid #767676; }
+
+.frames { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 38%); }
+.contentContainer { overflow-y: auto; padding: 10px 20px 60px; min-width: 0; }
+.sideFrame { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid #c4cbd3; }
+@media (max-width: 980px) {
+  body { display: block; height: auto; }
+  .frames { display: block; }
+  .contentContainer { overflow: visible; }
+  .sideFrame { border-left: 0; border-top: 1px solid #c4cbd3; height: 80vh; }
+}
+
+.title { color: #2c4557; font-size: 20px; margin: 10px 0; }
+.header dl { margin: 6px 0 0; }
+dt { font-size: 12px; font-weight: bold; color: #4E4E4E; margin: 10px 0 0; }
+dd { margin: 4px 0 6px 20px; }
+
+h2.sectionBar, h3.memberBar, h4.memberName {
+  background: #dee3e9;
+  border: 1px solid #d0d9e0;
+  margin: 0 0 6px -8px;
+  padding: 7px 5px;
+  font-size: 15px;
+}
+h2.sectionBar { font-size: 16px; margin: 24px 0 8px; }
+h3.memberBar { margin: 0 0 8px -10px; font-size: 14px; }
+h4.memberName { font-size: 13px; }
+
+table.memberSummary { width: 100%; border-collapse: collapse; border: 1px solid #EEE; }
+.tableTabs { padding-top: 10px; }
+.tableWrap { overflow-x: auto; }
+.tableTabs .tab {
+  display: inline-block;
+  padding: 5px 12px 7px;
+  margin: 0 1px 1px 0;
+  font-weight: bold;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  background: #4D7A97;
+  color: #ffffff;
+  border: 0;
+  font-family: inherit;
+}
+.tableTabs .tab.active { background: #F8981D; color: #253441; }
+table.memberSummary th {
+  background: #dee3e9;
+  text-align: left;
+  padding: 8px 3px 3px 7px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+table.memberSummary td { vertical-align: top; padding: 8px 3px 3px 7px; font-size: 13px; }
+table.memberSummary tr.altColor { background: #ffffff; }
+table.memberSummary tr.rowColor { background: #EEEEEF; }
+td.colFirst { white-space: nowrap; }
+td.colSecond code { font-weight: bold; }
+td.colLast .block { font-size: 13px; }
+td.colAction { white-space: nowrap; text-align: right; padding-right: 7px; }
+.deprecationLabel { font-weight: bold; }
+
+ul.blockList { list-style: none; margin: 10px 0; padding: 0; }
+li.groupBlock { border: 1px solid #ededed; background: #f8f8f8; padding: 0 20px 5px 10px; margin-bottom: 15px; }
+li.groupBlock > ul > li.memberBlock { background: #ffffff; padding: 0 8px 12px 8px; margin-bottom: 10px; line-height: 1.4; }
+li.memberBlock.active h4.memberName { background: #F8981D; border-color: #d98a1d; color: #253441; }
+pre.signature {
+  font-size: 13px;
+  margin: 8px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+li.memberBlock dd code { font-size: 13px; }
+li.memberBlock dd input[type="text"], li.memberBlock dd select { font-size: 12px; padding: 1px 3px; border: 1px solid #767676; max-width: 100%; }
+li.memberBlock dd input[type="text"] { width: 16em; }
+li.memberBlock dd input.wide { width: min(46em, 100%); }
+.field.has-error input, .field.has-error select { border-color: #a94442; background: #fdf3f3; }
+.err { color: #a94442; font-size: 12px; margin-left: 6px; }
+.msg { margin: 6px 0; }
+.msg.warn b { color: #8a6d3b; }
+.msg.block-msg { color: #a94442; }
+.actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hint { font-size: 12px; color: #6b6b6b; }
+
+button {
+  font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  padding: 3px 12px;
+  border: 1px solid #4D7A97;
+  background: #4D7A97;
+  color: #ffffff;
+  cursor: pointer;
+  border-radius: 0;
+}
+button:hover:not(:disabled) { background: #3e6580; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.secondary { background: #ffffff; color: #4A6782; border-color: #9eadc0; }
+button.secondary:hover:not(:disabled) { background: #f0f3f6; }
+button.stop { background: #ffffff; color: #a94442; border-color: #a94442; }
+button.stop:hover:not(:disabled) { background: #fdf3f3; }
+button.small { padding: 1px 8px; font-size: 11px; }
+
+.st { font-size: 11px; font-weight: bold; text-transform: uppercase; }
+.st-starting, .st-stopping { color: #8a6d3b; }
+.st-running { color: #2f6f3e; }
+.st-finished { color: #4A6782; }
+.st-failed { color: #a94442; }
+.st-stopped { color: #777777; }
+.yes { color: #2f6f3e; }
+.no { color: #a94442; }
+
+.bar {
+  background: #4D7A97;
+  color: #ffffff;
+  font-size: 11px;
+  padding: .8em .5em .4em .8em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.bar .label { font-weight: bold; text-transform: uppercase; }
+.bar .st { color: #ffffff; text-decoration: underline; }
+.bar label { margin-left: auto; }
+#runs { list-style: none; margin: 0; padding: 4px 0; max-height: 30vh; overflow-y: auto; flex: none; border-bottom: 1px solid #c4cbd3; }
+#runs li { font-size: 12px; padding: 3px 10px; display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
+#runs li:hover { background: #EEEEEF; }
+#runs li.selected { background: #dee3e9; }
+#runs li .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #4A6782; }
+#runs li .meta { color: #6b6b6b; font-family: 'DejaVu Sans Mono', monospace; font-size: 11px; }
+#runs li.empty { cursor: default; color: #6b6b6b; }
+#log-cmd { font: 11px 'DejaVu Sans Mono', monospace; color: #4E4E4E; padding: 6px 10px; border-bottom: 1px solid #EEE; word-break: break-all; }
+#log { flex: 1; min-height: 160px; margin: 0; padding: 8px 10px; overflow: auto; font-size: 12px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; background: #ffffff; }
+
+#toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #253441; color: #ffffff; padding: 8px 14px; font-size: 13px; max-width: min(640px, 92vw); white-space: pre-line; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 10; }
+#toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<nav class="topNav" aria-label="Main">
+  <span class="brand">Billee Dev Tool</span>
+  <ul>
+    <li class="current">Catalog</li>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#detail">Detail</a></li>
+    <li><a href="#help">Help</a></li>
+  </ul>
+  <span class="env" id="env">…</span>
+</nav>
+<div class="subNav">
+  <div class="groups" id="group-links">GROUPS:&nbsp;</div>
+  <label>SEARCH: <input type="text" id="q" placeholder="sim, vcan0, controllers" aria-label="Search"></label>
+  <label><input type="checkbox" id="runnable-only"> Runnable here only</label>
+  <span id="count"></span>
+  <button class="secondary small" id="recheck" type="button">Re-check</button>
+</div>
+
+<div class="frames">
+  <main class="contentContainer" id="content">
+    <div class="header">
+      <h1 class="title">Billee Dev Tool</h1>
+      <div class="block">Every command, simulation and check in <code>billee-software-2027</code>. Set an item's
+        arguments in its detail entry and press Run; output appears in the panel on the right.</div>
+      <dl>
+        <dt>Platform:</dt>
+        <dd id="platform"></dd>
+        <dt>This machine:</dt>
+        <dd id="needs"></dd>
+      </dl>
+    </div>
+
+    <h2 class="sectionBar" id="summary">Item Summary</h2>
+    <div class="tableTabs" id="tabs" role="tablist" aria-label="Groups"></div>
+    <div class="tableWrap">
+      <table class="memberSummary">
+        <thead><tr><th>Kind</th><th>Item</th><th>Description</th><th></th></tr></thead>
+        <tbody id="summary-rows"></tbody>
+      </table>
+    </div>
+
+    <h2 class="sectionBar" id="detail">Item Detail</h2>
+    <ul class="blockList" id="details"></ul>
+
+    <h2 class="sectionBar" id="help">Help</h2>
+    <div class="block">
+      <dl>
+        <dt>Kinds:</dt>
+        <dd><code>task</code> runs to completion. <code>service</code> runs until you stop it.
+          <code>stream</code> prints until stopped. <code>gui</code> opens a window. <code>interactive</code>
+          needs keyboard input and opens in a terminal. <code>link</code> is something to open.</dd>
+        <dt>Needs:</dt>
+        <dd>What must exist first (a display, <code>vcan0</code>, a gamepad, a running drivetrain).
+          Missing ones are shown as warnings, and are checked again with Re-check.</dd>
+        <dt>Uses:</dt>
+        <dd>Resources the item holds. Two items that hold the same drivetrain, bridge port or gamepad
+          nodes can't run together; the second one is blocked until the first is stopped.</dd>
+        <dt>Stopping:</dt>
+        <dd>Stop sends Ctrl-C to the item and everything it started. Ctrl-C in the terminal running
+          <code>devtool/billee-dev</code> stops the tool and all its runs.</dd>
+        <dt>Editing items:</dt>
+        <dd><code>devtool/catalog.json</code>; reload the page after saving.</dd>
+      </dl>
+    </div>
+  </main>
+
+  <aside class="sideFrame">
+    <div class="bar"><span class="label">Runs</span><span id="runs-count"></span></div>
+    <ul id="runs"><li class="empty">Nothing started yet.</li></ul>
+    <div class="bar">
+      <span class="label">Output</span>
+      <span id="log-title">no run selected</span>
+      <span class="st" id="log-status" hidden></span>
+      <button class="stop small" id="log-stop" type="button" hidden>Stop</button>
+      <label><input type="checkbox" id="follow" checked> follow</label>
+    </div>
+    <div id="log-cmd"></div>
+    <pre id="log"></pre>
+  </aside>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1663 @@
+{
+  "schema": 1,
+  "repo": {
+    "commit": "6e1d6af",
+    "branch": "lucadev",
+    "root": "billee-software-2027"
+  },
+  "kinds": {
+    "task": "Runs to completion; show its output and exit code.",
+    "service": "Runs until stopped (SIGINT); has a ready signal where one exists.",
+    "stream": "Prints continuously until stopped; nothing else depends on it.",
+    "gui": "Opens a native window; runs until the window or the process is closed.",
+    "interactive": "Needs keyboard input in its own terminal (PTY).",
+    "link": "Something to open, not a process."
+  },
+  "runners": {
+    "ros": {
+      "label": "ROS env",
+      "description": "Inside the platform's ROS 2 environment: Pixi env activated, workspace overlay sourced, ROS_DOMAIN_ID=42, working dir ros2_ws. Pixi task names (build, fmt) also work here.",
+      "templates": {
+        "x86-native": "tooling/host-ros2 {cmd}",
+        "x86-docker": "tooling/desktop-ros2 run pixi run -e default {cmd}",
+        "mac": "tooling/desktop-ros2 run pixi run -e mac-cpu {cmd}",
+        "linux-aarch64": "cd ros2_ws && pixi run -e linux-aarch64 {cmd}",
+        "l4t": "tooling/rover-ros2 run pixi run -e l4t {cmd}"
+      }
+    },
+    "host": {
+      "label": "Host",
+      "description": "A plain shell on the host machine at the repo root, never inside a container.",
+      "templates": {
+        "*": "{cmd}"
+      }
+    },
+    "host-sudo": {
+      "label": "Host + sudo",
+      "description": "Host shell at the repo root; prompts for the sudo password, so run it in a terminal (PTY) the user can type into.",
+      "templates": {
+        "*": "{cmd}"
+      }
+    },
+    "link": {
+      "label": "Link",
+      "description": "Not a process: a URL, file or app to open.",
+      "templates": {
+        "*": "{cmd}"
+      }
+    }
+  },
+  "platforms": {
+    "x86-native": "x86-64 Linux with the workspace built natively in ros2_ws/.pixi/envs/default (this laptop). tooling/host-ros2 strips a system /opt/ros install from the environment first.",
+    "x86-docker": "x86-64 Linux + NVIDIA running the billee-desktop image (make setup x86).",
+    "mac": "Apple-Silicon Mac running the billee-mac-cpu image. Headless: no RViz window, gamepad, vcan0 or DDS to other machines.",
+    "linux-aarch64": "ARM64 Linux, native Pixi env, no container.",
+    "l4t": "The Jetson rover, rover-ros2 image. Headless."
+  },
+  "needs": {
+    "display": "An X/Wayland display for a window (RViz, Gazebo, rqt). Headless machines put xvfb-run -a in front of sim launches.",
+    "vcan0": "The virtual CAN interface on the host: run can.vcan-up first (sudo).",
+    "can0": "A real CAN interface: the Jetson's mttcan or a USB-CAN adapter, brought up with can.up.",
+    "gamepad": "A gamepad at /dev/input/js0 (check with teleop.joy-list).",
+    "docker": "Docker reachable without sudo (docker info works).",
+    "sudo": "The user's sudo password.",
+    "internet": "Network access for downloads.",
+    "rover": "The physical rover. Wheels will turn: put it on blocks first.",
+    "terminal": "Reads keys from its own terminal: the launcher must give it an interactive PTY.",
+    "drivetrain": "A running drivetrain item (any of the 'drivetrain' group)."
+  },
+  "resources": {
+    "drivetrain": "Only one at a time. Each starts /controller_manager, /diff_drive_controller and /robot_state_publisher; two would publish conflicting odometry and TF.",
+    "port-8765": "foxglove_bridge's WebSocket port. One bridge per machine; a second one fails to bind.",
+    "gamepad-nodes": "joy_node + joy_tank_drive. The sim always starts a pair (joy_control:=false is ignored), teleop.launch.py and ground_station.launch.py start another. Two pairs publish duplicate commands, and an idle pad publishes zeros at 20 Hz.",
+    "cmd-vel": "/diff_drive_controller/cmd_vel_unstamped. Every publisher here commands the wheels; the controller obeys the last message received."
+  },
+  "exclusive": [
+    "drivetrain",
+    "port-8765",
+    "gamepad-nodes"
+  ],
+  "groups": [
+    {
+      "id": "setup",
+      "label": "Machine setup",
+      "description": "One-time setup and environment info. Runs on the host."
+    },
+    {
+      "id": "build",
+      "label": "Build & code checks",
+      "description": "Compile the workspace, lint, test."
+    },
+    {
+      "id": "model",
+      "label": "Robot model",
+      "description": "Expand and validate the URDF without starting anything."
+    },
+    {
+      "id": "drivetrain",
+      "label": "Drivetrain (pick one)",
+      "description": "The backend that moves the wheels. Mutually exclusive."
+    },
+    {
+      "id": "addons",
+      "label": "Add-ons",
+      "description": "Run next to a drivetrain: bridge, RViz, emulator, ground station."
+    },
+    {
+      "id": "drive",
+      "label": "Drive it",
+      "description": "Ways to send velocity commands."
+    },
+    {
+      "id": "can",
+      "label": "CAN bus",
+      "description": "Bring up, watch and poke the CAN interface. Host side."
+    },
+    {
+      "id": "health",
+      "label": "Health checks",
+      "description": "Is it up, at what rate, and who is talking."
+    },
+    {
+      "id": "gui",
+      "label": "Desktop GUI tools",
+      "description": "Native windows (need a display)."
+    },
+    {
+      "id": "record",
+      "label": "Record & replay",
+      "description": "rosbag2 recording and playback."
+    },
+    {
+      "id": "containers",
+      "label": "Containers",
+      "description": "Docker images and devcontainers."
+    },
+    {
+      "id": "links",
+      "label": "External",
+      "description": "Apps and pages outside this repo."
+    }
+  ],
+  "items": [
+    {
+      "id": "setup.make",
+      "group": "setup",
+      "label": "Set up this machine",
+      "kind": "task",
+      "runner": "host",
+      "cmd": "make setup {{platform}}",
+      "args": [
+        {
+          "name": "platform",
+          "type": "enum",
+          "choices": [
+            "x86",
+            "mac",
+            "linux-aarch64",
+            "l4t"
+          ],
+          "default": "x86",
+          "style": "template",
+          "help": "Recorded in ros2_ws/.billee-platform"
+        },
+        {
+          "name": "SKIP_APT",
+          "type": "bool",
+          "default": false,
+          "style": "env",
+          "env": "SKIP_APT",
+          "help": "Skip apt (and on x86 the NVIDIA driver, Docker and toolkit installs)"
+        },
+        {
+          "name": "NVIDIA_DRIVER_BRANCH",
+          "type": "string",
+          "default": "",
+          "style": "env",
+          "env": "NVIDIA_DRIVER_BRANCH",
+          "help": "x86 only: install this driver branch instead of Ubuntu's recommendation"
+        }
+      ],
+      "needs": [
+        "sudo",
+        "internet",
+        "docker"
+      ],
+      "status": "untested",
+      "notes": "Long-running and installs system packages. On x86 it exits with code 3 when a reboot or re-login is needed; run it again afterwards. linux-aarch64 needs no Docker.",
+      "docs": "README.md#setup"
+    },
+    {
+      "id": "setup.x86-preview",
+      "group": "setup",
+      "label": "Preview the x86 host install",
+      "kind": "task",
+      "runner": "host",
+      "cmd": "DRY_RUN=1 tooling/install-x86-host",
+      "status": "untested",
+      "notes": "Prints what make setup x86 would install (NVIDIA driver, Docker Engine, NVIDIA Container Toolkit) without changing anything."
+    },
+    {
+      "id": "setup.platform",
+      "group": "setup",
+      "label": "Show detected platform",
+      "kind": "task",
+      "runner": "host",
+      "shell": true,
+      "cmd": "source tooling/billee-env.sh && echo \"$BILLEE_PLATFORM $BILLEE_PIXI_ENV $BILLEE_WS\"",
+      "status": "verified",
+      "verified": "x86 default …/ros2_ws",
+      "notes": "Reads ros2_ws/.billee-platform, else detects from the CPU. BILLEE_PLATFORM=<p> overrides it for one command."
+    },
+    {
+      "id": "setup.pixi-install",
+      "group": "setup",
+      "label": "Install the Pixi environment",
+      "kind": "task",
+      "runner": "host",
+      "shell": true,
+      "cmd": "cd ros2_ws && CONDA_OVERRIDE_CUDA=${CONDA_OVERRIDE_CUDA:-13.2} pixi install -e {{env}}",
+      "args": [
+        {
+          "name": "env",
+          "type": "enum",
+          "choices": [
+            "default",
+            "linux-aarch64",
+            "mac-cpu",
+            "l4t"
+          ],
+          "default": "default",
+          "style": "template"
+        }
+      ],
+      "needs": [
+        "internet"
+      ],
+      "status": "untested",
+      "notes": "Native platforms only. Containers run pixi install automatically on start (desktop-ros2 run/shell, devcontainer postStartCommand). CONDA_OVERRIDE_CUDA defaults to 13.2, as in tooling/host-ros2 and the x86 Dockerfile, so the default env also installs on machines without an NVIDIA GPU."
+    },
+    {
+      "id": "setup.make-help",
+      "group": "setup",
+      "label": "List make targets",
+      "kind": "task",
+      "runner": "host",
+      "cmd": "make help",
+      "status": "untested"
+    },
+    {
+      "id": "build.all",
+      "group": "build",
+      "label": "Build the workspace",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "build",
+      "status": "verified",
+      "verified": "4 packages finished in 1.3 s (no changes)",
+      "notes": "The Pixi task: colcon build --symlink-install with this env's CMake flags. Equivalent to make build, which on this laptop fails because it goes through Docker.",
+      "docs": "ros2_ws/pixi.toml"
+    },
+    {
+      "id": "build.package",
+      "group": "build",
+      "label": "Build one package",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "colcon build --symlink-install --event-handlers console_direct+ --base-paths src --packages-select {{package}}",
+      "args": [
+        {
+          "name": "package",
+          "type": "enum",
+          "choices": [
+            "chassis_bringup",
+            "robot_description",
+            "odesc",
+            "teleop"
+          ],
+          "default": "teleop",
+          "style": "template"
+        }
+      ],
+      "status": "untested",
+      "notes": "Faster loop for C++ changes (odesc, teleop). Launch, config and Python files are symlinked, so editing them needs no rebuild."
+    },
+    {
+      "id": "build.first-l4t",
+      "group": "build",
+      "label": "First build on the Jetson",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "colcon build --symlink-install --parallel-workers 2 --executor sequential --event-handlers console_direct+ --base-paths src --cmake-args -DCMAKE_BUILD_TYPE=Release",
+      "status": "untested",
+      "notes": "Only for the Orin Nano's first build (fits in 8 GB RAM). Afterwards use build.all."
+    },
+    {
+      "id": "build.clean",
+      "group": "build",
+      "label": "Delete build outputs",
+      "kind": "task",
+      "runner": "host",
+      "shell": true,
+      "confirm": true,
+      "cmd": "cd ros2_ws && rm -rf build install log",
+      "status": "untested",
+      "notes": "Destructive. Needed after switching a checkout between Pixi environments (make setup does it automatically). Stop running launches first; follow with build.all."
+    },
+    {
+      "id": "build.lint",
+      "group": "build",
+      "label": "Lint Python (read-only)",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ruff check src/",
+      "status": "verified",
+      "verified": "runs; currently reports 14 existing findings (exit code 1)"
+    },
+    {
+      "id": "build.fmt",
+      "group": "build",
+      "label": "Lint and auto-fix Python",
+      "kind": "task",
+      "runner": "ros",
+      "confirm": true,
+      "cmd": "fmt",
+      "status": "untested",
+      "notes": "Pixi task: ruff check src/ --fix. Edits files in place."
+    },
+    {
+      "id": "build.test",
+      "group": "build",
+      "label": "Run package tests",
+      "kind": "task",
+      "runner": "ros",
+      "shell": true,
+      "cmd": "colcon test --event-handlers console_direct+ && colcon test-result --verbose",
+      "status": "untested",
+      "notes": "ament_lint_auto linters for the C++ packages; flake8, pep257 and copyright for robot_description. No functional tests exist yet."
+    },
+    {
+      "id": "model.sim",
+      "group": "model",
+      "label": "Expand + check the sim URDF",
+      "kind": "task",
+      "runner": "ros",
+      "shell": true,
+      "cmd": "xacro src/robot_description/urdf/robot.urdf.xacro > /tmp/billee_sim.urdf && check_urdf /tmp/billee_sim.urdf",
+      "status": "verified",
+      "verified": "check_urdf prints the full link tree",
+      "notes": "Hardware plugin ign_ros2_control/IgnitionSystem."
+    },
+    {
+      "id": "model.real",
+      "group": "model",
+      "label": "Expand the hardware URDF",
+      "kind": "task",
+      "runner": "ros",
+      "shell": true,
+      "cmd": "xacro src/robot_description/urdf/robot.urdf.xacro use_sim:=false can_interface:={{can_interface}} > /tmp/billee_real.urdf && grep -E 'plugin|node_id' /tmp/billee_real.urdf",
+      "args": [
+        {
+          "name": "can_interface",
+          "type": "enum",
+          "choices": [
+            "mock",
+            "can0",
+            "vcan0"
+          ],
+          "default": "mock",
+          "style": "template"
+        }
+      ],
+      "status": "verified",
+      "verified": "odesc/OdescSystemHardware with a node_id on all six wheels"
+    },
+    {
+      "id": "model.graph",
+      "group": "model",
+      "label": "Draw the link tree",
+      "kind": "task",
+      "runner": "ros",
+      "shell": true,
+      "cmd": "xacro src/robot_description/urdf/robot.urdf.xacro > /tmp/billee_sim.urdf && cd /tmp && urdf_to_graphviz /tmp/billee_sim.urdf billee",
+      "status": "untested",
+      "notes": "Writes /tmp/billee.gv and /tmp/billee.pdf."
+    },
+    {
+      "id": "drivetrain.mock",
+      "group": "drivetrain",
+      "label": "Mock drivetrain",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock",
+      "args": [
+        {
+          "name": "rviz",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Also open RViz (needs a display)"
+        },
+        {
+          "name": "gear_ratio",
+          "type": "number",
+          "default": 48.0,
+          "style": "ros"
+        }
+      ],
+      "uses": [
+        "drivetrain",
+        "port-8765"
+      ],
+      "ports": [
+        8765
+      ],
+      "ready": "Configured and activated .*joint_state_broadcaster",
+      "status": "verified",
+      "verified": "controllers active in under 1 s; odom and joint_states at 30 Hz; bridge on :8765",
+      "notes": "The real (non-Gazebo) stack with a software loopback in the ODESC plugin. No CAN, motors, Gazebo or GPU. Fastest loop. Wall-clock time (use_sim_time:=false for separate viewers). Starts no teleop."
+    },
+    {
+      "id": "drivetrain.sim",
+      "group": "drivetrain",
+      "label": "Gazebo simulation",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch chassis_bringup rover.launch.py",
+      "args": [
+        {
+          "name": "rviz",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Also open RViz"
+        }
+      ],
+      "needs": [
+        "display"
+      ],
+      "uses": [
+        "drivetrain",
+        "port-8765",
+        "gamepad-nodes"
+      ],
+      "ports": [
+        8765
+      ],
+      "ready": "Configured and activated .*joint_state_broadcaster",
+      "status": "untested",
+      "notes": "Gazebo Fortress, empty world, Foxglove bridge always on. Also starts gamepad teleop (it can't be turned off). Sim time: viewers need use_sim_time:=true. Opens a Gazebo window; headless machines prefix xvfb-run -a (not installed on this laptop, which also has no NVIDIA driver, so Gazebo renders on the CPU)."
+    },
+    {
+      "id": "drivetrain.sim-full",
+      "group": "drivetrain",
+      "label": "Gazebo simulation (all options)",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch chassis_bringup sim_gz.launch.py",
+      "args": [
+        {
+          "name": "foxglove",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Start the bridge on :8765 (off by default here, unlike rover.launch.py)"
+        },
+        {
+          "name": "rviz",
+          "type": "bool",
+          "default": false,
+          "style": "ros"
+        },
+        {
+          "name": "odesc_shadow",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Also run the ODESC driver + emulator on vcan0 (needs vcan0; see addons.emulator: currently broken)"
+        },
+        {
+          "name": "x",
+          "type": "number",
+          "default": 0.0,
+          "style": "ros",
+          "help": "Spawn x (m)"
+        },
+        {
+          "name": "y",
+          "type": "number",
+          "default": 0.0,
+          "style": "ros",
+          "help": "Spawn y (m)"
+        },
+        {
+          "name": "z",
+          "type": "number",
+          "default": 0.2,
+          "style": "ros",
+          "help": "Spawn z (m)"
+        },
+        {
+          "name": "yaw",
+          "type": "number",
+          "default": 0.0,
+          "style": "ros",
+          "help": "Spawn yaw (rad)"
+        },
+        {
+          "name": "joy_control",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Ignored: known bug, the gamepad nodes always start"
+        },
+        {
+          "name": "world_file",
+          "type": "string",
+          "default": "empty.sdf",
+          "style": "ros",
+          "help": "Ignored: known bug, always empty.sdf"
+        }
+      ],
+      "needs": [
+        "display"
+      ],
+      "uses": [
+        "drivetrain",
+        "gamepad-nodes"
+      ],
+      "ready": "Configured and activated .*joint_state_broadcaster",
+      "status": "untested",
+      "notes": "The underlying sim launch. Uses port 8765 only with foxglove:=true.",
+      "usesWhen": {
+        "foxglove": [
+          "port-8765"
+        ]
+      }
+    },
+    {
+      "id": "drivetrain.sim-up",
+      "group": "drivetrain",
+      "label": "sim-up (platform-aware sim)",
+      "kind": "service",
+      "runner": "host",
+      "cmd": "tooling/sim-up {{foxglove}} {{joystick}}",
+      "args": [
+        {
+          "name": "foxglove",
+          "type": "enum",
+          "choices": [
+            "true",
+            "false"
+          ],
+          "default": "true",
+          "style": "template"
+        },
+        {
+          "name": "joystick",
+          "type": "enum",
+          "choices": [
+            "true",
+            "false"
+          ],
+          "default": "true",
+          "style": "template",
+          "help": "Passed as joy_control, which is ignored (bug)"
+        },
+        {
+          "name": "RVIZ",
+          "type": "enum",
+          "choices": [
+            "",
+            "true",
+            "false"
+          ],
+          "default": "",
+          "style": "env",
+          "env": "RVIZ",
+          "help": "Default: true with a display, false on Mac/headless"
+        },
+        {
+          "name": "SHADOW",
+          "type": "enum",
+          "choices": [
+            "",
+            "true",
+            "false"
+          ],
+          "default": "",
+          "style": "env",
+          "env": "SHADOW",
+          "help": "Default: true when vcan0 exists"
+        },
+        {
+          "name": "HEADLESS",
+          "type": "bool",
+          "default": false,
+          "style": "env",
+          "env": "HEADLESS",
+          "help": "Force xvfb-run -a"
+        }
+      ],
+      "needs": [
+        "display"
+      ],
+      "uses": [
+        "drivetrain",
+        "gamepad-nodes"
+      ],
+      "ports": [
+        8765
+      ],
+      "ready": "Configured and activated .*joint_state_broadcaster",
+      "status": "untested",
+      "notes": "What make sim runs. Calls pixi run directly, so on this laptop it inherits the /opt/ros paths ~/.bashrc sources (the problem host-ros2 exists to avoid). Prefer drivetrain.sim here. Turns the ODESC shadow on by itself whenever vcan0 exists.",
+      "usesWhen": {
+        "foxglove": [
+          "port-8765"
+        ]
+      }
+    },
+    {
+      "id": "drivetrain.vcan",
+      "group": "drivetrain",
+      "label": "Virtual CAN bench",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=vcan0",
+      "args": [
+        {
+          "name": "rviz",
+          "type": "bool",
+          "default": false,
+          "style": "ros"
+        }
+      ],
+      "needs": [
+        "vcan0"
+      ],
+      "uses": [
+        "drivetrain",
+        "port-8765"
+      ],
+      "ports": [
+        8765
+      ],
+      "ready": "Configured and activated .*joint_state_broadcaster",
+      "status": "untested",
+      "notes": "The real ODESC driver talking to a virtual bus. Pair with addons.emulator for feedback, and can.dump to watch frames (six 0x07 on activate, 0x0D per command)."
+    },
+    {
+      "id": "drivetrain.real",
+      "group": "drivetrain",
+      "label": "Real drivetrain",
+      "kind": "service",
+      "runner": "ros",
+      "confirm": true,
+      "cmd": "ros2 launch chassis_bringup rover.launch.py mode:=real",
+      "args": [
+        {
+          "name": "can_interface",
+          "type": "enum",
+          "choices": [
+            "can0",
+            "vcan0",
+            "mock"
+          ],
+          "default": "can0",
+          "style": "ros"
+        },
+        {
+          "name": "gear_ratio",
+          "type": "number",
+          "default": 48.0,
+          "style": "ros"
+        },
+        {
+          "name": "rviz",
+          "type": "bool",
+          "default": false,
+          "style": "ros"
+        }
+      ],
+      "needs": [
+        "rover",
+        "can0"
+      ],
+      "uses": [
+        "drivetrain",
+        "port-8765"
+      ],
+      "ports": [
+        8765
+      ],
+      "ready": "Configured and activated .*joint_state_broadcaster",
+      "status": "untested",
+      "notes": "6× ODESC V4.2 + NEO over can0 at 500 kbit/s. Motion only with a command stream; wheels stop 0.25 s after the last command. First runs on blocks."
+    },
+    {
+      "id": "drivetrain.real-direct",
+      "group": "drivetrain",
+      "label": "Hardware backend (no bridge)",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch chassis_bringup real.launch.py",
+      "args": [
+        {
+          "name": "can_interface",
+          "type": "enum",
+          "choices": [
+            "can0",
+            "vcan0",
+            "mock"
+          ],
+          "default": "can0",
+          "style": "ros"
+        },
+        {
+          "name": "gear_ratio",
+          "type": "number",
+          "default": 48.0,
+          "style": "ros"
+        },
+        {
+          "name": "foxglove",
+          "type": "bool",
+          "default": false,
+          "style": "ros"
+        },
+        {
+          "name": "rviz",
+          "type": "bool",
+          "default": false,
+          "style": "ros"
+        }
+      ],
+      "uses": [
+        "drivetrain"
+      ],
+      "ready": "Configured and activated .*joint_state_broadcaster",
+      "status": "untested",
+      "notes": "What rover.launch.py mode:=real wraps, without forcing the bridge on. Writes a temp controllers.yaml with use_sim_time: false.",
+      "usesWhen": {
+        "foxglove": [
+          "port-8765"
+        ]
+      }
+    },
+    {
+      "id": "addons.emulator",
+      "group": "addons",
+      "label": "ODESC vCAN emulator",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 run odesc odesc_vcan_emulator.py --interface {{interface}}",
+      "workaround": "python3 install/odesc/lib/odesc/odesc_vcan_emulator.py --interface {{interface}}",
+      "args": [
+        {
+          "name": "interface",
+          "type": "string",
+          "default": "vcan0",
+          "style": "template"
+        }
+      ],
+      "needs": [
+        "vcan0"
+      ],
+      "status": "broken",
+      "verified": "ros2 run: 'No executable found'. The script is committed without the executable bit (git mode 100644) and --symlink-install links to it, so odesc_shadow:=true hits 'Permission denied' too. python3 <path> works.",
+      "notes": "Answers as nodes 0–5 with 0x09 encoder frames at 100 Hz. Fix in the repo: git update-index --chmod=+x ros2_ws/src/odesc/scripts/odesc_vcan_emulator.py."
+    },
+    {
+      "id": "addons.bridge",
+      "group": "addons",
+      "label": "Foxglove bridge only",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch chassis_bringup viz.launch.py rviz:=false",
+      "args": [
+        {
+          "name": "use_sim_time",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "true for the sim"
+        }
+      ],
+      "uses": [
+        "port-8765"
+      ],
+      "ports": [
+        8765
+      ],
+      "ready": "Server listening on port 8765",
+      "status": "untested",
+      "notes": "Only for a drivetrain started without one (real-direct, sim-full). rover.launch.py already runs a bridge, so this would clash on :8765."
+    },
+    {
+      "id": "addons.rviz",
+      "group": "addons",
+      "label": "RViz with the drivetrain view",
+      "kind": "gui",
+      "runner": "ros",
+      "cmd": "ros2 launch chassis_bringup viz.launch.py foxglove:=false",
+      "args": [
+        {
+          "name": "use_sim_time",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "true for the sim"
+        }
+      ],
+      "needs": [
+        "display",
+        "drivetrain"
+      ],
+      "status": "untested",
+      "notes": "Fixed frame odom, robot model, odometry trail (rviz/drivetrain.rviz)."
+    },
+    {
+      "id": "addons.ground-station",
+      "group": "addons",
+      "label": "Ground station bundle",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch chassis_bringup ground_station.launch.py",
+      "args": [
+        {
+          "name": "use_sim_time",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "false when the rover runs real/mock"
+        },
+        {
+          "name": "rviz",
+          "type": "bool",
+          "default": true,
+          "style": "ros"
+        },
+        {
+          "name": "foxglove",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Set false on the same machine as a drivetrain (port clash)"
+        },
+        {
+          "name": "joystick",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Set false next to a local sim (it already runs gamepad nodes)"
+        },
+        {
+          "name": "fprime_gds",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Open the F´ GDS page in a browser"
+        },
+        {
+          "name": "fprime_gds_url",
+          "type": "string",
+          "default": "$FPRIME_GDS_URL",
+          "style": "ros"
+        }
+      ],
+      "needs": [
+        "display"
+      ],
+      "uses": [],
+      "ports": [
+        8765
+      ],
+      "status": "untested",
+      "notes": "Meant for a second machine on the rover's LAN. On one machine, only rviz is useful (the rest duplicates what the drivetrain launch already runs).",
+      "usesWhen": {
+        "foxglove": [
+          "port-8765"
+        ],
+        "joystick": [
+          "gamepad-nodes"
+        ]
+      }
+    },
+    {
+      "id": "drive.pub",
+      "group": "drive",
+      "label": "Scripted drive",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 topic pub -r {{rate}} /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/Twist '{linear: {x: {{v}}}, angular: {z: {{w}}}}'",
+      "args": [
+        {
+          "name": "v",
+          "type": "number",
+          "default": 0.4,
+          "style": "template",
+          "help": "m/s, forward +"
+        },
+        {
+          "name": "w",
+          "type": "number",
+          "default": 0.3,
+          "style": "template",
+          "help": "rad/s, left +"
+        },
+        {
+          "name": "rate",
+          "type": "number",
+          "default": 10,
+          "style": "template",
+          "help": "Hz; keep above 4 (0.25 s timeout)"
+        }
+      ],
+      "needs": [
+        "drivetrain"
+      ],
+      "uses": [
+        "cmd-vel"
+      ],
+      "status": "verified",
+      "verified": "topic pub reaches the controller (tested with --once)",
+      "notes": "Default drives a circle. Stopping the process stops the rover within 0.25 s."
+    },
+    {
+      "id": "drive.stop",
+      "group": "drive",
+      "label": "Send one zero command",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 topic pub --once /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/Twist '{}'",
+      "needs": [
+        "drivetrain"
+      ],
+      "uses": [
+        "cmd-vel"
+      ],
+      "status": "verified",
+      "verified": "topic pub --once works",
+      "notes": "Belt and braces; the controller already stops 0.25 s after commands stop."
+    },
+    {
+      "id": "drive.keyboard",
+      "group": "drive",
+      "label": "Keyboard teleop",
+      "kind": "interactive",
+      "runner": "ros",
+      "cmd": "ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel_unstamped",
+      "needs": [
+        "drivetrain",
+        "terminal"
+      ],
+      "uses": [
+        "cmd-vel"
+      ],
+      "status": "untested",
+      "notes": "i forward, , back, j/l turn, k stop, q/z speed. Reads keys from its terminal, so the launcher must attach a PTY and forward keystrokes."
+    },
+    {
+      "id": "drive.gamepad",
+      "group": "drive",
+      "label": "Gamepad teleop",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch teleop teleop.launch.py",
+      "needs": [
+        "gamepad",
+        "drivetrain"
+      ],
+      "uses": [
+        "gamepad-nodes",
+        "cmd-vel"
+      ],
+      "status": "untested",
+      "notes": "Hold RB (deadman); RT forward, LT reverse, left stick steers. Don't add it next to a sim: the sim already runs these nodes."
+    },
+    {
+      "id": "drive.joy-list",
+      "group": "drive",
+      "label": "Find gamepads",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 run joy joy_enumerate_devices",
+      "status": "verified",
+      "verified": "runs; none plugged in on this laptop"
+    },
+    {
+      "id": "drive.joy-echo",
+      "group": "drive",
+      "label": "Watch raw gamepad input",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic echo /joy sensor_msgs/msg/Joy",
+      "needs": [
+        "gamepad"
+      ],
+      "status": "untested",
+      "notes": "buttons[5] = RB deadman, axes[0] steer, axes[5] RT, axes[2] LT."
+    },
+    {
+      "id": "can.vcan-up",
+      "group": "can",
+      "label": "Create vcan0",
+      "kind": "task",
+      "runner": "host-sudo",
+      "cmd": "tooling/can-up vcan0",
+      "needs": [
+        "sudo"
+      ],
+      "status": "untested",
+      "notes": "Loads the vcan module and creates the interface. Idempotent. Linux hosts only (not the Mac container). Run on the host even when ROS runs in a container: the containers use host networking."
+    },
+    {
+      "id": "can.vcan-down",
+      "group": "can",
+      "label": "Remove vcan0",
+      "kind": "task",
+      "runner": "host-sudo",
+      "cmd": "tooling/can-up down vcan0",
+      "needs": [
+        "sudo"
+      ],
+      "status": "untested"
+    },
+    {
+      "id": "can.up",
+      "group": "can",
+      "label": "Bring up a real CAN bus",
+      "kind": "task",
+      "runner": "host-sudo",
+      "cmd": "tooling/can-up {{iface}} {{bitrate}}",
+      "args": [
+        {
+          "name": "iface",
+          "type": "string",
+          "default": "can0",
+          "style": "template"
+        },
+        {
+          "name": "bitrate",
+          "type": "number",
+          "default": 500000,
+          "style": "template"
+        }
+      ],
+      "needs": [
+        "sudo",
+        "can0"
+      ],
+      "status": "untested",
+      "notes": "The interface must already exist (Jetson mttcan or a USB-CAN adapter). Already-up interfaces are left alone: take them down first to change the bitrate."
+    },
+    {
+      "id": "can.status",
+      "group": "can",
+      "label": "CAN interface status",
+      "kind": "task",
+      "runner": "host",
+      "cmd": "tooling/can-up status {{iface}}",
+      "args": [
+        {
+          "name": "iface",
+          "type": "string",
+          "default": "vcan0",
+          "style": "template"
+        }
+      ],
+      "status": "verified",
+      "verified": "'vcan0: does not exist' on this laptop"
+    },
+    {
+      "id": "can.dump",
+      "group": "can",
+      "label": "Watch CAN frames",
+      "kind": "stream",
+      "runner": "host",
+      "cmd": "candump -L {{iface}}",
+      "args": [
+        {
+          "name": "iface",
+          "type": "string",
+          "default": "vcan0",
+          "style": "template"
+        }
+      ],
+      "needs": [
+        "vcan0"
+      ],
+      "status": "untested",
+      "notes": "Expect 0x07 Set_Axis_Requested_State ×6 when the controller activates, then 0x0D Set_Input_Vel per command. ID = (node_id << 5) | cmd."
+    },
+    {
+      "id": "can.send",
+      "group": "can",
+      "label": "Inject a CAN frame",
+      "kind": "task",
+      "runner": "host",
+      "cmd": "cansend {{iface}} {{frame}}",
+      "args": [
+        {
+          "name": "iface",
+          "type": "string",
+          "default": "vcan0",
+          "style": "template"
+        },
+        {
+          "name": "frame",
+          "type": "string",
+          "default": "009#000000000000803F",
+          "style": "template",
+          "help": "Default: node 0 Get_Encoder_Estimates, pos 0, vel 1.0 turn/s (float32 LE)"
+        }
+      ],
+      "needs": [
+        "vcan0"
+      ],
+      "status": "untested"
+    },
+    {
+      "id": "can.persist",
+      "group": "can",
+      "label": "Persist can0 across reboots (Jetson)",
+      "kind": "task",
+      "runner": "host-sudo",
+      "shell": true,
+      "confirm": true,
+      "cmd": "sudo cp tooling/can0.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now can0.service",
+      "needs": [
+        "sudo",
+        "can0"
+      ],
+      "status": "untested"
+    },
+    {
+      "id": "health.controllers",
+      "group": "health",
+      "label": "Controller states",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 control list_controllers",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "verified": "diff_drive_controller + joint_state_broadcaster active",
+      "notes": "inactive on real hardware usually means CAN is down."
+    },
+    {
+      "id": "health.hardware",
+      "group": "health",
+      "label": "Hardware components",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 control list_hardware_components",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "verified": "all six wheel velocity interfaces claimed"
+    },
+    {
+      "id": "health.packages",
+      "group": "health",
+      "label": "Workspace packages built?",
+      "kind": "task",
+      "runner": "ros",
+      "shell": true,
+      "cmd": "ros2 pkg list | grep -E '^(chassis_bringup|odesc|robot_description|teleop)$'",
+      "status": "verified",
+      "verified": "all 4 listed"
+    },
+    {
+      "id": "health.topics",
+      "group": "health",
+      "label": "List topics",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 topic list -t",
+      "status": "verified",
+      "verified": "12 topics in mock mode"
+    },
+    {
+      "id": "health.nodes",
+      "group": "health",
+      "label": "List nodes",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 node list",
+      "status": "untested"
+    },
+    {
+      "id": "health.odom-rate",
+      "group": "health",
+      "label": "Odometry rate",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic hz /diff_drive_controller/odom",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "verified": "30.0 Hz (docs say ~50; update_rate 30 caps it)"
+    },
+    {
+      "id": "health.joint-states",
+      "group": "health",
+      "label": "One joint_states message",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 topic echo --once /joint_states sensor_msgs/msg/JointState",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "verified": "six wheel joints (arbitrary order)"
+    },
+    {
+      "id": "health.tf",
+      "group": "health",
+      "label": "Watch odom → base_link",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 run tf2_ros tf2_echo {{parent}} {{child}}",
+      "args": [
+        {
+          "name": "parent",
+          "type": "string",
+          "default": "odom",
+          "style": "template"
+        },
+        {
+          "name": "child",
+          "type": "string",
+          "default": "base_link",
+          "style": "template"
+        }
+      ],
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "verified": "prints the transform once a second"
+    },
+    {
+      "id": "health.cmd-echo",
+      "group": "health",
+      "label": "Watch drive commands",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic echo /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/Twist",
+      "status": "untested",
+      "notes": "May first print stale latched commands left by disconnected Foxglove clients (bridge quirk)."
+    },
+    {
+      "id": "health.cmd-publishers",
+      "group": "health",
+      "label": "Who publishes drive commands",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 topic info -v /diff_drive_controller/cmd_vel_unstamped",
+      "status": "verified",
+      "verified": "shows publishers with QoS, including leftover foxglove_bridge ones",
+      "notes": "Use it when two commanders fight."
+    },
+    {
+      "id": "health.shadow-odom",
+      "group": "health",
+      "label": "Shadow odometry (CAN path)",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic echo /odesc_shadow/diff_drive_controller/odom nav_msgs/msg/Odometry",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "untested",
+      "notes": "Only with drivetrain.sim-full odesc_shadow:=true. Compare with /diff_drive_controller/odom."
+    },
+    {
+      "id": "health.params",
+      "group": "health",
+      "label": "Dump a node's parameters",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 param dump {{node}}",
+      "args": [
+        {
+          "name": "node",
+          "type": "enum",
+          "choices": [
+            "/diff_drive_controller",
+            "/controller_manager",
+            "/robot_state_publisher",
+            "/joy_tank_drive",
+            "/foxglove_bridge"
+          ],
+          "default": "/diff_drive_controller",
+          "style": "template"
+        }
+      ],
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "untested",
+      "notes": "ros2 param get /diff_drive_controller wheel_radius verified (0.11)."
+    },
+    {
+      "id": "health.domain",
+      "group": "health",
+      "label": "Show ROS_DOMAIN_ID",
+      "kind": "task",
+      "runner": "ros",
+      "shell": true,
+      "cmd": "echo ROS_DOMAIN_ID=$ROS_DOMAIN_ID ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-0}",
+      "status": "verified",
+      "verified": "42 (set by Pixi activation)"
+    },
+    {
+      "id": "health.doctor",
+      "group": "health",
+      "label": "ros2 doctor",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 doctor --report",
+      "status": "verified",
+      "verified": "runs; warns about publishers without subscribers (normal)"
+    },
+    {
+      "id": "health.multicast-recv",
+      "group": "health",
+      "label": "DDS multicast: receive",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 multicast receive",
+      "status": "untested",
+      "notes": "Run on one machine, then health.multicast-send on the other. If nothing arrives, DDS discovery can't cross that network."
+    },
+    {
+      "id": "health.multicast-send",
+      "group": "health",
+      "label": "DDS multicast: send",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 multicast send",
+      "status": "untested"
+    },
+    {
+      "id": "health.daemon-restart",
+      "group": "health",
+      "label": "Restart the ros2 CLI daemon",
+      "kind": "task",
+      "runner": "ros",
+      "shell": true,
+      "cmd": "ros2 daemon stop; ros2 daemon start",
+      "status": "untested",
+      "notes": "Fixes ros2 topic/node list showing things that no longer exist, and 'Could not determine the type for the passed topic'. The daemon is shared per ROS_DOMAIN_ID, so one started with different settings (e.g. ROS_LOCALHOST_ONLY=1) gives stale answers. Echo items here pass the message type so they don't need it."
+    },
+    {
+      "id": "gui.rqt-graph",
+      "group": "gui",
+      "label": "rqt_graph (node/topic graph)",
+      "kind": "gui",
+      "runner": "ros",
+      "cmd": "ros2 run rqt_graph rqt_graph",
+      "needs": [
+        "display"
+      ],
+      "status": "untested"
+    },
+    {
+      "id": "gui.rqt-console",
+      "group": "gui",
+      "label": "rqt_console (logs)",
+      "kind": "gui",
+      "runner": "ros",
+      "cmd": "ros2 run rqt_console rqt_console",
+      "needs": [
+        "display"
+      ],
+      "status": "untested"
+    },
+    {
+      "id": "gui.rqt-plot",
+      "group": "gui",
+      "label": "rqt_plot (live plots)",
+      "kind": "gui",
+      "runner": "ros",
+      "cmd": "ros2 run rqt_plot rqt_plot {{fields}}",
+      "args": [
+        {
+          "name": "fields",
+          "type": "string",
+          "default": "/diff_drive_controller/odom/twist/twist/linear/x /diff_drive_controller/odom/twist/twist/angular/z",
+          "style": "template"
+        }
+      ],
+      "needs": [
+        "display"
+      ],
+      "status": "untested"
+    },
+    {
+      "id": "gui.rqt-image",
+      "group": "gui",
+      "label": "rqt_image_view (camera)",
+      "kind": "gui",
+      "runner": "ros",
+      "cmd": "ros2 run rqt_image_view rqt_image_view {{topic}}",
+      "args": [
+        {
+          "name": "topic",
+          "type": "string",
+          "default": "/depth_cam/image",
+          "style": "template"
+        }
+      ],
+      "needs": [
+        "display"
+      ],
+      "status": "untested",
+      "notes": "Camera topics exist only in the Gazebo sim."
+    },
+    {
+      "id": "gui.rqt-reconfigure",
+      "group": "gui",
+      "label": "rqt_reconfigure (parameters)",
+      "kind": "gui",
+      "runner": "ros",
+      "cmd": "ros2 run rqt_reconfigure rqt_reconfigure",
+      "needs": [
+        "display"
+      ],
+      "status": "untested",
+      "notes": "joy_tank_drive reads parameters only at startup, so changes to it have no effect until restart."
+    },
+    {
+      "id": "gui.rqt",
+      "group": "gui",
+      "label": "rqt (all plugins)",
+      "kind": "gui",
+      "runner": "ros",
+      "cmd": "rqt",
+      "needs": [
+        "display"
+      ],
+      "status": "untested",
+      "notes": "Topic monitor, publisher, service caller, message/service browsers, bag viewer, Python console."
+    },
+    {
+      "id": "gui.turtlesim",
+      "group": "gui",
+      "label": "turtlesim (ROS + display smoke test)",
+      "kind": "gui",
+      "runner": "ros",
+      "cmd": "ros2 run turtlesim turtlesim_node",
+      "needs": [
+        "display"
+      ],
+      "status": "untested",
+      "notes": "Installed by pixi.toml. If a turtle window appears, the env and display forwarding work."
+    },
+    {
+      "id": "record.bag",
+      "group": "record",
+      "label": "Record a bag",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 bag record -o {{name}} {{topics}}",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "default": "/tmp/billee_run",
+          "style": "template",
+          "help": "Output folder; must not exist yet. Outside the repo so it stays out of git status."
+        },
+        {
+          "name": "topics",
+          "type": "string",
+          "default": "/diff_drive_controller/odom /joint_states /tf /tf_static /robot_description /diff_drive_controller/cmd_vel_unstamped /rosout",
+          "style": "template"
+        }
+      ],
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "verified": "5.5 s, 332 messages; stopping with SIGINT/SIGTERM finalises the bag",
+      "notes": "Stop it, don't kill it, or the bag's metadata isn't written."
+    },
+    {
+      "id": "record.info",
+      "group": "record",
+      "label": "Bag info",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "ros2 bag info {{name}}",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "default": "/tmp/billee_run",
+          "style": "template"
+        }
+      ],
+      "status": "verified",
+      "verified": "duration, message counts per topic"
+    },
+    {
+      "id": "record.play",
+      "group": "record",
+      "label": "Replay a bag",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 bag play {{name}}",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "default": "/tmp/billee_run",
+          "style": "template"
+        },
+        {
+          "name": "loop",
+          "type": "bool",
+          "default": false,
+          "style": "flag",
+          "flag": "--loop"
+        }
+      ],
+      "uses": [
+        "drivetrain"
+      ],
+      "status": "untested",
+      "notes": "Publishes the recorded odometry and TF, so don't run a drivetrain at the same time. Add a bridge (addons.bridge) to view it in Foxglove."
+    },
+    {
+      "id": "containers.build",
+      "group": "containers",
+      "label": "Build this platform's image",
+      "kind": "task",
+      "runner": "host",
+      "cmd": "tooling/desktop-ros2 build",
+      "needs": [
+        "docker",
+        "internet"
+      ],
+      "status": "untested",
+      "notes": "billee-desktop:latest (x86), billee-mac-cpu:latest (Mac) or rover-ros2:latest (l4t). On this laptop docker is pointed at a stopped Docker Desktop and you aren't in the docker group: docker context use default, sudo usermod -aG docker $USER, re-login."
+    },
+    {
+      "id": "containers.env",
+      "group": "containers",
+      "label": "Start the long-lived ROS container",
+      "kind": "service",
+      "runner": "host",
+      "cmd": "tooling/desktop-ros2 run sleep infinity",
+      "needs": [
+        "docker"
+      ],
+      "status": "untested",
+      "notes": "Launcher pattern: start this first, then every ros item joins it via docker exec. The first desktop-ros2 run owns the container (--rm), so if a sim is the first process, stopping the sim kills everything else in that container."
+    },
+    {
+      "id": "containers.shell",
+      "group": "containers",
+      "label": "Shell in the container",
+      "kind": "interactive",
+      "runner": "host",
+      "cmd": "tooling/desktop-ros2 shell",
+      "needs": [
+        "docker",
+        "terminal"
+      ],
+      "status": "untested",
+      "notes": "Joins the running billee-<platform> container if there is one. tooling/rover-ros2 shell on the Jetson."
+    },
+    {
+      "id": "containers.devcontainers",
+      "group": "containers",
+      "label": "VS Code devcontainers",
+      "kind": "link",
+      "runner": "link",
+      "cmd": ".devcontainer/devcontainer.json · .devcontainer/cpu/ · .devcontainer/mac/ · .devcontainer/l4t/",
+      "status": "untested",
+      "notes": "desktop-roshumble_dev-x862 (x86 + NVIDIA), desktop-roshumble_dev-x86-cpu (x86, no GPU; untracked in this checkout), desktop-roshumble-mac-cpu, rover-roshumble_l4t-aarch64. Opened from VS Code (Reopen in Container), not from a script."
+    },
+    {
+      "id": "links.foxglove",
+      "group": "links",
+      "label": "Foxglove Studio",
+      "kind": "link",
+      "runner": "link",
+      "cmd": "ws://localhost:8765",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "verified": "bridge answers on :8765 (protocol foxglove.sdk.v1)",
+      "notes": "Open connection → Foxglove WebSocket → ws://localhost:8765, then Layouts → Import from file → ros2_ws/src/chassis_bringup/foxglove/drivetrain.json. The Teleop panel drives on /diff_drive_controller/cmd_vel_unstamped."
+    },
+    {
+      "id": "links.fprime",
+      "group": "links",
+      "label": "F´ GDS web UI",
+      "kind": "link",
+      "runner": "link",
+      "cmd": "http://192.168.4.73:5000",
+      "status": "untested",
+      "notes": "From FPRIME_GDS_URL in ros2_ws/pixi.toml. ground_station.launch.py's built-in fallback is .74, not .73: one of them is stale."
+    },
+    {
+      "id": "links.guide",
+      "group": "links",
+      "label": "Billee field guide",
+      "kind": "link",
+      "runner": "link",
+      "cmd": "http://localhost:8000/",
+      "status": "verified",
+      "verified": "served from ~/Desktop/BILLEE/billee-guide",
+      "notes": "Only while the guide's web server runs: python3 -m http.server 8000 --bind 127.0.0.1 --directory ~/Desktop/BILLEE/billee-guide"
+    }
+  ],
+  "notBootable": [
+    {
+      "what": "ZED camera node",
+      "why": "The ZED SDK is installed in the Docker images, but no ZED ROS wrapper is a dependency, and the zed_camera.launch.py hint in docker/ros_entrypoint*.sh comes from entrypoint scripts no Dockerfile uses."
+    },
+    {
+      "what": "Other Gazebo worlds",
+      "why": "sim_gz.launch.py ignores world_file and always loads empty.sdf."
+    },
+    {
+      "what": "Sim without gamepad nodes",
+      "why": "joy_control:=false is ignored (a LaunchConfiguration object is always truthy). Harmless without a pad; duplicates commands with a pad and teleop.launch.py."
+    },
+    {
+      "what": "ODESC emulator / sim + shadow",
+      "why": "odesc_vcan_emulator.py lacks the executable bit in git. Workaround: python3 install/odesc/lib/odesc/odesc_vcan_emulator.py."
+    },
+    {
+      "what": "Navigation / autonomy (Nav2)",
+      "why": "Mentioned as future work; nothing in the workspace yet."
+    },
+    {
+      "what": "Radio-link bridge (zenoh-bridge-ros2dds)",
+      "why": "Planned in docs/RUN_GUIDE.md, not set up."
+    },
+    {
+      "what": "rosbridge (port 9090)",
+      "why": "Not installed; foxglove_bridge is the only WebSocket bridge."
+    },
+    {
+      "what": "Headless sim on this laptop",
+      "why": "xvfb-run isn't installed on the host (sudo apt install xvfb)."
+    },
+    {
+      "what": "make build / shell / sim on this laptop",
+      "why": "They go through Docker for the x86 platform, and Docker isn't reachable here. Use the tooling/host-ros2 runner."
+    }
+  ]
+}
