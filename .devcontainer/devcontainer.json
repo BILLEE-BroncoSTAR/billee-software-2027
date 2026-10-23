@@ -25,7 +25,7 @@
 	  "--volume", "/dev/shm:/dev/shm"
   ],
 
-  "postStartCommand": "cd ros2_ws && pixi install",
+  "updateContentCommand": "cd ros2_ws && pixi install",
 
   "containerEnv": {
     "ROS_DISTRO": "humble",
@@ -59,7 +59,13 @@
         "remote.otherPortsAttributes": {
           "onAutoForward": "ignore"
         }
-      }
+      },
+      "mounts": [
+      // Bind mount (not a named volume) so the cache shares a filesystem with the
+      // bind-mounted workspace — pixi's pypi installer hardlinks wheels from here into
+      // ros2_ws/.pixi, which fails (panic) across the volume/workspace filesystem boundary.
+      "source=${localEnv:HOME}/.cache/urc-pixi-cache,target=/home/ros_user/.cache/rattler,type=bind"
+    ]
     }
   }
 

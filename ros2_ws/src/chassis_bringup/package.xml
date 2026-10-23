@@ -25,6 +25,7 @@
   <exec_depend>gz_ros2_control</exec_depend>
   <exec_depend>ros_gz</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>navigation</exec_depend>
 
   <!-- viewers (viz.launch.py; opt-in from sim_gz.launch.py / real.launch.py) -->
   <exec_depend>rviz2</exec_depend>

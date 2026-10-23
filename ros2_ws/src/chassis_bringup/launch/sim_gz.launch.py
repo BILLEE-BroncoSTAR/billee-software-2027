@@ -90,6 +90,13 @@ declare_args = [
             description="start the joystick control nodes alongside the sim",
         ),
         DeclareLaunchArgument(
+            "navigation",
+            default_value="false",
+            description=(
+                "Start the simulation pose estimator and local costmap."
+            ),
+        ),
+        DeclareLaunchArgument(
             "odesc_shadow",
             default_value="false",
             description=(
@@ -229,6 +236,19 @@ def _launch_description(ctx):
         }.items(),
     )
 
+    # The navigation launch owns the synthetic VIO source, EKF, and the
+    # lifecycle-managed local costmap.  It uses the same /clock and /gz/odom
+    # bridged by this simulator launch.
+    navigation = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare("navigation"), "launch", "pose_estim.launch.py"
+            ])
+        ),
+        launch_arguments={"use_sim": "true"}.items(),
+        condition=IfCondition(LaunchConfiguration("navigation")),
+    )
+
     # A second, namespaced controller manager mirrors the command into the
     # ODESC/vCAN path. Gazebo remains authoritative for robot physics and TF.
     odesc_shadow = IncludeLaunchDescription(
@@ -272,6 +292,7 @@ def _launch_description(ctx):
             spawn_entity,
             diff_drive_controller_spawner,
             odesc_shadow,
+            navigation,
             viz,
             *teleop_nodes
         ]

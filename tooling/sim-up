@@ -6,6 +6,7 @@
 
 start_foxglove="${1:-true}"
 use_controller="${2:-true}"
+bringup_can_sim="${2:-false}"
 
 cd /workspaces/URC-2027/ros2_ws
-pixi run --environment default ros2 launch chassis_bringup sim_gz.launch.py  odesc_shadow:=true can_interface:=vcan0 joy_control:=$use_controller foxglove:=$start_foxglove
+pixi run --environment default ros2 launch chassis_bringup sim_gz.launch.py  odesc_shadow:=$bringup_can_sim can_interface:=vcan0 joy_control:=$use_controller foxglove:=$start_foxglove
