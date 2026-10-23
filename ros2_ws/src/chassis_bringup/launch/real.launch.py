@@ -57,7 +57,7 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "can_interface",
-        default_value="can0",
+        default_value="can2",
         description="SocketCAN interface for the ODESC bus. 'mock' or 'none' runs "
         "OdescSystemHardware in mock mode (no CAN, gear-ratio loopback feedback) so the "
         "stack can be brought up with no motor hardware. 'vcan0' etc. for a virtual bus.",

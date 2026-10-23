@@ -35,7 +35,7 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "can_interface",
-        default_value="can0",
+        default_value="can2",
         description="mode:=real only. 'mock'/'none' = no CAN (loopback feedback); "
         "'vcan0' = virtual bus.",
     ),

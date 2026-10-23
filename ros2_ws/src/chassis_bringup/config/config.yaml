@@ -1,7 +1,3 @@
-# Gazebo Sim to ROS 2 bridges used by sim_gz.launch.py.
-# The Gazebo world launched by default is `empty` and the robot entity is
-# spawned as `BILLEE_BOT`.
-
 - ros_topic_name: "/clock"
   gz_topic_name: "/clock"
   ros_type_name: "rosgraph_msgs/msg/Clock"

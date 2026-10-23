@@ -8,5 +8,6 @@
     "remote.restoreForwardedPorts": false,
     "remote.otherPortsAttributes": {
         "onAutoForward": "ignore"
-    }
+    },
+    "cmake.sourceDirectory": "/workspaces/URC-2027/ros2_ws/src/chassis_bringup"
 }
