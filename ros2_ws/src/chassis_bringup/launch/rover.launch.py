@@ -53,13 +53,15 @@ def _setup(context):
 
     if mode == "sim":
         target = "sim_gz.launch.py"
-        args = common
+        args = {
+            **common
+        }
     elif mode == "real":
         target = "real.launch.py"
         args = {
             **common,
             "can_interface": LaunchConfiguration("can_interface"),
-            "gear_ratio": LaunchConfiguration("gear_ratio"),
+            "gear_ratio": LaunchConfiguration("gear_ratio")
         }
     else:  # DeclareLaunchArgument(choices=...) already guards this
         raise RuntimeError(f"rover.launch.py: unknown mode {mode!r} (use sim|real)")
