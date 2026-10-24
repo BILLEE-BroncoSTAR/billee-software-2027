@@ -80,11 +80,6 @@ declare_args = [
         default_value="false",
         description="Also start the foxglove_bridge WebSocket server on :8765.",
     ),
-    DeclareLaunchArgument(
-        "joy_control",
-        default_value="true",
-        description="Start joy_node and joy_tank_drive for local real-rover control.",
-    ),
 ]
 
 
@@ -154,15 +149,6 @@ def _launch_setup(context):
         arguments=["diff_drive_controller", "joint_state_broadcaster"],
     )
 
-    teleop = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [FindPackageShare("teleop"), "launch", "teleop.launch.py"]
-            )
-        ),
-        condition=IfCondition(LaunchConfiguration("joy_control")),
-    )
-
     viz = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -176,7 +162,7 @@ def _launch_setup(context):
         }.items(),
     )
 
-    return [robot_state_publisher, controller_manager, controller_spawner, teleop, viz]
+    return [robot_state_publisher, controller_manager, controller_spawner, viz]
 
 
 def generate_launch_description():
