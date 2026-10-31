@@ -99,7 +99,8 @@
         <plugin filename="libignition-gazebo-odometry-publisher-system.so" name="ignition::gazebo::systems::OdometryPublisher">
             <odom_topic>/gz/odom</odom_topic>
             <odom_frame>odom</odom_frame>
-            <robot_base_frame>base_link</robot_base_frame>
+            <!-- Gazebo reports the model origin, which is the URDF root base_footprint -->
+            <robot_base_frame>base_footprint</robot_base_frame>
         </plugin>
     </gazebo>
 

@@ -5,11 +5,14 @@ synthetic_vio:
     truth_topic: /gz/odom
     vio_topic: /depth_cam/vio/odom
     output_frame_id: odom
-    child_frame_id: base_link
+    child_frame_id: base_footprint  # truth (/gz/odom) is the model origin = base_footprint
 
     # calibration is for initial covariance tuning; validation samples plausible
     # model parameters per run; stress also introduces latency, outliers and dropouts.
-    profile: validation
+    # calibration (nominal error) by default: the yaw random walk grows with time even when
+    # parked, and validation's up-to-2x multipliers reached ~13 deg of heading error in 5 min,
+    # which swamps pose/perception work. Switch to validation/stress for EKF evaluation runs.
+    profile: calibration
     # Use -1 for a new seed. The node logs the resolved seed for replay.
     seed: 42
 

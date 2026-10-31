@@ -27,7 +27,8 @@
       "followTf": "odom",
       "scene": {
         "transforms": { "showLabel": false, "axisScale": 0.3 },
-        "backgroundColor": "#202020"
+        "backgroundColor": "#202020",
+        "meshUpAxis": "z_up"
       },
       "transforms": {},
       "topics": {

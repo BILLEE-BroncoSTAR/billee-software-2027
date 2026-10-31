@@ -364,15 +364,15 @@ Tests: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest src/perception/people/
 - `headless:=true` runs only the Gazebo server (sensors still render under `xvfb-run`); the
   hidden GUI otherwise eats about half the CPU OpenPose needs.
 - `net_height` is OpenPose's input height: 368 ≈ 4.7 s/frame, 256 ≈ 2.3 s/frame on a Mac CPU.
-- **Known localization issues (not fixed yet)** — they make the rover and skeleton look shifted /
-  rotated in Foxglove: `base_link` has two TF parents (EKF `odom→base_link` and URDF
-  `base_footprint→base_link`), so `base_footprint` is an orphan root; Gazebo odometry, diff drive,
-  synthetic VIO and the EKF all call the robot origin `base_link` although the URDF puts
-  `base_link` 0.36 m ahead / 0.115 m up of it; and the EKF's `odom0: /odom` has no publisher
-  (the controller publishes `/diff_drive_controller/odom`), so it only follows the noisy VIO.
-  Fix direction: use `base_footprint` as the base frame in `ekf_sim.yaml`, `controllers.yaml`,
-  `robot_gz.urdf.xacro` (odometry publisher) and `synthetic_vio.yaml`, and point `odom0` at
-  `/diff_drive_controller/odom`. Until then, set Foxglove's Display frame to `odom`.
+- TF is one chain: `odom → base_footprint` (EKF) `→ base_link` (URDF) `→ camera_link → camera_link_optical`.
+  The EKF is planar (`two_d_mode`), fuses wheel speed + yaw rate and synthetic-VIO x, y, yaw.
+- The skeleton's few-degree heading / sideways error is the synthetic VIO's deliberate noise —
+  the only absolute heading source in sim. Its yaw drift is a random walk that grows with time,
+  **even when parked**. Default `profile: calibration` (nominal error) in
+  `zed2i/config/synthetic_vio.yaml`; `validation` (up to 2× error) reached ~13° in 5 min — use it
+  only for EKF evaluation runs.
+- Run **one sim at a time** per container/machine: two sims share ROS and Gazebo topics (two
+  clocks, two `/gz/odom`), which corrupts TF and can tip or freeze the rover.
 </details>
 
 ---
@@ -417,10 +417,12 @@ Tests: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest src/perception/people/
 | `/joy` silent | `ls /dev/input/js*`, `jstest`; check `device_id`. |
 | Foxglove "connection refused" | Bridge not running or wrong IP (`hostname -I`), port 8765. |
 | Foxglove shows bare axes | Bridge can't serve `package://` meshes — `robot_description` not in the rover's overlay. |
+| Foxglove rover on its side (wheels flat, chassis upright) but TF axes upright | 3D panel → Scene → **Mesh up-axis: Z-up** (STL meshes; Y-up is Foxglove's default). Both layout files set it. |
 | Model still, odom trail moves | Expected: view follows `base_link`. Set fixed/follow frame to `odom` / Off. |
 | Real: controllers `inactive` | `can0` down or wrong bitrate → `can-up`, check `dmesg`. |
 | Real: hangs "Loading controller" | `use_sim_time:=true` with no `/clock`. Use `real.launch.py` or `-p use_sim_time:=false`. |
 | `vcan0`: no frames | `can-up vcan0` first; expect six `0x07` on activate, `0x0D` while driving. |
 | People: no / very slow skeletons | `pgrep -af "ign gazebo"` — only one sim may run (a stray one fights for topics and CPU; `pkill -9 -f "ign gazebo"`). Use `headless:=true`, `net_height:=256`. Mac: `top` — if `cpptools` is high, **Developer: Reload Window** (limits in `ros2_ws/.vscode/settings.json`) or give Docker/Rancher more RAM. |
 | People world: `Failed to configure controller`, no `odom` | First launch stalls Gazebo while it downloads the person model. Relaunch — it's cached now. |
-| Rover / skeleton shifted or rotated in Foxglove | Pose follows the rover's *belief*, and the TF tree is split (two parents for `base_link`, EKF without wheel odometry) — everything sits ~0.36 m short and drifts. See §8 "Known localization issues"; set Display frame to `odom`. |
+| Rover tipped over / frozen, `jump back in time` warnings | Two sims running at once — `pgrep -af "ign gazebo"`; keep one. |
+| Skeleton a few degrees / ~0.3 m off sideways | Expected: the rover's believed heading carries the synthetic VIO's noise, which grows the longer the sim runs (§8). Check `ros2 param get /synthetic_vio profile` is `calibration`; restart the sim to reset the drift. |

@@ -24,7 +24,7 @@ diff_drive_controller:
     wheel_separation: 0.67   # track width
     wheel_radius: 0.11 
 
-    base_frame_id: base_link
+    base_frame_id: base_footprint  # robot origin (URDF root); base_link is 0.36 m ahead of it
     odom_frame_id: odom
     enable_odom_tf: false # must disable to use robot_localization package
 
