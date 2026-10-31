@@ -1,15 +1,22 @@
 # Initial shell configuration, which should be run as the user after dependencies have been loaded
 
-# Initialize ROS 2 toolchain from the Pixi Environment
-source /workspaces/URC-2027/ros2_ws/.pixi/envs/default/setup.bash
-# Initialize colcon autocomplete from the Pixi environment
-source /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/colcon_argcomplete/hook/colcon-argcomplete.bash
-# Source the local workspace overlay to enable autocomplete
-source /workspaces/URC-2027/ros2_ws/install/setup.bash
+# Devcontainers mount the repo at /workspaces/<clone folder name>, so look ros2_ws up rather than
+# hardcoding it. BILLEE_PIXI_ENV is set per devcontainer (mac-cpu, l4t); the x86 desktop uses default.
+ROS2_WS=$(ls -d /workspaces/*/ros2_ws 2>/dev/null | head -n 1)
+PIXI_ENV_DIR="$ROS2_WS/.pixi/envs/${BILLEE_PIXI_ENV:-default}"
+
+if [ -n "$ROS2_WS" ]; then
+  # Initialize ROS 2 toolchain from the Pixi Environment
+  [ -f "$PIXI_ENV_DIR/setup.bash" ] && source "$PIXI_ENV_DIR/setup.bash"
+  # Initialize colcon autocomplete from the Pixi environment
+  [ -f "$PIXI_ENV_DIR/share/colcon_argcomplete/hook/colcon-argcomplete.bash" ] && source "$PIXI_ENV_DIR/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
+  # Source the local workspace overlay to enable autocomplete
+  [ -f "$ROS2_WS/install/setup.bash" ] && source "$ROS2_WS/install/setup.bash"
+  # Navigate to ros2_ws
+  cd "$ROS2_WS"
+fi
 # Override GNU Readline defaults to display ambiguous autocomplete matches on first tab (instead of second)
 bind 'set show-all-if-ambiguous on'
-# Navigate to ros2_ws
-cd ros2_ws
 
 # Dynamic welcome message based on the active Pixi environment
 if [ -n "$PIXI_ENVIRONMENT_NAME" ]; then

@@ -28,6 +28,7 @@
 
   "containerEnv": {
     "ROS_DISTRO": "humble",
+    "BILLEE_PIXI_ENV": "l4t",
     "NVIDIA_DRIVER_CAPABILITIES": "all",
     "DISPLAY": "${localEnv:DISPLAY}"
   },
