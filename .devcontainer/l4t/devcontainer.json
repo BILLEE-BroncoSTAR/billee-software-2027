@@ -10,7 +10,7 @@
 
   "runArgs": [
     "--privileged",
-    // JetPack 7 (Thor/Orin): use the nvidia runtime, NOT "--gpus all" (unreliable on JP7).
+    // Jetson (AGX Orin / Orin Nano): use the nvidia runtime, NOT "--gpus all".
     "--runtime", "nvidia",
     "-e=NVIDIA_VISIBLE_DEVICES=all",
     "-e=NVIDIA_DRIVER_CAPABILITIES=all",

@@ -63,3 +63,5 @@ ros2_ws/build
 .cache
 
 cpp_pubsub
+# OpenPose weights etc. (src/perception/people/scripts/get_openpose_models.sh)
+ros2_ws/models/

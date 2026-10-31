@@ -26,7 +26,7 @@ Gazebo resource, model, system-plugin, GUI-plugin, and QML import environment va
 
 The launch separates model state, simulator creation, and transport bridging into independent processes. That makes the Xacro model authoritative for both ROS transforms and Gazebo physics, while YAML files hold topic mapping choices. The controller spawner requests `diff_drive_controller` and `joint_state_broadcaster` together, relying on the plugin embedded in the spawned robot model to create the controller manager.
 
-There are no package-specific unit or launch tests. Validate with a full simulator launch and ROS CLI checks. Two current implementation details are worth preserving: `world_file` is declared but ignored because `gz_args` is hard-coded to `empty.sdf`, and `config/config.yaml` does not yet bridge velocity-command or odometry topics despite the launch-file TODO noting both gaps.
+There are no package-specific unit or launch tests. Validate with a full simulator launch and ROS CLI checks. One current implementation detail is worth preserving: `config/config.yaml` does not yet bridge velocity-command or odometry topics despite the launch-file TODO noting both gaps.
 
 ## 4. Architecture
 
@@ -99,7 +99,7 @@ ros2 launch chassis_bringup sim_gz.launch.py \
   x:=0.0 y:=0.0 z:=0.2 yaw:=0.0
 ```
 
-`world_file` is accepted as an argument but does not currently change the launched world; the launch passes `empty.sdf` to Gazebo unconditionally.
+`world_file` selects the world: a path inside `robot_description` when that file exists (e.g. `world_file:=worlds/people.sdf`), otherwise a Gazebo built-in world name (the default, `empty.sdf`). `headless:=true` runs only the Gazebo server (no GUI) — use it under `xvfb-run` on headless machines to save CPU.
 
 ### Verify it's running
 
@@ -112,10 +112,10 @@ ros2 launch chassis_bringup sim_gz.launch.py \
 ### Common issues
 
 - **Missing meshes, rendering resources, or `ign_ros2_control` plugin:** ensure the Pixi environment is active and run the provided launch rather than `gz sim` directly; the launch sets the required resource/plugin paths.
-- **Gazebo GUI/QML load failure outside the devcontainer:** the launch hard-codes its GUI and QML plugin paths under `/workspaces/URC-2027/ros2_ws/.pixi/...`; update those two values for a different workspace location or environment layout.
+- **Gazebo GUI/QML load failure:** the launch finds the GUI/QML plugin directory from the active Pixi env (`$CONDA_PREFIX/lib/ign-gazebo-*/plugins/gui`); run it from an activated env (`pixi shell` / `pixi run`).
 - **No motion from ROS velocity commands:** the active `config.yaml` only bridges `/clock`. Add and validate the required velocity bridge before expecting ROS commands to reach Gazebo.
 - **No ROS odometry:** likewise, no odometry bridge is currently configured.
-- **`world_file:=...` has no effect:** this is a known launch-file limitation; change the `gz_args` construction to use `world_path`.
+- **People world: `Failed to configure controller` on first launch:** Gazebo stalls while it downloads the person model from Gazebo Fuel; relaunch once it is cached.
 
 ## 6. Subnode Breakdown
 

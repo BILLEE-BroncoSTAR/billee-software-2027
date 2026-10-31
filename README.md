@@ -142,21 +142,21 @@ Two ways to use it:
    Studio on the host connects to `ws://localhost:8765`; drive with keyboard teleop.
 2. **Remote viewer** — just point Foxglove Studio at the rover's `ws://<rover-ip>:8765`.
 
-See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → "Mac (Apple Silicon)" for the commands.
+See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → §2.3 (Mac setup), §4 (quick launch) and §8 (OpenPose people sim) for the commands.
 
 ## NVIDIA Jetson (L4T) rover devcontainer
 
-For the rover itself — an NVIDIA Jetson (Orin-family or Thor) flashed with
-**JetPack 6.0 / L4T r36.3.x** — use the `l4t` configuration in
+For the rover itself — the **Jetson AGX Orin** (BILLEE 2027 computer) or a **Jetson Orin Nano**, both flashed with
+**JetPack 6.0 / L4T r36.3.x** (the base of `docker/Dockerfile.l4t-humble`) — use the `l4t` configuration in
 `.devcontainer/l4t/devcontainer.json` (VS Code: **Dev Containers: Reopen in
 Container**, then select **rover-roshumble_l4t-aarch64**).
 
-Host prep on the Jetson (one-time — **already done on the current BILLEE Orin Nano**):
+Host prep, once per board (**done on the Orin Nano; repeat on the AGX Orin**):
 
 ```sh
-sudo apt install -y nvidia-container curl   # JetPack 7.2: pulls nvidia-container-toolkit
-                                            # and runs nv-install-docker.service (installs
-                                            # Docker CE + wires the nvidia runtime)
+sudo apt install -y nvidia-container curl   # JetPack meta-package: nvidia-container-toolkit
+curl https://get.docker.com | sh && sudo systemctl --now enable docker
+sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
 # then, for GPU access at build time too:
 #   /etc/docker/daemon.json -> "default-runtime": "nvidia"
 sudo usermod -aG docker "$USER"   # then log out / back in

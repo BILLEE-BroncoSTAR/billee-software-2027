@@ -69,6 +69,12 @@ declare_args = [
             default_value="empty.sdf",
             description="Path to the robot world file (relative to the description package share).",
         ),
+        DeclareLaunchArgument(
+            "headless",
+            default_value="false",
+            description="Run only the Gazebo server (no GUI window). Sensors still render; "
+            "use with xvfb-run on the Mac/Jetson to save the CPU the hidden GUI would use.",
+        ),
         DeclareLaunchArgument("x", default_value="0.0", description="Spawn X (m)."),
         DeclareLaunchArgument("y", default_value="0.0", description="Spawn Y (m)."),
         DeclareLaunchArgument("z", default_value="0.2", description="Spawn Z (m)."),
@@ -151,9 +157,16 @@ def _launch_description(ctx):
         ),
         # gz launch always declares gz_args as a string and PathJoinSubstiution is lazily 
         # evaluated at runtime so  we must eval here to pass as a gz_arg
+        # A world shipped in the description package wins; otherwise pass the name
+        # through so Gazebo's built-in worlds (the empty.sdf default) still resolve.
         launch_arguments={
-            #"gz_args": f"-r -v 4 {world_path.perform(ctx)}",
-            "gz_args": f"-r -v 4 empty.sdf",
+            "gz_args": "-r -v 4 "
+            + ("-s " if LaunchConfiguration("headless").perform(ctx) == "true" else "")
+            + (
+                world_path.perform(ctx)
+                if os.path.isfile(world_path.perform(ctx))
+                else world_file.perform(ctx)
+            ),
             "extra_gz_args": f"--ros-args --params-file {gazebo_params_file}",
             "on_exit_shutdown": "true",
         }.items(),

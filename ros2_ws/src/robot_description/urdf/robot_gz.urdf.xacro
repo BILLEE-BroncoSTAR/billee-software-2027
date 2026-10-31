@@ -65,7 +65,7 @@
             <image>
                 <width>${zed_width}</width>
                 <height>${zed_height}</height>
-                <format>L8</format>
+                <format>R8G8B8</format>
             </image>
             <clip>
                 <near>0.01</near>

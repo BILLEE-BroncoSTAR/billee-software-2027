@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<!-- Flat ground with one person walking a 2 x 4 m loop 5-7 m in front of the spawn point.
+     One person only: the pose node is single-person for now.
+     Launch: sim_gz.launch.py world_file:=worlds/people_walking.sdf -->
+<sdf version="1.8">
+  <world name="people_walking">
+    <!-- Same physics + systems as Gazebo's built-in empty.sdf -->
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="ignition-gazebo-physics-system" name="ignition::gazebo::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system" name="ignition::gazebo::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system" name="ignition::gazebo::systems::SceneBroadcaster"/>
+    <plugin filename="ignition-gazebo-contact-system" name="ignition::gazebo::systems::Contact"/>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <actor name="walker">
+      <skin>
+        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
+      </skin>
+      <animation name="walk">
+        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <auto_start>true</auto_start>
+        <!-- pose z = 1.0: the walk.dae root sits at the hips -->
+        <trajectory id="0" type="walk" tension="0.6">
+          <waypoint><time>0</time><pose>5 -2 1.0 0 0 1.5708</pose></waypoint>
+          <waypoint><time>4</time><pose>5 2 1.0 0 0 1.5708</pose></waypoint>
+          <waypoint><time>5</time><pose>5 2 1.0 0 0 0</pose></waypoint>
+          <waypoint><time>7</time><pose>7 2 1.0 0 0 0</pose></waypoint>
+          <waypoint><time>8</time><pose>7 2 1.0 0 0 -1.5708</pose></waypoint>
+          <waypoint><time>12</time><pose>7 -2 1.0 0 0 -1.5708</pose></waypoint>
+          <waypoint><time>13</time><pose>7 -2 1.0 0 0 3.1416</pose></waypoint>
+          <waypoint><time>15</time><pose>5 -2 1.0 0 0 3.1416</pose></waypoint>
+          <waypoint><time>16</time><pose>5 -2 1.0 0 0 1.5708</pose></waypoint>
+        </trajectory>
+      </script>
+    </actor>
+  </world>
+</sdf>

@@ -1,3 +1,24 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:system"
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+
+    // The C++ extension otherwise indexes the multi-GB pixi env and build trees and runs one
+    // IntelliSense process per open file; in the 8 GB Mac container that took ~2.5 GB of RAM and
+    // ~2 CPUs, starving Gazebo and OpenPose. Headers in .pixi still resolve for IntelliSense.
+    "C_Cpp.files.exclude": {
+        "**/.pixi": true,
+        "**/build": true,
+        "**/install": true,
+        "**/log": true,
+        "**/models": true
+    },
+    "files.watcherExclude": {
+        "**/.pixi/**": true,
+        "**/build/**": true,
+        "**/install/**": true,
+        "**/log/**": true,
+        "**/models/**": true
+    },
+    "C_Cpp.maxCachedProcesses": 2,
+    "C_Cpp.intelliSense.maxCachedProcesses": 2,
+    "C_Cpp.intelliSense.maxMemory": 1024
 }

@@ -31,7 +31,7 @@ fi
 case "$action" in
   build)
     exec docker build \
-      --file "$repo_root/scripts/Dockerfile.desktop.humble" \
+      --file "$repo_root/docker/Dockerfile.desktop.humble" \
       --tag "$image" \
       "$@" \
       "$repo_root"
@@ -49,7 +49,9 @@ case "$action" in
       --volume /tmp/.X11-unix:/tmp/.X11-unix
       --volume /dev:/dev
       --volume /dev/shm:/dev/shm
-      --mount "type=bind,source=$repo_root/ros2_ws,target=/root/ros2_ws"
+      # Same layout as the devcontainer: whole repo at /workspaces/<clone name>
+      --mount "type=bind,source=$repo_root,target=/workspaces/$(basename "$repo_root")"
+      --workdir "/workspaces/$(basename "$repo_root")/ros2_ws"
       --env ROS_DISTRO=humble
       --env "DISPLAY=${DISPLAY:-}"
       --env "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"

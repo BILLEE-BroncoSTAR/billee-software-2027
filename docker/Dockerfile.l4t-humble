@@ -5,7 +5,9 @@
 # `CMD ["pixi", "shell"]`. ROS 2 Humble itself comes from pixi / RoboStack (see
 # ros2_ws/pixi.toml, environment `l4t`)
 #
-# Running on jetpack v6.x
+# Running on JetPack 6.0 (L4T r36.3). The image is keyed to the L4T version, not the board:
+# the same build runs on the AGX Orin (BILLEE 2027 rover) and the Orin Nano. Retarget with --build-arg L4T_VERSION=rXX.Y.Z;
+# the ZED SDK download follows it, so pick a ZED_SDK_MINOR that ships that L4T build.
 
 ARG L4T_VERSION=r36.3.0
 ARG IMAGE_NAME=nvcr.io/nvidia/l4t-jetpack:${L4T_VERSION}
@@ -21,10 +23,11 @@ ARG USER_GID=1000
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+# ZED SDK 5.2 is the newest release with an L4T 36.3 build (5.3+ start at 36.4)
 ARG ZED_SDK_MAJOR=5
-ARG ZED_SDK_MINOR=4
-ARG L4T_MAJOR=39
-ARG L4T_MINOR=2
+ARG ZED_SDK_MINOR=2
+# re-declared so the ZED step can see it (ARGs before FROM leave scope)
+ARG L4T_VERSION
 
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 
@@ -66,12 +69,13 @@ RUN userdel -r ubuntu 2>/dev/null || true; \
 RUN apt-get update || true && apt-get install -y --no-install-recommends \
       libusb-1.0-0-dev zlib1g-dev libgeographic-dev && \
     rm -rf /var/lib/apt/lists/* && \
+    l4t=$(echo "${L4T_VERSION#r}" | cut -d. -f1,2) && \
     wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run \
-      "https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}/l4t${L4T_MAJOR}.${L4T_MINOR}/jetsons" && \
+      "https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}/l4t${l4t}/jetsons" && \
     chmod +x ZED_SDK_Linux_JP.run && \
     ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda && \
     rm -rf ZED_SDK_Linux_JP.run /usr/local/zed/resources/* && \
-    chown -R ${USERNAME}:${USERNAME} /usr/local/zed ; \
+    chown -R ${USERNAME}:${USERNAME} /usr/local/zed
 
 # pixi -> provides ROS 2 Humble + colcon via the `l4t` environment in ros2_ws/pixi.toml
 ENV PIXI_HOME=/opt/pixi

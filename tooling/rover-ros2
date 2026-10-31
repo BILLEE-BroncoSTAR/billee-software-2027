@@ -13,7 +13,7 @@ usage() {
 Usage: tooling/rover-ros2 <build|run|shell> [arguments...]
 
   build  Build rover-ros2:latest from docker/Dockerfile.l4t-humble.
-         Extra arguments are passed to `docker build` (e.g. --build-arg INSTALL_ZED=true).
+         Extra arguments are passed to `docker build` (e.g. --build-arg L4T_VERSION=...).
   run    Start the image with the same host, GPU (nvidia runtime), device, and
          workspace settings as .devcontainer/l4t/devcontainer.json. Extra
          arguments replace the image's default command.
@@ -57,8 +57,11 @@ case "$action" in
       --volume /dev:/dev
       --volume /dev/shm:/dev/shm
       --volume /tmp/.X11-unix:/tmp/.X11-unix
-      --mount "type=bind,source=$repo_root/ros2_ws,target=/home/ros_user/ros2_ws"
+      # Same layout as the devcontainer: whole repo at /workspaces/<clone name>
+      --mount "type=bind,source=$repo_root,target=/workspaces/$(basename "$repo_root")"
+      --workdir "/workspaces/$(basename "$repo_root")/ros2_ws"
       --env ROS_DISTRO=humble
+      --env BILLEE_PIXI_ENV=l4t
       --env "DISPLAY=${DISPLAY:-}"
     )
 

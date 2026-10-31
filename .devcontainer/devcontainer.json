@@ -5,7 +5,8 @@
     "context": "../"
   },
 
-  "initializeCommand": "xhost +local:",
+  // mkdir: the pixi cache bind mount below fails to start if its host folder is missing
+  "initializeCommand": "mkdir -p \"$HOME/.cache/urc-pixi-cache\" && xhost +local:",
 
   "containerUser": "ros_user",
   "remoteUser": "ros_user",
@@ -23,6 +24,13 @@
 	  "--volume", "/tmp/.X11-unix:/tmp/.X11-unix",
 	  "--volume", "/dev:/dev",
 	  "--volume", "/dev/shm:/dev/shm"
+  ],
+
+  // Bind mount (not a named volume) so the cache shares a filesystem with the
+  // bind-mounted workspace — pixi's pypi installer hardlinks wheels from here into
+  // ros2_ws/.pixi, which fails (panic) across the volume/workspace filesystem boundary.
+  "mounts": [
+    "source=${localEnv:HOME}/.cache/urc-pixi-cache,target=/home/ros_user/.cache/rattler,type=bind"
   ],
 
   "updateContentCommand": "cd ros2_ws && pixi install",
@@ -59,13 +67,7 @@
         "remote.otherPortsAttributes": {
           "onAutoForward": "ignore"
         }
-      },
-      "mounts": [
-      // Bind mount (not a named volume) so the cache shares a filesystem with the
-      // bind-mounted workspace — pixi's pypi installer hardlinks wheels from here into
-      // ros2_ws/.pixi, which fails (panic) across the volume/workspace filesystem boundary.
-      "source=${localEnv:HOME}/.cache/urc-pixi-cache,target=/home/ros_user/.cache/rattler,type=bind"
-    ]
+      }
     }
   }
 
