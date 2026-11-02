@@ -2,7 +2,10 @@
   "name": "rover-roshumble_l4t-aarch64",
   "build": {
     "dockerfile": "../../docker/Dockerfile.l4t-humble",
-    "context": "../../"
+    "context": "../../",
+    // Parallel OpenPose compile jobs; empty = all cores. `export OPENPOSE_JOBS=2` on the host
+    // before "Rebuild Container" if nvcc runs out of RAM.
+    "args": { "OPENPOSE_JOBS": "${localEnv:OPENPOSE_JOBS}" }
   },
 
   "containerUser": "ros_user",

@@ -33,7 +33,7 @@ endif()
 
 find_package(ZED REQUIRED PATHS /usr/local/zed NO_DEFAULT_PATH)
 find_package(CUDA REQUIRED)
-# JetPack's OpenCV, which OpenPose was built against - never the pixi env's own OpenCV.
+# The image's system OpenCV, which OpenPose was built against - never the pixi env's own OpenCV.
 find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs
   PATHS /usr/lib/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu/cmake/opencv4 NO_DEFAULT_PATH)
 find_package(rclcpp REQUIRED)

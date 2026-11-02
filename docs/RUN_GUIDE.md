@@ -35,7 +35,7 @@ pixi shell -e <env>                    # l4t | default | mac-cpu
 | platform | host | container (VS Code → **Dev Containers: Reopen in Container**) | env | good for |
 |---|---|---|---|---|
 | **Linux x86 + NVIDIA** | Ubuntu, NVIDIA driver for CUDA 13.2 | `desktop-roshumble_dev-x862` · or `tooling/desktop-ros2` | `default` | everything: GPU sim, RViz, gamepad, ZED, CAN |
-| **Jetson AGX Orin / Orin Nano** (rover) | JetPack 6.0 (L4T r36.3) on both | `rover-roshumble_l4t-aarch64` · or `tooling/rover-ros2` | `l4t` | rover: real drivetrain, ZED |
+| **Jetson AGX Orin / Orin Nano** (rover) | JetPack 7.2 (L4T r39.2) on both | `rover-roshumble_l4t-aarch64` · or `tooling/rover-ros2` | `l4t` | rover: real drivetrain, ZED |
 | **Apple Silicon Mac** | macOS + Docker Desktop / Rancher Desktop | `desktop-roshumble-mac-cpu` | `mac-cpu` | headless sim + Foxglove |
 | **Native pixi** | Linux x86 (CUDA 13) or aarch64 | none | `default` / `l4t` | quick tools; no ZED SDK |
 
@@ -89,8 +89,8 @@ tooling/desktop-ros2 shell        # bash inside it, same mounts/devices as the d
 
 ### 2.2 Jetson AGX Orin / Orin Nano (rover)
 
-One image serves both boards. Flash both with **JetPack 6.0**
-(`cat /etc/nv_tegra_release` → `R36 (release), REVISION: 3.x`).
+One image serves both boards. Flash both with **JetPack 7.2**
+(`cat /etc/nv_tegra_release` → `R39 (release), REVISION: 2.x`).
 
 Host prep, once per board — **done on the Orin Nano; repeat on the AGX Orin**:
 ```bash
@@ -107,25 +107,31 @@ Open in VS Code (over Remote-SSH) → **Reopen in Container** → `rover-roshumb
 Without VS Code:
 ```bash
 tooling/rover-ros2 build                                  # image rover-ros2:latest
-tooling/rover-ros2 build --build-arg L4T_VERSION=r36.4.0  # different JetPack (ZED SDK follows)
+tooling/rover-ros2 build --build-arg L4T_VERSION=r39.2 --build-arg CUDA_VERSION=13-2  # other JetPack 7.x
 tooling/rover-ros2 shell
 ```
 Build: AGX Orin → normal `pixi run -e l4t build`; Orin Nano (8 GB) → the low-RAM command in §3.
 
 <details><summary>▸ What this does</summary>
 
-- Image `docker/Dockerfile.l4t-humble`: `nvcr.io/nvidia/l4t-jetpack:${L4T_VERSION}` (default
-  `r36.3.0` = JetPack 6.0), ZED SDK 5.2 (newest with an L4T 36.3 build; the download URL is
-  derived from `L4T_VERSION`), pixi. Runs as `ros_user`.
-- Board-agnostic: the JetPack base image and the ZED SDK `.run` are keyed to the L4T version,
+- Image `docker/Dockerfile.l4t-humble`: `ubuntu:24.04` + CUDA 13.2, cuDNN 9 and the TensorRT
+  runtime from NVIDIA's Jetson apt repo (`L4T_VERSION`, default `r39.2` = JetPack 7.2; NVIDIA
+  ships no `l4t-jetpack` image for JetPack 7), ZED SDK 5.5 (newest with an L4T 39.2 build; the
+  download URL is derived from `L4T_VERSION`), OpenPose in `/opt/openpose`, pixi. Runs as `ros_user`.
+- Board-agnostic: the Jetson apt packages and the ZED SDK `.run` are keyed to the L4T version,
   not the board, so AGX Orin and Orin Nano use the same image as long as both run the same L4T.
   A board on a different JetPack builds with `--build-arg L4T_VERSION=` matching its release.
 - `--runtime nvidia` (Jetson's GPU runtime), not `--gpus all`.
 - Host network + `/dev` → `can0`, ZED and DDS to the ground station all work; hostname `rover`.
 - `can0` is a host interface: bring it up on the Jetson host (`tooling/can-up` or the service),
   never inside the container.
-- For a different JetPack in the devcontainer, add `"args": {"L4T_VERSION": "..."}` under
-  `build` in `.devcontainer/l4t/devcontainer.json`.
+- For a different JetPack in the devcontainer, add `"L4T_VERSION"` / `"CUDA_VERSION"` to
+  `build.args` in `.devcontainer/l4t/devcontainer.json`.
+- Disk: the image is ~10 GB; leave ~20 GB free for the first build (pixi env + OpenPose build
+  tree). On a small SD card, Docker's classic store saves a few GB:
+  `/etc/docker/daemon.json` → `"features": {"containerd-snapshotter": false}`.
+- OpenPose compiles with all cores; if nvcc runs out of RAM, `export OPENPOSE_JOBS=2` on the
+  host before **Rebuild Container**.
 - On start it runs `pixi install --environment l4t`.
 </details>
 

@@ -147,7 +147,7 @@ See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → §2.3 (Mac setup) and §4 (quick 
 ## NVIDIA Jetson (L4T) rover devcontainer
 
 For the rover itself — the **Jetson AGX Orin** (BILLEE 2027 computer) or a **Jetson Orin Nano**, both flashed with
-**JetPack 6.0 / L4T r36.3.x** (the base of `docker/Dockerfile.l4t-humble`) — use the `l4t` configuration in
+**JetPack 7.2 / L4T r39.2.x** (what `docker/Dockerfile.l4t-humble` targets) — use the `l4t` configuration in
 `.devcontainer/l4t/devcontainer.json` (VS Code: **Dev Containers: Reopen in
 Container**, then select **rover-roshumble_l4t-aarch64**).
 
