@@ -5,12 +5,14 @@
 # `CMD ["pixi", "shell"]`. ROS 2 Humble itself comes from pixi / RoboStack (see
 # ros2_ws/pixi.toml, environment `l4t`)
 #
-# Running on JetPack 6.0 (L4T r36.3). The image is keyed to the L4T version, not the board:
-# the same build runs on the AGX Orin (BILLEE 2027 rover) and the Orin Nano. Retarget with --build-arg L4T_VERSION=rXX.Y.Z;
-# the ZED SDK download follows it, so pick a ZED_SDK_MINOR that ships that L4T build.
+# Running on JetPack 7.2 (L4T r39.2, Ubuntu 24.04, CUDA 13.2). The image is keyed to the L4T
+# version, not the board: the same build runs on the AGX Orin (BILLEE 2027 rover) and the Orin
+# Nano, as long as the host is flashed with the same JetPack. NVIDIA publishes no
+# l4t-jetpack image for JetPack 7, so (like stereolabs/zed-docker base/l4t) this starts from
+# ubuntu:24.04 and installs only the CUDA / cuDNN / TensorRT pieces the ZED SDK and OpenPose
+# need from NVIDIA's Jetson apt repo (~7.5 GB instead of nvidia-jetpack's ~16.5 GB).
 
-ARG L4T_VERSION=r36.3.0
-ARG IMAGE_NAME=nvcr.io/nvidia/l4t-jetpack:${L4T_VERSION}
+ARG IMAGE_NAME=ubuntu:24.04
 
 FROM ${IMAGE_NAME}
 
@@ -23,11 +25,12 @@ ARG USER_GID=1000
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# ZED SDK 5.2 is the newest release with an L4T 36.3 build (5.3+ start at 36.4)
+# Jetson apt repo release (r39.2 also serves the r39.2.1 point release) and the matching CUDA
+ARG L4T_VERSION=r39.2
+ARG CUDA_VERSION=13-2
+# ZED SDK 5.5 is the newest release with an L4T 39.2 build
 ARG ZED_SDK_MAJOR=5
-ARG ZED_SDK_MINOR=2
-# re-declared so the ZED step can see it (ARGs before FROM leave scope)
-ARG L4T_VERSION
+ARG ZED_SDK_MINOR=5
 
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 
@@ -66,15 +69,44 @@ RUN userdel -r ubuntu 2>/dev/null || true; \
   echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
   chmod 0440 /etc/sudoers.d/${USERNAME}
 
+# CUDA (nvcc + runtime libs, plus the dev libs Caffe and the ZED SDK's cmake link: NPP, cuBLAS,
+# cuRAND), cuDNN and the TensorRT runtime (ZED NEURAL depth) from the Jetson repo. The pin keeps
+# Ubuntu's own conflicting nvidia-* packages out; the marker file stops l4t postinst scripts from
+# trying a boot-firmware update inside the build.
+RUN mkdir -p /opt/nvidia/l4t-packages && \
+    touch /opt/nvidia/l4t-packages/.nv-l4t-disable-boot-fw-update-in-preinstall && \
+    printf 'Package: *\nPin: origin repo.download.nvidia.com\nPin-Priority: 1001\n' \
+      > /etc/apt/preferences.d/nvidia-l4t && \
+    echo 'Acquire::Retries "10"; Acquire::http::Timeout "60";' > /etc/apt/apt.conf.d/99retries && \
+    curl -fsSL https://repo.download.nvidia.com/jetson/jetson-ota-public.asc \
+      -o /etc/apt/trusted.gpg.d/nvidia-l4t.asc && \
+    echo "deb https://repo.download.nvidia.com/jetson/common ${L4T_VERSION} main" \
+      > /etc/apt/sources.list.d/nvidia-l4t.list && \
+    echo "deb https://repo.download.nvidia.com/jetson/som ${L4T_VERSION} main" \
+      >> /etc/apt/sources.list.d/nvidia-l4t.list && \
+    apt-get update && apt-get install -y --no-install-recommends \
+      cuda-nvcc-${CUDA_VERSION} cuda-cudart-dev-${CUDA_VERSION} cuda-libraries-${CUDA_VERSION} \
+      libnpp-dev-${CUDA_VERSION} libcublas-dev-${CUDA_VERSION} libcurand-dev-${CUDA_VERSION} \
+      libcudnn9-dev-cuda-13 libnvinfer10 libnvinfer-plugin10 libnvonnxparsers10 && \
+    rm -rf /var/lib/apt/lists/* && \
+    ln -sfn /usr/local/cuda-$(echo ${CUDA_VERSION} | tr - .) /usr/local/cuda
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=/usr/local/cuda/bin:${PATH}
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64
+
+# The ZED installer checks /etc/nv_tegra_release, which only exists on the host: write the L4T
+# version there as stereolabs/zed-docker does. The libv4l2 link is for ZED streaming in containers.
 RUN apt-get update || true && apt-get install -y --no-install-recommends \
       libusb-1.0-0-dev zlib1g-dev libgeographic-dev && \
     rm -rf /var/lib/apt/lists/* && \
-    l4t=$(echo "${L4T_VERSION#r}" | cut -d. -f1,2) && \
+    l4t=${L4T_VERSION#r} && \
+    echo "# R${l4t%%.*} (release), REVISION: ${l4t#*.}" > /etc/nv_tegra_release && \
     wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run \
       "https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}/l4t${l4t}/jetsons" && \
     chmod +x ZED_SDK_Linux_JP.run && \
-    ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda && \
+    ./ZED_SDK_Linux_JP.run silent skip_tools skip_drivers skip_python && \
     rm -rf ZED_SDK_Linux_JP.run /usr/local/zed/resources/* && \
+    ln -sf /usr/lib/aarch64-linux-gnu/tegra/libv4l2.so.0 /usr/lib/aarch64-linux-gnu/libv4l2.so && \
     chown -R ${USERNAME}:${USERNAME} /usr/local/zed
 
 # CMU OpenPose with CUDA + cuDNN, for zed_openpose (port of stereolabs/zed-openpose), into
