@@ -3,8 +3,7 @@
 #
 # CUDA as a non-root user needs read/write on /dev/nvmap, /dev/nvgpu/igpu0/*, /dev/nvhost-* and
 # /dev/dri/*, owned by host groups (video 44, render, ...) whose gids differ between hosts and
-# from the image's /etc/group. CDI (`--device nvidia.com/gpu=all`) adds them only to the
-# container's first process; `docker exec` (every VS Code terminal and task) builds the user's
+# from the image's /etc/group. `docker exec` (every VS Code terminal and task) builds the user's
 # groups from the container's /etc/group, so they are written there. Run as root at container
 # start (the devcontainer's postStartCommand); new exec sessions pick the groups up.
 set -eu

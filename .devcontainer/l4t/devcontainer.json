@@ -13,13 +13,10 @@
 
   "runArgs": [
     "--privileged",
-    // Jetson (AGX Orin / Orin Nano): use the nvidia runtime, NOT "--gpus all".
+    // Jetson (AGX Orin / Orin Nano): use the nvidia runtime, NOT "--gpus all". It mounts the
+    // host's GPU driver and device nodes; postStartCommand's gpu_groups.sh gives ros_user the
+    // host groups that own those nodes ("CUDA error 100/801" otherwise).
     "--runtime", "nvidia",
-    // ...and request the GPU through CDI (JetPack 7 keeps the spec in /var/run/cdi/nvidia.yaml).
-    // CDI's host video/render gids reach only the container's first process, not VS Code's
-    // `docker exec` terminals: postStartCommand's gpu_groups.sh adds them to ros_user for those
-    // ("CUDA error 100/801" otherwise).
-    "--device", "nvidia.com/gpu=all",
     "-e=NVIDIA_VISIBLE_DEVICES=all",
     "-e=NVIDIA_DRIVER_CAPABILITIES=all",
     "--network=host",

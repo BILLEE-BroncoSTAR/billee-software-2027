@@ -35,7 +35,7 @@ pixi shell -e <env>                    # l4t | default | mac-cpu
 | platform | host | container (VS Code → **Dev Containers: Reopen in Container**) | env | good for |
 |---|---|---|---|---|
 | **Linux x86 + NVIDIA** | Ubuntu, NVIDIA driver for CUDA 13.2 | `desktop-roshumble_dev-x862` · or `tooling/desktop-ros2` | `default` | everything: GPU sim, RViz, gamepad, ZED, CAN |
-| **Jetson AGX Orin / Orin Nano** (rover) | JetPack 7.2 (L4T r39.2) on both | `rover-roshumble_l4t-aarch64` · or `tooling/rover-ros2` | `l4t` | rover: real drivetrain, ZED |
+| **Jetson AGX Orin / Orin Nano** (rover) | JetPack 6.0 (L4T r36.3) on both | `rover-roshumble_l4t-aarch64` · or `tooling/rover-ros2` | `l4t` | rover: real drivetrain, ZED |
 | **Apple Silicon Mac** | macOS + Docker Desktop / Rancher Desktop | `desktop-roshumble-mac-cpu` | `mac-cpu` | headless sim + Foxglove |
 | **Native pixi** | Linux x86 (CUDA 13) or aarch64 | none | `default` / `l4t` | quick tools; no ZED SDK |
 
@@ -89,8 +89,8 @@ tooling/desktop-ros2 shell        # bash inside it, same mounts/devices as the d
 
 ### 2.2 Jetson AGX Orin / Orin Nano (rover)
 
-One image serves both boards. Flash both with **JetPack 7.2**
-(`cat /etc/nv_tegra_release` → `R39 (release), REVISION: 2.x`).
+One image serves both boards. Flash both with **JetPack 6.0**, the `Prerelease` tag's version
+(`cat /etc/nv_tegra_release` → `R36 (release), REVISION: 3.x`).
 
 Host prep, once per board — **done on the Orin Nano; repeat on the AGX Orin**:
 ```bash
@@ -99,8 +99,6 @@ curl https://get.docker.com | sh && sudo systemctl --now enable docker
 sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
 # GPU at build time too: /etc/docker/daemon.json -> "default-runtime": "nvidia"
 sudo usermod -aG docker "$USER"               # then log out / in
-ls /var/run/cdi/nvidia.yaml                   # GPU CDI spec (JetPack 7 generates it); else:
-#   sudo nvidia-ctk cdi generate --output=/var/run/cdi/nvidia.yaml
 # ZED 2i USB access for the container's non-root user (the rule ships in the image):
 docker run --rm rover-ros2 cat /etc/udev/rules.d/99-slabs.rules | sudo tee /etc/udev/rules.d/99-slabs.rules
 sudo udevadm control --reload-rules && sudo udevadm trigger
@@ -111,35 +109,36 @@ Open in VS Code (over Remote-SSH) → **Reopen in Container** → `rover-roshumb
 Without VS Code:
 ```bash
 tooling/rover-ros2 build                                  # image rover-ros2:latest
-tooling/rover-ros2 build --build-arg L4T_VERSION=r39.2 --build-arg CUDA_VERSION=13-2  # other JetPack 7.x
+tooling/rover-ros2 build --build-arg L4T_VERSION=r36.4.0 --build-arg ZED_SDK_MINOR=4  # e.g. JetPack 6.1/6.2
 tooling/rover-ros2 shell
 ```
 Build: AGX Orin → normal `pixi run -e l4t build`; Orin Nano (8 GB) → the low-RAM command in §3.
 
 <details><summary>▸ What this does</summary>
 
-- Image `docker/Dockerfile.l4t-humble`: `ubuntu:24.04` + CUDA 13.2, cuDNN 9 and the TensorRT
-  runtime from NVIDIA's Jetson apt repo (`L4T_VERSION`, default `r39.2` = JetPack 7.2; NVIDIA
-  ships no `l4t-jetpack` image for JetPack 7), ZED SDK 5.5 (newest with an L4T 39.2 build; the
-  download URL is derived from `L4T_VERSION`), OpenPose in `/opt/openpose`, pixi. Runs as `ros_user`.
-- Board-agnostic: the Jetson apt packages and the ZED SDK `.run` are keyed to the L4T version,
-  not the board, so AGX Orin and Orin Nano use the same image as long as both run the same L4T.
-  A board on a different JetPack builds with `--build-arg L4T_VERSION=` matching its release.
-- `--runtime nvidia` (Jetson's GPU runtime), not `--gpus all`, plus `--device nvidia.com/gpu=all`
-  (CDI). CUDA as the non-root `ros_user` needs the host gids of the GPU device nodes (`video`,
-  `render`, ...; `CUDA error 100/801` otherwise). CDI gives them only to the container's first
-  process, so the devcontainer's `postStartCommand` runs `sudo gpu_groups.sh`
-  (`docker/gpu_groups.sh`), which adds `ros_user` to them for every `docker exec` / VS Code
-  terminal. In a container you `docker exec` into yourself, run it once as root:
+- Image `docker/Dockerfile.l4t-humble`: `nvcr.io/nvidia/l4t-jetpack:r36.3.0` (JetPack 6.0:
+  Ubuntu 22.04, CUDA 12.2, cuDNN 8.9, TensorRT 8.6, NVIDIA's OpenCV 4.8), ZED SDK 5.2 (newest
+  with an L4T 36.3 build; ZED 5.3+ need L4T 36.4 or newer; the download URL is derived from
+  `L4T_VERSION`), OpenPose in `/opt/openpose`, pixi. Runs as `ros_user`.
+- Board-agnostic: the base image and the ZED SDK `.run` are keyed to the L4T version, not the
+  board, so AGX Orin and Orin Nano use the same image as long as both run the same L4T. A board on
+  a different JetPack builds with `--build-arg L4T_VERSION=` (and a ZED SDK that supports it).
+- `--runtime nvidia` (Jetson's GPU runtime), not `--gpus all`: it mounts the host's GPU driver
+  and device nodes. CUDA as the non-root `ros_user` also needs the host gids that own those nodes
+  (`video`, `render`, ...; `CUDA error 100/801` otherwise): the devcontainer's `postStartCommand`
+  runs `sudo gpu_groups.sh` (`docker/gpu_groups.sh`), which adds `ros_user` to them for every
+  `docker exec` / VS Code terminal, and `tooling/rover-ros2` passes them as `--group-add`. In a
+  container you start some other way, run it once as root:
   `docker exec -u root <container> gpu_groups.sh`.
 - Host network + `/dev` → `can0`, ZED and DDS to the ground station all work; hostname `rover`.
 - `can0` is a host interface: bring it up on the Jetson host (`tooling/can-up` or the service),
   never inside the container.
-- For a different JetPack in the devcontainer, add `"L4T_VERSION"` / `"CUDA_VERSION"` to
+- For a different JetPack in the devcontainer, add `"L4T_VERSION"` / `"ZED_SDK_MINOR"` to
   `build.args` in `.devcontainer/l4t/devcontainer.json`.
-- Disk: the image is ~10 GB; leave ~20 GB free for the first build (pixi env + OpenPose build
-  tree). On a small SD card, Docker's classic store saves a few GB:
-  `/etc/docker/daemon.json` → `"features": {"containerd-snapshotter": false}`.
+- Disk: the `l4t-jetpack` base alone is a ~7 GB download (more unpacked), plus the ZED SDK,
+  OpenPose's build tree and the ~6 GB pixi env. Leave ~30 GB free for the first build (an
+  estimate: not yet measured on JetPack 6). On a small SD card, Docker's classic store saves a
+  few GB: `/etc/docker/daemon.json` → `"features": {"containerd-snapshotter": false}`.
 - OpenPose compiles with all cores; if nvcc runs out of RAM, `export OPENPOSE_JOBS=2` on the
   host before **Rebuild Container**.
 - On start it runs `pixi install --environment l4t`.

@@ -16,9 +16,11 @@ if [ ! -d "$SRC/.git" ]; then
   git checkout "$OPENPOSE_COMMIT"
   git submodule update --init 3rdparty/caffe
   # OpenPose's CMake later checks Caffe out at 1807aad (its CUDA 11 / cuDNN 8 / Ampere commit),
-  # keeping these working-tree edits. Patches for CUDA 13 / cuDNN 9 / Ubuntu 24.04:
-  #  - C++17 everywhere: CUDA 13's Thrust/CCCL requires it
-  #  - cudaDeviceProp fields CUDA 13 removed are dropped from Caffe's device report
+  # keeping these working-tree edits. Patches for current CUDA / protobuf (needed on CUDA 12.2 /
+  # JetPack 6, which the image targets, and on CUDA 13 / JetPack 7):
+  #  - C++17 everywhere: CUDA 12's Thrust needs C++14 or newer, CUDA 13's needs C++17
+  #  - cudaDeviceProp fields deprecated in CUDA 12 and removed in 13 are dropped from Caffe's
+  #    device report
   #  - protobuf's two-argument SetTotalBytesLimit -> the one-argument form
   sed -i -e 's/-std=c++11/-std=c++17/' -e 's/-std=c++14/-std=c++17/' CMakeLists.txt
   sed -i 's/-std=c++11/-std=c++17/' 3rdparty/caffe/CMakeLists.txt
@@ -29,7 +31,7 @@ if [ ! -d "$SRC/.git" ]; then
 fi
 
 # CUDA 13 moved Thrust/CUB under include/cccl: nvcc finds them, but Caffe's .cpp files that
-# include <thrust/...> are compiled by plain g++.
+# include <thrust/...> are compiled by plain g++. (CUDA 12 has them in include/: no-op there.)
 export CPATH="/usr/local/cuda/include/cccl${CPATH:+:$CPATH}"
 
 mkdir -p "$SRC/build"

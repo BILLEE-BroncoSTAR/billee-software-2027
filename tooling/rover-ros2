@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build and run the NVIDIA Jetson (L4T) rover ROS 2 image without VS Code / Dev Containers.
 # Parallel to tooling/desktop-ros2, but for docker/Dockerfile.l4t-humble and the
-# nvidia container runtime (JetPack 7 does not reliably support `--gpus all`).
+# nvidia container runtime (Jetson does not support `--gpus all`).
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -21,7 +21,7 @@ Usage: tooling/rover-ros2 <build|run|shell> [arguments...]
 
 Examples:
   tooling/rover-ros2 build
-  tooling/rover-ros2 build --build-arg L4T_VERSION=r39.2
+  tooling/rover-ros2 build --build-arg L4T_VERSION=r36.3.0
   tooling/rover-ros2 run
   tooling/rover-ros2 shell
   tooling/rover-ros2 run pixi run --environment l4t build
@@ -48,7 +48,6 @@ case "$action" in
       --tty
       --privileged
       --runtime nvidia
-      --device nvidia.com/gpu=all
       --env NVIDIA_VISIBLE_DEVICES=all
       --env NVIDIA_DRIVER_CAPABILITIES=all
       --network host
@@ -67,6 +66,12 @@ case "$action" in
       --env "PIXI_CACHE_DIR=/workspaces/$(basename "$repo_root")/ros2_ws/.pixi/cache"
       --env "DISPLAY=${DISPLAY:-}"
     )
+    # CUDA as ros_user needs the host groups that own the GPU device nodes (gids differ per host;
+    # the devcontainer gets them from docker/gpu_groups.sh instead)
+    for gid in $(stat -c %g /dev/nvmap /dev/nvgpu/igpu0/* /dev/nvhost* /dev/host1x* /dev/dri/* \
+                   2>/dev/null | sort -un); do
+      [[ "$gid" == 0 ]] || docker_args+=(--group-add "$gid")
+    done
 
     if [[ "$action" == shell ]]; then
       exec docker run "${docker_args[@]}" --entrypoint /bin/bash "$image" "$@"

@@ -174,11 +174,11 @@ flowchart TB
     N --> OP["OpenPose library (libopenpose.so)"]
     N --> SL["ZED SDK (libsl_zed.so)"]
     OP --> CF["Caffe (libcaffe.so)"]
-    CF --> DNN["cuDNN 9 + cuBLAS"]
+    CF --> DNN["cuDNN 8.9 + cuBLAS"]
     SL --> TRT["CUDA + TensorRT (neural depth modes)"]
-    DNN --> CU["CUDA 13.2 runtime"]
+    DNN --> CU["CUDA 12.2 runtime"]
     TRT --> CU
-    CU --> DRV["Jetson GPU driver (from the host, JetPack 7.2)"]
+    CU --> DRV["Jetson GPU driver (from the host, JetPack 6.0)"]
 ```
 
 ### 2.4 ROS 2 in five ideas
@@ -248,7 +248,8 @@ placed wrongly by the same offset.
   after a late change only redoes the steps after it.
 - The **NVIDIA container runtime** (`--runtime nvidia`) mounts the host's GPU driver and device
   files into the container. The container brings CUDA libraries; the driver must come from the
-  host, which is why host and image must use the same **JetPack** release (7.2 = L4T r39.2).
+  host, which is why host and image must use the same **JetPack** release (6.0 = L4T r36.3, the
+  version of the repository's `Prerelease` tag).
 - A **dev container** is VS Code opening a folder *inside* a container
   (`.devcontainer/l4t/devcontainer.json`), so the editor, terminals and builds all run in the
   Jetson image.
@@ -564,29 +565,29 @@ frame `base_link`, add `MarkerArray` `/people/markers` and `Image` `/people/debu
 
 | Step | Contents | Why |
 | --- | --- | --- |
-| Base | `ubuntu:24.04` | NVIDIA publishes no JetPack 7 base image; JetPack 7.2 is Ubuntu 24.04. |
+| Base | `nvcr.io/nvidia/l4t-jetpack:r36.3.0` | NVIDIA's JetPack 6.0 image: Ubuntu 22.04 with CUDA 12.2, cuDNN 8.9, TensorRT 8.6 and NVIDIA's OpenCV 4.8 already installed |
 | Basics | compilers, cmake, git, ... | build tools |
 | User | `ros_user` (uid 1000), passwordless sudo | don't run as root |
-| CUDA | from NVIDIA's Jetson apt repo, release `r39.2`: nvcc, cudart, cuBLAS, cuRAND, NPP, cuDNN 9, TensorRT 10 runtime | only the pieces needed (~7.5 GB instead of ~16.5 GB for the full JetPack) |
-| ZED SDK | 5.5 for L4T 39.2, silent install | camera driver + depth |
-| OpenPose | built from source by `docker/build_openpose.sh` into `/opt/openpose` | no prebuilt OpenPose for CUDA 13 / ARM exists |
+| ZED SDK | 5.2 for L4T 36.3, silent install | camera driver + depth; 5.2 is the newest ZED SDK built for JetPack 6.0 |
+| OpenPose | built from source by `docker/build_openpose.sh` into `/opt/openpose` | no prebuilt OpenPose for current CUDA on ARM exists |
 | pixi | `/opt/pixi` | installs ROS 2 into the workspace |
 | Fix-ups | ZED folder permissions, `gpu_groups.sh` | see §5.3 |
 
-The image is ~9 GB. On the Orin Nano the OpenPose step alone took ~10.5 min (6 parallel jobs);
-a rebuild where only late layers change takes seconds.
+The base alone is a ~7 GB download. In the earlier JetPack 7.2 build on the Orin Nano, the
+OpenPose step took ~10.5 min (6 parallel jobs); a rebuild where only late layers change takes
+seconds.
 
-### 5.2 Patching OpenPose for CUDA 13
+### 5.2 Patching OpenPose for current CUDA
 
 OpenPose was last updated in 2020 and its bundled Caffe is older still. `build_openpose.sh` pins
 OpenPose commit `5c5d965` and applies these patches before building:
 
 | Patch | Reason |
 | --- | --- |
-| `-std=c++11/14` → `-std=c++17` | CUDA 13's headers (Thrust/CUB) and current protobuf require C++17. |
-| `prop.clockRate`, `prop.deviceOverlap`, `prop.kernelExecTimeoutEnabled` → constants | These `cudaDeviceProp` fields were removed in CUDA 13; Caffe only prints them. |
+| `-std=c++11/14` → `-std=c++17` | CUDA 12's Thrust needs at least C++14 (CUDA 13's needs C++17); OpenPose and Caffe ask for C++11. |
+| `prop.clockRate`, `prop.deviceOverlap`, `prop.kernelExecTimeoutEnabled` → constants | These `cudaDeviceProp` fields are deprecated in CUDA 12 and removed in CUDA 13; Caffe only prints them. |
 | `SetTotalBytesLimit(a, b)` → `SetTotalBytesLimit(a)` | Newer protobuf removed the two-argument form (used when reading the model file). |
-| `CPATH=/usr/local/cuda/include/cccl` | CUDA 13 moved Thrust/CUB headers into `include/cccl`; Caffe includes `<thrust/...>`. |
+| `CPATH=/usr/local/cuda/include/cccl` | Only matters on CUDA 13, which moved Thrust/CUB into `include/cccl`; no effect on CUDA 12.2. |
 | `CUDA_ARCH_BIN=87` | Compile GPU code only for Orin, which cuts build time and size. |
 
 Model downloads in OpenPose's CMake are disabled (CMU's model server is offline); see §4.4.
@@ -597,7 +598,7 @@ Model downloads in OpenPose's CMake are disabled (CMU's model server is offline)
 
 | Option | Purpose |
 | --- | --- |
-| `--runtime nvidia`, `--device nvidia.com/gpu=all` | GPU driver and device files from the host (CDI = Container Device Interface, the standard way to describe them) |
+| `--runtime nvidia` | GPU driver and device files from the host |
 | `--privileged`, `--volume /dev:/dev` | USB access to the ZED, CAN bus devices |
 | `--network=host` | the container shares the Jetson's network, so DDS and port 8765 work as if native |
 | `--hostname=rover`, `--add-host=rover:127.0.1.1` | fixed hostname; resolvable inside the container |
@@ -613,14 +614,16 @@ silently skipped `zed_openpose`. Fix: the Dockerfile makes `/usr/local/zed` worl
 **Problem 2: GPU permissions in VS Code terminals.** Linux controls device access with file
 permissions. The GPU device files (`/dev/nvmap`, `/dev/nvgpu/igpu0/*`, `/dev/dri/*`, ...) belong to
 host groups (`video` = 44, `render` = 993, 982 on the dev Nano) whose numbers differ between
-machines. CDI adds those groups only to the container's first process; VS Code opens every
-terminal with `docker exec`, which takes groups from the container's `/etc/group`. Without them,
-CUDA fails with `error 100` (no device) or `801`. Fix: `docker/gpu_groups.sh` runs at start,
-reads the group id of each GPU device file and adds `ros_user` to it.
+machines and don't exist in the image. VS Code opens every terminal with `docker exec`, which
+takes the user's groups from the container's `/etc/group`. Without them, CUDA fails with
+`error 100` (no device) or `801`. Fix: `docker/gpu_groups.sh` runs at start, reads the group id of
+each GPU device file and adds `ros_user` to it. (`tooling/rover-ros2`, which starts the container
+without VS Code, passes the same group ids with `--group-add`.)
 
 **Problem 3: two copies of GLib.** A program loads **shared libraries** (`.so` files) at start-up;
 the dynamic linker loads each library name once and every user shares it. OpenPose links OpenCV's
-GUI module, which pulls in the system's GLib 2.80; ROS from pixi brings GLib 2.88. Parts of each
+GUI module, which pulls in the system's GLib (2.72 on Ubuntu 22.04, 2.80 on 24.04); ROS from
+pixi brings GLib 2.88. Parts of each
 got mixed, and the node aborted at start with
 `libgio-2.0.so.0: undefined symbol g_variant_builder_...`. Fix (`zed_openpose/CMakeLists.txt`):
 link pixi's GLib first and force it to stay loaded (`-Wl,--no-as-needed`), so the whole process
@@ -665,7 +668,11 @@ From `zed_openpose/config/zed_openpose.yaml` and `people/config/gestures.yaml`:
 
 ## 7. Verification done so far
 
-On the dev Orin Nano (JetPack 7.2), 2026-11-02, in the dev container without the camera:
+**The JetPack 6.0 image has not been built or tested yet** (the dev Orin Nano is being reflashed
+from JetPack 7.2 to 6.0). Everything below was verified on 2026-11-02 with the earlier JetPack 7.2
+version of the image (CUDA 13.2, ZED SDK 5.5) on the dev Orin Nano, in the dev container without the
+camera. The node, messages, 3D math and gesture code are the same in both; only the image's
+versions differ.
 
 | Check | Result |
 | --- | --- |
@@ -678,7 +685,7 @@ On the dev Orin Nano (JetPack 7.2), 2026-11-02, in the dev container without the
 | `zed_openpose_node` without a camera | exits with `CAMERA NOT DETECTED` (expected) |
 | OpenPose BODY_25 on the GPU, standalone test on a sample photo | 5 people, 25 keypoints each |
 
-**Not yet tested:** anything with the ZED 2i connected (live depth, 3D placement accuracy, gestures
+**Not yet tested:** the JetPack 6.0 image; anything with the ZED 2i connected (live depth, 3D placement accuracy, gestures
 on real people, end-to-end frame rate).
 
 Run the tests yourself:
@@ -693,8 +700,8 @@ pixi run -e l4t colcon test-result --verbose
 
 ## 8. Performance and limitations
 
-**Measured** (Orin Nano, OpenPose alone, network input 368 px high, 640×480 photo): ~160 ms per
-frame ≈ 6 frames/s. The node's default `320x240` input is smaller, so it should be somewhat faster,
+**Measured** (Orin Nano, JetPack 7.2 image, OpenPose alone, network input 368 px high, 640×480
+photo): ~160 ms per frame ≈ 6 frames/s. The node's default `320x240` input is smaller, so it should be somewhat faster,
 and the AGX Orin on the rover has twice the GPU cores of the Nano at higher clocks. Both are
 expectations until measured with the camera.
 
@@ -746,7 +753,6 @@ load their GPU code lazily from the SD card on first use. Later frames are not a
 | --- | --- |
 | Atomic variable | a variable that several threads can read/write safely without a lock |
 | Baseline | distance between the two lenses of a stereo camera (12 cm on the ZED 2i) |
-| CDI | Container Device Interface: standard description of host devices to expose to containers |
 | CNN | convolutional neural network: stacks of learned 2D filters |
 | colcon | the ROS 2 build tool |
 | Confidence map | per-part heat-map output of OpenPose |
@@ -757,7 +763,7 @@ load their GPU code lazily from the SD card on first use. Later frames are not a
 | Disparity | horizontal pixel shift of a point between left and right images |
 | Frame (coordinate) | origin + axes that a 3D point is expressed in |
 | Inference | running a trained network on new input |
-| JetPack / L4T | NVIDIA's OS + driver bundle for Jetson (JetPack 7.2 = Linux for Tegra r39.2) |
+| JetPack / L4T | NVIDIA's OS + driver bundle for Jetson (JetPack 6.0 = Linux for Tegra r36.3) |
 | Keypoint | one body joint found by OpenPose: (u, v, score) |
 | Launch file | script that starts several ROS nodes with their parameters |
 | Message | typed data structure sent over a topic |
