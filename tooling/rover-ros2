@@ -21,7 +21,7 @@ Usage: tooling/rover-ros2 <build|run|shell> [arguments...]
 
 Examples:
   tooling/rover-ros2 build
-  tooling/rover-ros2 build --build-arg L4T_VERSION=r38.2.0
+  tooling/rover-ros2 build --build-arg L4T_VERSION=r39.2
   tooling/rover-ros2 run
   tooling/rover-ros2 shell
   tooling/rover-ros2 run pixi run --environment l4t build
@@ -48,6 +48,7 @@ case "$action" in
       --tty
       --privileged
       --runtime nvidia
+      --device nvidia.com/gpu=all
       --env NVIDIA_VISIBLE_DEVICES=all
       --env NVIDIA_DRIVER_CAPABILITIES=all
       --network host
@@ -62,6 +63,7 @@ case "$action" in
       --workdir "/workspaces/$(basename "$repo_root")/ros2_ws"
       --env ROS_DISTRO=humble
       --env BILLEE_PIXI_ENV=l4t
+      --env "PIXI_CACHE_DIR=/workspaces/$(basename "$repo_root")/ros2_ws/.pixi/cache"
       --env "DISPLAY=${DISPLAY:-}"
     )
 

@@ -34,8 +34,9 @@ endif()
 find_package(ZED REQUIRED PATHS /usr/local/zed NO_DEFAULT_PATH)
 find_package(CUDA REQUIRED)
 # The image's system OpenCV, which OpenPose was built against - never the pixi env's own OpenCV.
-find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs
-  PATHS /usr/lib/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu/cmake/opencv4 NO_DEFAULT_PATH)
+# /usr as the prefix finds both NVIDIA's Jetson-repo build (/usr/lib/cmake/opencv4, what the l4t
+# image gets) and Ubuntu's (/usr/lib/<arch>/cmake/opencv4).
+find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs PATHS /usr NO_DEFAULT_PATH)
 find_package(rclcpp REQUIRED)
 find_package(people_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -50,7 +51,16 @@ target_include_directories(zed_openpose_node PRIVATE
   include ${OPENPOSE_INCLUDE_DIR} ${ZED_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 ament_target_dependencies(zed_openpose_node
   rclcpp people_msgs geometry_msgs sensor_msgs visualization_msgs tf2 tf2_ros)
+# OpenPose links OpenCV's highgui, which drags in the system GTK + GLib, while the pixi env has
+# its own, newer GLib: mixing the two aborts at load ("libgio-2.0.so.0: undefined symbol
+# g_variant_builder_..."). Link the env's GLib first and keep it in NEEDED, so it loads before
+# anything else asks for GLib and the whole process shares that one (backward-compatible) copy.
+find_library(GLIB_LIB glib-2.0 PATHS $ENV{CONDA_PREFIX}/lib NO_DEFAULT_PATH REQUIRED)
+find_library(GOBJECT_LIB gobject-2.0 PATHS $ENV{CONDA_PREFIX}/lib NO_DEFAULT_PATH REQUIRED)
+find_library(GMODULE_LIB gmodule-2.0 PATHS $ENV{CONDA_PREFIX}/lib NO_DEFAULT_PATH REQUIRED)
+find_library(GIO_LIB gio-2.0 PATHS $ENV{CONDA_PREFIX}/lib NO_DEFAULT_PATH REQUIRED)
 target_link_libraries(zed_openpose_node
+  -Wl,--no-as-needed ${GLIB_LIB} ${GOBJECT_LIB} ${GMODULE_LIB} ${GIO_LIB} -Wl,--as-needed
   ${OPENPOSE_LIB} ${CAFFE_LIB} ${ZED_LIBRARIES} ${OpenCV_LIBS} ${CUDA_CUDART_LIBRARY})
 # pixi's conda linker uses an older glibc sysroot than the system libraries linked above; let
 # their symbols resolve at run time (the x86 build task in pixi.toml does the same).

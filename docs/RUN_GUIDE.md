@@ -99,7 +99,11 @@ curl https://get.docker.com | sh && sudo systemctl --now enable docker
 sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
 # GPU at build time too: /etc/docker/daemon.json -> "default-runtime": "nvidia"
 sudo usermod -aG docker "$USER"               # then log out / in
-docker run --rm --runtime nvidia ubuntu:24.04 nvidia-smi
+ls /var/run/cdi/nvidia.yaml                   # GPU CDI spec (JetPack 7 generates it); else:
+#   sudo nvidia-ctk cdi generate --output=/var/run/cdi/nvidia.yaml
+# ZED 2i USB access for the container's non-root user (the rule ships in the image):
+docker run --rm rover-ros2 cat /etc/udev/rules.d/99-slabs.rules | sudo tee /etc/udev/rules.d/99-slabs.rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
 # real CAN bus, persisted across reboots:
 sudo cp tooling/can0.service /etc/systemd/system/ && sudo systemctl enable --now can0.service
 ```
@@ -121,7 +125,9 @@ Build: AGX Orin → normal `pixi run -e l4t build`; Orin Nano (8 GB) → the low
 - Board-agnostic: the Jetson apt packages and the ZED SDK `.run` are keyed to the L4T version,
   not the board, so AGX Orin and Orin Nano use the same image as long as both run the same L4T.
   A board on a different JetPack builds with `--build-arg L4T_VERSION=` matching its release.
-- `--runtime nvidia` (Jetson's GPU runtime), not `--gpus all`.
+- `--runtime nvidia` (Jetson's GPU runtime), not `--gpus all`, plus `--device nvidia.com/gpu=all`
+  (CDI): it adds the host's `video` and `render` gids, which CUDA needs as the non-root
+  `ros_user` (`CUDA error 801` / `no CUDA-capable device` otherwise).
 - Host network + `/dev` → `can0`, ZED and DDS to the ground station all work; hostname `rover`.
 - `can0` is a host interface: bring it up on the Jetson host (`tooling/can-up` or the service),
   never inside the container.

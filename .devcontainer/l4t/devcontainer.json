@@ -15,6 +15,10 @@
     "--privileged",
     // Jetson (AGX Orin / Orin Nano): use the nvidia runtime, NOT "--gpus all".
     "--runtime", "nvidia",
+    // ...and request the GPU through CDI (JetPack 7 keeps the spec in /var/run/cdi/nvidia.yaml):
+    // it also adds the host gids of the GPU nodes (video, render), which CUDA needs as the
+    // non-root ros_user ("CUDA error 801/100" otherwise); render's gid differs between hosts.
+    "--device", "nvidia.com/gpu=all",
     "-e=NVIDIA_VISIBLE_DEVICES=all",
     "-e=NVIDIA_DRIVER_CAPABILITIES=all",
     "--network=host",
@@ -32,6 +36,10 @@
   "containerEnv": {
     "ROS_DISTRO": "humble",
     "BILLEE_PIXI_ENV": "l4t",
+    // pixi's package cache inside the workspace mount (ros2_ws/.pixi is git-ignored), so the env
+    // hardlinks from it instead of copying (no hardlinks across mounts): halves the disk the env
+    // needs on the Jetson's SD card, and the cache survives container rebuilds.
+    "PIXI_CACHE_DIR": "${containerWorkspaceFolder}/ros2_ws/.pixi/cache",
     "NVIDIA_DRIVER_CAPABILITIES": "all",
     "DISPLAY": "${localEnv:DISPLAY}"
   },
