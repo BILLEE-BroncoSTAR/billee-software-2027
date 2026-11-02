@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build and run the NVIDIA Jetson (L4T) rover ROS 2 image without VS Code / Dev Containers.
 # Parallel to tooling/desktop-ros2, but for docker/Dockerfile.l4t-humble and the
-# nvidia container runtime (Jetson does not support `--gpus all`).
+# nvidia container runtime (JetPack 7 does not reliably support `--gpus all`).
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -13,7 +13,7 @@ usage() {
 Usage: tooling/rover-ros2 <build|run|shell> [arguments...]
 
   build  Build rover-ros2:latest from docker/Dockerfile.l4t-humble.
-         Extra arguments are passed to `docker build` (e.g. --build-arg L4T_VERSION=...).
+         Extra arguments are passed to `docker build` (e.g. --build-arg INSTALL_ZED=true).
   run    Start the image with the same host, GPU (nvidia runtime), device, and
          workspace settings as .devcontainer/l4t/devcontainer.json. Extra
          arguments replace the image's default command.
@@ -21,7 +21,7 @@ Usage: tooling/rover-ros2 <build|run|shell> [arguments...]
 
 Examples:
   tooling/rover-ros2 build
-  tooling/rover-ros2 build --build-arg L4T_VERSION=r36.3.0
+  tooling/rover-ros2 build --build-arg L4T_VERSION=r38.2.0
   tooling/rover-ros2 run
   tooling/rover-ros2 shell
   tooling/rover-ros2 run pixi run --environment l4t build
@@ -54,24 +54,13 @@ case "$action" in
       --pid host
       --ipc host
       --hostname rover
-      --add-host rover:127.0.1.1
       --volume /dev:/dev
       --volume /dev/shm:/dev/shm
       --volume /tmp/.X11-unix:/tmp/.X11-unix
-      # Same layout as the devcontainer: whole repo at /workspaces/<clone name>
-      --mount "type=bind,source=$repo_root,target=/workspaces/$(basename "$repo_root")"
-      --workdir "/workspaces/$(basename "$repo_root")/ros2_ws"
+      --mount "type=bind,source=$repo_root/ros2_ws,target=/home/ros_user/ros2_ws"
       --env ROS_DISTRO=humble
-      --env BILLEE_PIXI_ENV=l4t
-      --env "PIXI_CACHE_DIR=/workspaces/$(basename "$repo_root")/ros2_ws/.pixi/cache"
       --env "DISPLAY=${DISPLAY:-}"
     )
-    # CUDA as ros_user needs the host groups that own the GPU device nodes (gids differ per host;
-    # the devcontainer gets them from docker/gpu_groups.sh instead)
-    for gid in $(stat -c %g /dev/nvmap /dev/nvgpu/igpu0/* /dev/nvhost* /dev/host1x* /dev/dri/* \
-                   2>/dev/null | sort -un); do
-      [[ "$gid" == 0 ]] || docker_args+=(--group-add "$gid")
-    done
 
     if [[ "$action" == shell ]]; then
       exec docker run "${docker_args[@]}" --entrypoint /bin/bash "$image" "$@"

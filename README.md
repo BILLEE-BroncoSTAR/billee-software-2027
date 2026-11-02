@@ -142,25 +142,25 @@ Two ways to use it:
    Studio on the host connects to `ws://localhost:8765`; drive with keyboard teleop.
 2. **Remote viewer** — just point Foxglove Studio at the rover's `ws://<rover-ip>:8765`.
 
-See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → §2.3 (Mac setup) and §4 (quick launch) for the commands.
+See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → "Mac (Apple Silicon)" for the commands.
 
 ## NVIDIA Jetson (L4T) rover devcontainer
 
-For the rover itself — the **Jetson AGX Orin** (BILLEE 2027 computer) or a **Jetson Orin Nano**, both flashed with
-**JetPack 6.0 / L4T r36.3.x** (what `docker/Dockerfile.l4t-humble` targets, as on the `Prerelease` tag) — use the `l4t` configuration in
+For the rover itself — an NVIDIA Jetson (Orin-family or Thor) flashed with
+**JetPack 6.0 / L4T r36.3.x** — use the `l4t` configuration in
 `.devcontainer/l4t/devcontainer.json` (VS Code: **Dev Containers: Reopen in
 Container**, then select **rover-roshumble_l4t-aarch64**).
 
-Host prep, once per board (**done on the Orin Nano; repeat on the AGX Orin**):
+Host prep on the Jetson (one-time — **already done on the current BILLEE Orin Nano**):
 
 ```sh
-sudo apt install -y nvidia-container curl   # JetPack meta-package: nvidia-container-toolkit
-curl https://get.docker.com | sh && sudo systemctl --now enable docker
-sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
-# then, for GPU access at build time too (required: the image compiles OpenPose with CUDA):
+sudo apt install -y nvidia-container curl   # JetPack 7.2: pulls nvidia-container-toolkit
+                                            # and runs nv-install-docker.service (installs
+                                            # Docker CE + wires the nvidia runtime)
+# then, for GPU access at build time too:
 #   /etc/docker/daemon.json -> "default-runtime": "nvidia"
 sudo usermod -aG docker "$USER"   # then log out / back in
-docker run --rm --runtime nvidia nvcr.io/nvidia/l4t-jetpack:r36.3.0 nvidia-smi   # smoke test
+docker run --rm --runtime nvidia ubuntu:24.04 nvidia-smi   # smoke test
 ```
 
 
@@ -174,7 +174,6 @@ pixi run --environment l4t build            # later incremental builds
 pixi run --environment l4t ros2 launch chassis_bringup real.launch.py            # real ODESC/CAN
 pixi run --environment l4t ros2 launch chassis_bringup real.launch.py can_interface:=mock  # no motors
 pixi run --environment l4t ros2 launch chassis_bringup viz.launch.py            # rviz + foxglove :8765
-pixi run --environment l4t ros2 launch people people_rover.launch.py            # ZED 2 + OpenPose (CUDA), RUN_GUIDE §8
 ```
 
 Set the VS Code Python interpreter to `.pixi/envs/l4t/bin/python3`.
@@ -182,3 +181,6 @@ On the ground station (x86 laptop, default devcontainer) open Foxglove Studio an
 connect to `ws://<rover-ip>:8765`.
 
 Without VS Code, `tooling/rover-ros2 build|run|shell` builds and runs the same image.
+
+People / pose (ZED 2i + CUDA OpenPose, Jetson only): `docs/RUN_GUIDE.md` section C and
+`docs/ZED_OpenPose_Implementation.md`.

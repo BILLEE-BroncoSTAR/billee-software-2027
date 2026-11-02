@@ -1,22 +1,31 @@
 # Initial shell configuration, which should be run as the user after dependencies have been loaded
 
-# Devcontainers mount the repo at /workspaces/<clone folder name>, so look ros2_ws up rather than
-# hardcoding it. BILLEE_PIXI_ENV is set per devcontainer (mac-cpu, l4t); the x86 desktop uses default.
-ROS2_WS=$(ls -d /workspaces/*/ros2_ws 2>/dev/null | head -n 1)
-PIXI_ENV_DIR="$ROS2_WS/.pixi/envs/${BILLEE_PIXI_ENV:-default}"
+# Initialize ROS 2 from the Pixi environment selected for this shell.  The
+# fallback supports opening a regular dev-container terminal before `pixi
+# shell`; a Jetson `pixi shell -e l4t` selects the l4t prefix automatically.
+_billee_ws=/workspaces/URC-2027/ros2_ws
+_billee_pixi_env=${PIXI_ENVIRONMENT_NAME:-default}
+_billee_pixi_prefix=$_billee_ws/.pixi/envs/$_billee_pixi_env
 
-if [ -n "$ROS2_WS" ]; then
-  # Initialize ROS 2 toolchain from the Pixi Environment
-  [ -f "$PIXI_ENV_DIR/setup.bash" ] && source "$PIXI_ENV_DIR/setup.bash"
-  # Initialize colcon autocomplete from the Pixi environment
-  [ -f "$PIXI_ENV_DIR/share/colcon_argcomplete/hook/colcon-argcomplete.bash" ] && source "$PIXI_ENV_DIR/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
-  # Source the local workspace overlay to enable autocomplete
-  [ -f "$ROS2_WS/install/setup.bash" ] && source "$ROS2_WS/install/setup.bash"
-  # Navigate to ros2_ws
-  cd "$ROS2_WS"
+if [ -f "$_billee_pixi_prefix/setup.bash" ]; then
+  source "$_billee_pixi_prefix/setup.bash"
 fi
+
+# Keep the overlay separate from the Pixi underlay.  local_setup.bash contains
+# only workspace packages; setup.bash may replay an underlay recorded by a
+# build performed on a different platform.
+if [ -f "$_billee_pixi_prefix/share/colcon_argcomplete/hook/colcon-argcomplete.bash" ]; then
+  source "$_billee_pixi_prefix/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
+fi
+if [ -f "$_billee_ws/install/local_setup.bash" ]; then
+  source "$_billee_ws/install/local_setup.bash"
+fi
+
+unset _billee_ws _billee_pixi_env _billee_pixi_prefix
 # Override GNU Readline defaults to display ambiguous autocomplete matches on first tab (instead of second)
 bind 'set show-all-if-ambiguous on'
+# Navigate to ros2_ws
+cd ros2_ws
 
 # Dynamic welcome message based on the active Pixi environment
 if [ -n "$PIXI_ENVIRONMENT_NAME" ]; then

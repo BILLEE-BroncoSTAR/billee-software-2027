@@ -3,7 +3,7 @@
 gesture_node:
   ros__parameters:
     conf_threshold: 0.2   # OpenPose joint confidence below this counts as "not seen"
-    hold_frames: 2        # consecutive skeletons before a gesture (or its end) is reported; ~1 Hz on CPU
+    hold_frames: 2        # consecutive skeletons before a gesture (or its end) is reported; ~0.3 s at ~6 Hz
     commands:
       arms_u: stop
       t_pose: come_here

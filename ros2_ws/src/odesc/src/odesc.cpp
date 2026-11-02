@@ -44,7 +44,7 @@ hardware_interface::CallbackReturn OdescSystemHardware::on_init(
   }
 
   // ---- hardware-level parameters ----
-  std::string connection{"can0"};
+  std::string connection{"can2"};
   if (info_.hardware_parameters.count("can_interface")) {
     connection = info_.hardware_parameters.at("can_interface");
   } else {

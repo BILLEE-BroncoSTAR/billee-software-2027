@@ -16,7 +16,7 @@ def generate_launch_description():
 
     launch_args = [
         DeclareLaunchArgument("use_sim", default_value="true"),
-        DeclareLaunchArgument("sim_vio_profile", default_value="calibration"),
+        DeclareLaunchArgument("sim_vio_profile", default_value="validation"),
         DeclareLaunchArgument("sim_vio_seed", default_value="42"),
         DeclareLaunchArgument("sim_vio_truth_topic", default_value="/gz/odom"),
     ]

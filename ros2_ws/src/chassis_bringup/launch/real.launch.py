@@ -32,6 +32,7 @@ import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -57,7 +58,7 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "can_interface",
-        default_value="can0",
+        default_value="can2",
         description="SocketCAN interface for the ODESC bus. 'mock' or 'none' runs "
         "OdescSystemHardware in mock mode (no CAN, gear-ratio loopback feedback) so the "
         "stack can be brought up with no motor hardware. 'vcan0' etc. for a virtual bus.",

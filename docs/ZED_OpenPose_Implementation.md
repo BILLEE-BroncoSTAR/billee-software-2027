@@ -21,7 +21,7 @@ A glossary is at the end (§11).
 | Launch file (starts everything) | `ros2_ws/src/perception/people/launch/people_rover.launch.py` |
 | Jetson container image | `docker/Dockerfile.l4t-humble`, `docker/build_openpose.sh`, `docker/gpu_groups.sh` |
 | VS Code dev container for the Jetson | `.devcontainer/l4t/devcontainer.json` |
-| How to run it | `docs/RUN_GUIDE.md` §8 |
+| How to run it | `docs/RUN_GUIDE.md` section C |
 
 ---
 
@@ -174,11 +174,11 @@ flowchart TB
     N --> OP["OpenPose library (libopenpose.so)"]
     N --> SL["ZED SDK (libsl_zed.so)"]
     OP --> CF["Caffe (libcaffe.so)"]
-    CF --> DNN["cuDNN 8.9 + cuBLAS"]
+    CF --> DNN["cuDNN 9 + cuBLAS"]
     SL --> TRT["CUDA + TensorRT (neural depth modes)"]
-    DNN --> CU["CUDA 12.2 runtime"]
+    DNN --> CU["CUDA 12.6 runtime"]
     TRT --> CU
-    CU --> DRV["Jetson GPU driver (from the host, JetPack 6.0)"]
+    CU --> DRV["Jetson GPU driver (from the host, JetPack 6.1/6.2)"]
 ```
 
 ### 2.4 ROS 2 in five ideas
@@ -248,8 +248,8 @@ placed wrongly by the same offset.
   after a late change only redoes the steps after it.
 - The **NVIDIA container runtime** (`--runtime nvidia`) mounts the host's GPU driver and device
   files into the container. The container brings CUDA libraries; the driver must come from the
-  host, which is why host and image must use the same **JetPack** release (6.0 = L4T r36.3, the
-  version of the repository's `Prerelease` tag).
+  host, which is why host and image must use the same **JetPack** release: L4T 36.4, i.e.
+  JetPack 6.1 or 6.2, the release `main`'s Isaac ROS base image is built on.
 - A **dev container** is VS Code opening a folder *inside* a container
   (`.devcontainer/l4t/devcontainer.json`), so the editor, terminals and builds all run in the
   Jetson image.
@@ -565,15 +565,15 @@ frame `base_link`, add `MarkerArray` `/people/markers` and `Image` `/people/debu
 
 | Step | Contents | Why |
 | --- | --- | --- |
-| Base | `nvcr.io/nvidia/l4t-jetpack:r36.3.0` | NVIDIA's JetPack 6.0 image: Ubuntu 22.04 with CUDA 12.2, cuDNN 8.9, TensorRT 8.6 and NVIDIA's OpenCV 4.8 already installed |
+| Base | `nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_…` (as on `main`) | NVIDIA's Isaac ROS image on L4T 36.4: Ubuntu 22.04 with CUDA 12.6, cuDNN 9, TensorRT 10.3, OpenCV 4.5.4 and ROS 2 Humble already installed |
 | Basics | compilers, cmake, git, ... | build tools |
 | User | `ros_user` (uid 1000), passwordless sudo | don't run as root |
-| ZED SDK | 5.2 for L4T 36.3, silent install | camera driver + depth; 5.2 is the newest ZED SDK built for JetPack 6.0 |
+| ZED SDK | 5.4 for L4T 36.4, silent install | camera driver + depth |
 | OpenPose | built from source by `docker/build_openpose.sh` into `/opt/openpose` | no prebuilt OpenPose for current CUDA on ARM exists |
 | pixi | `/opt/pixi` | installs ROS 2 into the workspace |
 | Fix-ups | ZED folder permissions, `gpu_groups.sh` | see §5.3 |
 
-The base alone is a ~7 GB download. In the earlier JetPack 7.2 build on the Orin Nano, the
+The base alone is a ~12.6 GB download. In the earlier JetPack 7.2 build on the Orin Nano, the
 OpenPose step took ~10.5 min (6 parallel jobs); a rebuild where only late layers change takes
 seconds.
 
@@ -587,7 +587,7 @@ OpenPose commit `5c5d965` and applies these patches before building:
 | `-std=c++11/14` → `-std=c++17` | CUDA 12's Thrust needs at least C++14 (CUDA 13's needs C++17); OpenPose and Caffe ask for C++11. |
 | `prop.clockRate`, `prop.deviceOverlap`, `prop.kernelExecTimeoutEnabled` → constants | These `cudaDeviceProp` fields are deprecated in CUDA 12 and removed in CUDA 13; Caffe only prints them. |
 | `SetTotalBytesLimit(a, b)` → `SetTotalBytesLimit(a)` | Newer protobuf removed the two-argument form (used when reading the model file). |
-| `CPATH=/usr/local/cuda/include/cccl` | Only matters on CUDA 13, which moved Thrust/CUB into `include/cccl`; no effect on CUDA 12.2. |
+| `CPATH=/usr/local/cuda/include/cccl` | Only matters on CUDA 13, which moved Thrust/CUB into `include/cccl`; no effect on CUDA 12.6. |
 | `CUDA_ARCH_BIN=87` | Compile GPU code only for Orin, which cuts build time and size. |
 
 Model downloads in OpenPose's CMake are disabled (CMU's model server is offline); see §4.4.
@@ -601,8 +601,7 @@ Model downloads in OpenPose's CMake are disabled (CMU's model server is offline)
 | `--runtime nvidia` | GPU driver and device files from the host |
 | `--privileged`, `--volume /dev:/dev` | USB access to the ZED, CAN bus devices |
 | `--network=host` | the container shares the Jetson's network, so DDS and port 8765 work as if native |
-| `--hostname=rover`, `--add-host=rover:127.0.1.1` | fixed hostname; resolvable inside the container |
-| `PIXI_CACHE_DIR` in the workspace | pixi hard-links packages from its cache instead of copying (saves ~6 GB on the SD card) |
+| `--hostname=rover` | fixed hostname |
 | `postStartCommand` | `sudo gpu_groups.sh`, then `pixi install --environment l4t` |
 
 **Problem 1: user id remapping.** VS Code changes `ros_user`'s uid inside the container to match
@@ -617,13 +616,13 @@ host groups (`video` = 44, `render` = 993, 982 on the dev Nano) whose numbers di
 machines and don't exist in the image. VS Code opens every terminal with `docker exec`, which
 takes the user's groups from the container's `/etc/group`. Without them, CUDA fails with
 `error 100` (no device) or `801`. Fix: `docker/gpu_groups.sh` runs at start, reads the group id of
-each GPU device file and adds `ros_user` to it. (`tooling/rover-ros2`, which starts the container
-without VS Code, passes the same group ids with `--group-add`.)
+each GPU device file and adds `ros_user` to it. (`tooling/rover-ros2` and `docker/compose.yaml`
+run the container as root, which needs no extra groups.)
 
 **Problem 3: two copies of GLib.** A program loads **shared libraries** (`.so` files) at start-up;
 the dynamic linker loads each library name once and every user shares it. OpenPose links OpenCV's
-GUI module, which pulls in the system's GLib (2.72 on Ubuntu 22.04, 2.80 on 24.04); ROS from
-pixi brings GLib 2.88. Parts of each
+GUI module, which pulls in the system's GLib 2.72 (Ubuntu 22.04); ROS from pixi brings GLib
+2.88. Parts of each
 got mixed, and the node aborted at start with
 `libgio-2.0.so.0: undefined symbol g_variant_builder_...`. Fix (`zed_openpose/CMakeLists.txt`):
 link pixi's GLib first and force it to stay loaded (`-Wl,--no-as-needed`), so the whole process
@@ -631,7 +630,7 @@ uses that one copy. Newer GLib is backward compatible, so the system libraries w
 
 ### 5.4 Running it
 
-Full commands are in `docs/RUN_GUIDE.md` §8. Short version, in the dev container on the Jetson:
+Full commands are in `docs/RUN_GUIDE.md` section C. Short version, in the dev container on the Jetson:
 
 ```bash
 cd ros2_ws
@@ -668,11 +667,10 @@ From `zed_openpose/config/zed_openpose.yaml` and `people/config/gestures.yaml`:
 
 ## 7. Verification done so far
 
-**The JetPack 6.0 image has not been built or tested yet** (the dev Orin Nano is being reflashed
-from JetPack 7.2 to 6.0). Everything below was verified on 2026-11-02 with the earlier JetPack 7.2
-version of the image (CUDA 13.2, ZED SDK 5.5) on the dev Orin Nano, in the dev container without the
-camera. The node, messages, 3D math and gesture code are the same in both; only the image's
-versions differ.
+**The current image (`main`'s Isaac ROS base, L4T 36.4) has not been built or tested yet.**
+Everything below was verified on 2026-11-02 with an earlier JetPack 7.2 version of the image
+(CUDA 13.2, ZED SDK 5.5) on the dev Orin Nano, in the dev container without the camera. The node,
+messages, 3D math and gesture code are the same; only the image's versions differ.
 
 | Check | Result |
 | --- | --- |
@@ -685,7 +683,7 @@ versions differ.
 | `zed_openpose_node` without a camera | exits with `CAMERA NOT DETECTED` (expected) |
 | OpenPose BODY_25 on the GPU, standalone test on a sample photo | 5 people, 25 keypoints each |
 
-**Not yet tested:** the JetPack 6.0 image; anything with the ZED 2i connected (live depth, 3D placement accuracy, gestures
+**Not yet tested:** the L4T 36.4 image; anything with the ZED 2i connected (live depth, 3D placement accuracy, gestures
 on real people, end-to-end frame rate).
 
 Run the tests yourself:
@@ -727,7 +725,7 @@ load their GPU code lazily from the SD card on first use. Later frames are not a
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `ZED open failed: CAMERA NOT DETECTED` | camera unplugged, USB 2 port, or no udev rule on the host | `lsusb \| grep 2b03` on the host; use a USB 3 port; install the udev rule (RUN_GUIDE §2.2) |
+| `ZED open failed: CAMERA NOT DETECTED` | camera unplugged, USB 2 port, or no udev rule on the host | `lsusb \| grep 2b03` on the host; use a USB 3 port; install the udev rule (RUN_GUIDE section C) |
 | `CUDA error 100` / `801`, `NvRmMemInitNvmap failed: Permission denied` | `ros_user` lacks the GPU device groups | `docker exec -u root <container> gpu_groups.sh`, or rebuild the dev container |
 | `OpenPose: ... prototxt ... not found` (FATAL) | models not downloaded | run `get_openpose_models.sh` |
 | `No TF base_link <- zed_left_camera_frame` | `robot_state_publisher` not running | use `people_rover.launch.py` (standalone) or start the drivetrain launch |
@@ -763,7 +761,7 @@ load their GPU code lazily from the SD card on first use. Later frames are not a
 | Disparity | horizontal pixel shift of a point between left and right images |
 | Frame (coordinate) | origin + axes that a 3D point is expressed in |
 | Inference | running a trained network on new input |
-| JetPack / L4T | NVIDIA's OS + driver bundle for Jetson (JetPack 6.0 = Linux for Tegra r36.3) |
+| JetPack / L4T | NVIDIA's OS + driver bundle for Jetson (JetPack 6.1/6.2 = Linux for Tegra r36.4) |
 | Keypoint | one body joint found by OpenPose: (u, v, score) |
 | Launch file | script that starts several ROS nodes with their parameters |
 | Message | typed data structure sent over a topic |

@@ -1,0 +1,12 @@
+<library path="pxx">
+  <class
+    name="pxx/PxxSystemHardware"
+    type="pxx::PxxSystemHardware"
+    base_class_type="hardware_interface::SystemInterface">
+    <description>
+      ros2_control SystemInterface for the BILLEE arm: P17 / P20 motors on a
+      shared CAN bus (one per arm joint), driven over a raw Linux SocketCAN socket.
+      Position command interface, position + velocity state interfaces.
+    </description>
+  </class>
+</library>

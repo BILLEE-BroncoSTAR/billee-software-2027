@@ -13,9 +13,7 @@
 
   "runArgs": [
     "--privileged",
-    // Jetson (AGX Orin / Orin Nano): use the nvidia runtime, NOT "--gpus all". It mounts the
-    // host's GPU driver and device nodes; postStartCommand's gpu_groups.sh gives ros_user the
-    // host groups that own those nodes ("CUDA error 100/801" otherwise).
+    // JetPack 7 (Thor/Orin): use the nvidia runtime, NOT "--gpus all" (unreliable on JP7).
     "--runtime", "nvidia",
     "-e=NVIDIA_VISIBLE_DEVICES=all",
     "-e=NVIDIA_DRIVER_CAPABILITIES=all",
@@ -23,23 +21,18 @@
     "--pid=host",
     "--ipc=host",
     "--hostname=rover",
-    // host networking copies the host's /etc/hosts, which lacks "rover" (sudo warns otherwise)
-    "--add-host=rover:127.0.1.1",
     "--volume", "/dev:/dev",
     "--volume", "/dev/shm:/dev/shm",
     // kept only for optional local debugging on a Jetson with a display attached
     "--volume", "/tmp/.X11-unix:/tmp/.X11-unix"
   ],
 
+  // gpu_groups.sh: CUDA as ros_user (zed_openpose) needs the host groups that own the GPU device
+  // nodes; VS Code's `docker exec` terminals only get groups listed in the container's /etc/group.
   "postStartCommand": "sudo /usr/local/bin/gpu_groups.sh && cd ros2_ws && pixi install --environment l4t",
 
   "containerEnv": {
     "ROS_DISTRO": "humble",
-    "BILLEE_PIXI_ENV": "l4t",
-    // pixi's package cache inside the workspace mount (ros2_ws/.pixi is git-ignored), so the env
-    // hardlinks from it instead of copying (no hardlinks across mounts): halves the disk the env
-    // needs on the Jetson's SD card, and the cache survives container rebuilds.
-    "PIXI_CACHE_DIR": "${containerWorkspaceFolder}/ros2_ws/.pixi/cache",
     "NVIDIA_DRIVER_CAPABILITIES": "all",
     "DISPLAY": "${localEnv:DISPLAY}"
   },

@@ -1,14 +1,17 @@
 # Plan: Fix the Remaining `colcon test` Failures
 
-Status 2026-11-02, branch `Prerelease-PoseDev` @ `a2745f8`, run on the dev Orin Nano (`l4t` env).
-The same failures appear in the x86 `default` env: the linters and their versions are identical.
+Measured 2026-11-02 on the dev Orin Nano (`l4t` env), on `Prerelease-PoseDev` @ `a2745f8`, whose
+drivetrain packages are identical to `main`'s; the x86 `default` env has the same linters and
+versions. Packages added to `main` since (`pxx`, the roboclaw submodules) were not part of that run:
+re-run `colcon test` on `main` first and add any new findings.
 
 ```
 Summary: 144 tests, 0 errors, 51 failures, 19 skipped
 ```
 
-**None of these failures is a functional test.** Every functional test passes (gestures, 3D lift,
-zed2i, robot_description). The failures come from **linters**: tools that check code style and file
+**None of these failures is a functional test.** The functional tests (gestures, 3D lift, zed2i,
+robot_description) passed in that run, with pytest pinned below 9 (step 0); on `main` the Python ones
+can't run at all until that pin lands. The 51 failures come from **linters**: tools that check code style and file
 format. ROS packages turn them on with `ament_lint_auto` in `CMakeLists.txt`, and each one reports
 as a test. Fixing them changes formatting only, not behaviour.
 
@@ -25,17 +28,18 @@ whenever any of its linters fails. That leaves **36 actual findings**:
 | D | `uncrustify` | C++ formatting (ROS 2 style) | 9 | comms (2), navigation (1), odesc (5), teleop (1) | Real: brace placement, initialiser lists on their own line, missing final newline |
 | E | `lint_cmake` | CMake style | 1 | teleop | Real: trailing whitespace on `CMakeLists.txt:40` |
 
-Not failures, but seen in the same logs (fixed in step 6):
+Separately, **every Python test package aborts before running** (`people`, `robot_description`, and
+any `ament_python` package): `pixi.lock` resolves pytest 9.1.1, and Humble's `launch_testing`
+pytest plugin uses the hook argument `path`, which pytest 9 removed
+(`PluginValidationError: Plugin 'launch_testing' ...`). Fixed in step 0.
 
-- CMake deprecation warnings `Compatibility with CMake < 3.10 will be removed`: `comms`, `odesc`,
-  `navigation`, `zed2i` declare `cmake_minimum_required(VERSION 3.8)`.
-- `people/config/gestures.yaml` says `hold_frames ... ~1 Hz on CPU`, a stale comment from the
-  removed CPU pose prototype (OpenPose now runs on the GPU at ~6 Hz).
+Not failures, but seen in the same logs (fixed in step 6): CMake deprecation warnings
+`Compatibility with CMake < 3.10 will be removed`: `comms`, `odesc`, `navigation`, `zed2i` declare
+`cmake_minimum_required(VERSION 3.8)`.
 
 ## 2. Ground rules
 
-- **Separate branch**, e.g. `fix/lint` from `Prerelease-PoseDev` (it carries the drivetrain changes
-  of `be96a49`, so branching from `main` would conflict). Keep it out of the pose work.
+- **Separate branch from `main`**, e.g. `fix/lint`. Keep it out of the pose work.
 - **One commit per step below**, so a formatting change can be reviewed (or reverted) on its own.
 - **Use the linters from the pixi env**, not system ones: the env pins the versions colcon uses
   (uncrustify 0.83, flake8 7.3, pycodestyle 2.14). Different versions format differently.
@@ -44,6 +48,20 @@ Not failures, but seen in the same logs (fixed in step 6):
 - All commands below run from `ros2_ws/` in either env; examples use `-e default`.
 
 ## 3. Steps
+
+### Step 0: pytest 9 (all Python tests)
+
+In `ros2_ws/pixi.toml`, add to both `[feature.linux-cuda.dependencies]` and
+`[feature.aarch64-cpu.dependencies]`:
+
+```toml
+# Humble's launch_testing pytest plugin uses the hook argument `path`, removed in pytest 9
+pytest = "<9"
+```
+
+then `pixi lock` (resolves pytest 8.4.2; the lock diff should only touch pytest). Verified on
+`Prerelease-PoseDev` before it was reset to `main`'s `pixi.toml`: `people` and `robot_description`
+tests then run and pass.
 
 ### Step 1: xmllint (A), 5 findings: serve the schema locally
 
@@ -152,9 +170,7 @@ Check: `pixi run -e default ament_lint_cmake src/teleop/CMakeLists.txt`.
 1. `cmake_minimum_required(VERSION 3.8)` → `3.10` in `comms`, `odesc`, `navigation` and
    `perception/zed2i` `CMakeLists.txt` (removes the deprecation warnings; the pixi envs ship
    CMake 3.31).
-2. `perception/people/config/gestures.yaml`: change the `hold_frames` comment to
-   `~0.3 s at ~6 Hz on the Orin Nano`.
-3. **Decision for the team:** `people`, `people_msgs` and `zed_openpose` run their functional tests
+2. **Decision for the team:** `people`, `people_msgs` and `zed_openpose` run their functional tests
    but no linters. Turning linters on (`ament_lint_auto` + `test_flake8.py`/`test_pep257.py` for
    `people`) would keep them consistent with the rest, but will surface new findings (e.g. D213 in
    `gesture_node.py`). Recommended: do it in a follow-up on the pose branch, not here.
@@ -173,7 +189,7 @@ Check: `pixi run -e default ament_lint_cmake src/teleop/CMakeLists.txt`.
 
 2. Behaviour check of the reformatted C++ (formatting shouldn't change it, but these nodes drive
    motors):
-   - ODESC shadow test on vCAN (`docs/RUN_GUIDE.md` §5, "ODESC shadow test"): drive the sim, confirm
+   - ODESC shadow test on vCAN (`docs/RUN_GUIDE.md`, "Nav2 → ODESC shadow test in Gazebo"): drive the sim, confirm
      the ODESC path sees the same commands as before.
    - teleop: gamepad drives the sim rover.
    - comms: `GpsNode` starts, publishes NavSatFix (on the rover if a GPS is attached, otherwise
@@ -185,6 +201,7 @@ Check: `pixi run -e default ament_lint_cmake src/teleop/CMakeLists.txt`.
 
 | Step | Effort | Risk |
 | --- | --- | --- |
+| 0 pytest pin | 10 min | none (test-only dependency) |
 | 1 xmllint | 15 min | none (test-only environment change) |
 | 2 flake8 | 20 min | low; launch files only, plus one import |
 | 3 pep257 | 5 min | none |
@@ -193,7 +210,7 @@ Check: `pixi run -e default ament_lint_cmake src/teleop/CMakeLists.txt`.
 | 6 cleanups | 10 min | none |
 | 7 verify | 30–45 min | catches anything above |
 
-About 2 hours in total, one reviewable PR with 6–7 commits.
+About 2 hours in total, one reviewable PR with 7–8 commits.
 
 ## 5. Keeping it at zero afterwards
 

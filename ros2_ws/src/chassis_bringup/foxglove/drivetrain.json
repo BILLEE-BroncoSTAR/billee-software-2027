@@ -17,8 +17,7 @@
       "followTf": "base_link",
       "scene": {
         "transforms": { "showLabel": true, "labelSize": 0.06, "axisScale": 0.3 },
-        "backgroundColor": "#303030",
-        "meshUpAxis": "z_up"
+        "backgroundColor": "#303030"
       },
       "transforms": {},
       "topics": {

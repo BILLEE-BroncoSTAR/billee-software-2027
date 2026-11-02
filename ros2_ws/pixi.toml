@@ -15,19 +15,11 @@ platforms = ["linux-64-cuda"]
 [feature.linux-cuda.tasks]
 build = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release' ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' ' -DCMAKE_CXX_FLAGS=\"-Wl,--allow-shlib-undefined\"'"
 
-# conda-forge's libignition-rendering6 6.6.3 bakes in a broken OGRE plugin dir
-# (".../$OGRE_LIB_DIRECTORY/OGRE-Next"), so Gazebo segfaults with "unable to find OpenGL 3+
-# Rendering Subsystem" as soon as a camera sensor renders. Point it at the real dir.
-[feature.linux-cuda.activation.env]
-OGRE2_RESOURCE_PATH = "$CONDA_PREFIX/lib/OGRE-Next"
-
 [feature.linux-cuda.dependencies]
 ros-humble-desktop = ">=0.10.0,<0.11"
 colcon-common-extensions = "*"
 flake8-docstrings = "*"
 pytest-cov = "*"
-# Humble's launch_testing pytest plugin uses the hook argument `path`, removed in pytest 9
-pytest = "<9"
 ros-humble-turtlesim = ">=1.4.3,<2"
 
 [feature.linux-cuda.pypi-dependencies]
@@ -50,8 +42,6 @@ ros-humble-desktop = ">=0.10.0,<0.11"
 colcon-common-extensions = "*"
 flake8-docstrings = "*"
 pytest-cov = "*"
-# Humble's launch_testing pytest plugin uses the hook argument `path`, removed in pytest 9
-pytest = "<9"
 ros-humble-turtlesim = ">=1.4.3,<2"
 
 [feature.aarch64-cpu.pypi-dependencies]
@@ -91,7 +81,10 @@ ros-humble-nav2-bringup = ">=1.1.20,<2"
 ros-humble-robot-localization = ">=3.5.4,<4"
 
 [activation]
-scripts = ["install/setup.sh"]
+# Pixi has already activated the selected environment (default, mac-cpu, or
+# l4t).  Source only this workspace's overlay so we do not re-source the
+# underlay captured when another architecture built install/setup.sh.
+scripts = ["install/local_setup.sh"]
 
 # Same ROS 2 domain on every machine (Jetson `l4t`, ground station `default`) so a
 # ground-station teleop node and the Jetson's diff_drive_controller share one DDS graph.
