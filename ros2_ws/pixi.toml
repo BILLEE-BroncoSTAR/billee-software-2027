@@ -26,6 +26,8 @@ ros-humble-desktop = ">=0.10.0,<0.11"
 colcon-common-extensions = "*"
 flake8-docstrings = "*"
 pytest-cov = "*"
+# Humble's launch_testing pytest plugin uses the hook argument `path`, removed in pytest 9
+pytest = "<9"
 ros-humble-turtlesim = ">=1.4.3,<2"
 
 [feature.linux-cuda.pypi-dependencies]
@@ -48,6 +50,8 @@ ros-humble-desktop = ">=0.10.0,<0.11"
 colcon-common-extensions = "*"
 flake8-docstrings = "*"
 pytest-cov = "*"
+# Humble's launch_testing pytest plugin uses the hook argument `path`, removed in pytest 9
+pytest = "<9"
 ros-humble-turtlesim = ">=1.4.3,<2"
 
 [feature.aarch64-cpu.pypi-dependencies]

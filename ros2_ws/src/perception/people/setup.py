@@ -23,6 +23,11 @@ setup(
     maintainer_email='luquilanzi@gmail.com',
     description='Arm gestures from zed_openpose skeletons, and the rover people launch.',
     license='Apache-2.0',
+    extras_require={
+        'test': [
+            'pytest',
+        ],
+    },
     entry_points={
         'console_scripts': [
             'gesture_node = people.gesture_node:main',

@@ -15,9 +15,10 @@
     "--privileged",
     // Jetson (AGX Orin / Orin Nano): use the nvidia runtime, NOT "--gpus all".
     "--runtime", "nvidia",
-    // ...and request the GPU through CDI (JetPack 7 keeps the spec in /var/run/cdi/nvidia.yaml):
-    // it also adds the host gids of the GPU nodes (video, render), which CUDA needs as the
-    // non-root ros_user ("CUDA error 801/100" otherwise); render's gid differs between hosts.
+    // ...and request the GPU through CDI (JetPack 7 keeps the spec in /var/run/cdi/nvidia.yaml).
+    // CDI's host video/render gids reach only the container's first process, not VS Code's
+    // `docker exec` terminals: postStartCommand's gpu_groups.sh adds them to ros_user for those
+    // ("CUDA error 100/801" otherwise).
     "--device", "nvidia.com/gpu=all",
     "-e=NVIDIA_VISIBLE_DEVICES=all",
     "-e=NVIDIA_DRIVER_CAPABILITIES=all",
@@ -25,13 +26,15 @@
     "--pid=host",
     "--ipc=host",
     "--hostname=rover",
+    // host networking copies the host's /etc/hosts, which lacks "rover" (sudo warns otherwise)
+    "--add-host=rover:127.0.1.1",
     "--volume", "/dev:/dev",
     "--volume", "/dev/shm:/dev/shm",
     // kept only for optional local debugging on a Jetson with a display attached
     "--volume", "/tmp/.X11-unix:/tmp/.X11-unix"
   ],
 
-  "postStartCommand": "cd ros2_ws && pixi install --environment l4t",
+  "postStartCommand": "sudo /usr/local/bin/gpu_groups.sh && cd ros2_ws && pixi install --environment l4t",
 
   "containerEnv": {
     "ROS_DISTRO": "humble",

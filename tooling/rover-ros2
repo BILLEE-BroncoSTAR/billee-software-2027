@@ -55,6 +55,7 @@ case "$action" in
       --pid host
       --ipc host
       --hostname rover
+      --add-host rover:127.0.1.1
       --volume /dev:/dev
       --volume /dev/shm:/dev/shm
       --volume /tmp/.X11-unix:/tmp/.X11-unix

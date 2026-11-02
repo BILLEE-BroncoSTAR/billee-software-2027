@@ -143,9 +143,13 @@ RUN apt-get update && apt-get install -y \
 # The ZED installer leaves /usr/local/zed at 770 for ros_user's build-time uid (1000), but the
 # devcontainer remaps ros_user to the host user's uid (2002 on the dev Orin Nano) and only re-owns
 # $HOME: make the SDK readable by anyone, and settings/ + resources/ (calibration files and AI
-# models the SDK downloads at run time) writable. (GPU access as ros_user comes from the
-# devcontainer's `--device nvidia.com/gpu=all`, which adds the host's video/render gids.)
+# models the SDK downloads at run time) writable.
 RUN chmod -R a+rX /usr/local/zed && chmod -R a+rwX /usr/local/zed/settings /usr/local/zed/resources
+
+# GPU access as ros_user: joins the host gids of the GPU device nodes at container start (see the
+# script; the devcontainer's postStartCommand runs it)
+COPY docker/gpu_groups.sh /usr/local/bin/gpu_groups.sh
+RUN chmod 755 /usr/local/bin/gpu_groups.sh
 
 # Ask the nvidia runtime for the GPU even under plain `docker run` (the devcontainer also passes it):
 # without it, nothing from the host (libcuda, /dev/nvhost-*, the Tegra multimedia libs) is mounted.

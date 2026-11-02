@@ -126,8 +126,12 @@ Build: AGX Orin → normal `pixi run -e l4t build`; Orin Nano (8 GB) → the low
   not the board, so AGX Orin and Orin Nano use the same image as long as both run the same L4T.
   A board on a different JetPack builds with `--build-arg L4T_VERSION=` matching its release.
 - `--runtime nvidia` (Jetson's GPU runtime), not `--gpus all`, plus `--device nvidia.com/gpu=all`
-  (CDI): it adds the host's `video` and `render` gids, which CUDA needs as the non-root
-  `ros_user` (`CUDA error 801` / `no CUDA-capable device` otherwise).
+  (CDI). CUDA as the non-root `ros_user` needs the host gids of the GPU device nodes (`video`,
+  `render`, ...; `CUDA error 100/801` otherwise). CDI gives them only to the container's first
+  process, so the devcontainer's `postStartCommand` runs `sudo gpu_groups.sh`
+  (`docker/gpu_groups.sh`), which adds `ros_user` to them for every `docker exec` / VS Code
+  terminal. In a container you `docker exec` into yourself, run it once as root:
+  `docker exec -u root <container> gpu_groups.sh`.
 - Host network + `/dev` → `can0`, ZED and DDS to the ground station all work; hostname `rover`.
 - `can0` is a host interface: bring it up on the Jetson host (`tooling/can-up` or the service),
   never inside the container.
