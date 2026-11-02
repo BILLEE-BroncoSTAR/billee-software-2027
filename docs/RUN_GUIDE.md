@@ -5,7 +5,7 @@ Each section has a **▸ What this does** dropdown for a refresher on how it wor
 
 | tag | machine | env | runs |
 |-----|---------|-----|------|
-| **[rover]** | Jetson AGX Orin (BILLEE 2027) or Orin Nano, headless | `l4t` | sim/real bring-up, controllers, `foxglove_bridge` |
+| **[rover]** | Jetson AGX Orin (BILLEE 2027) or Orin Nano, headless | `l4t` | sim/real bring-up, controllers, `foxglove_bridge`, zed-openpose (§8) |
 | **[ground]** | x86 Linux with monitor | `default` | gamepad teleop, RViz, Foxglove Studio |
 | **[mac]** | Apple Silicon, devcontainer | `mac-cpu` | headless sim + Foxglove Studio (no RViz, gamepad, or CAN) |
 
@@ -209,7 +209,9 @@ View: Foxglove Studio → `ws://localhost:8765` (or `ws://<rover-ip>:8765`) → 
 - `rover.launch.py` = robot + controllers on the chosen backend (Gazebo or ODESC CAN) +
   `foxglove_bridge` on :8765. No viewer or teleop.
 - `ground_station.launch.py` = joystick teleop + RViz + a local `foxglove_bridge`.
-- `xvfb-run -a` gives Gazebo a fake display on headless machines. Never needed for RViz.
+- `xvfb-run -a` gives Gazebo a fake display on headless machines (Mac, Jetson). The x86
+  devcontainer has no `xvfb-run`: it uses the host's display and GPU, so drop the prefix there.
+  Never needed for RViz.
 - `fprime_gds:=true` opens the F´ GDS web UI (needs a real browser/desktop). URL priority:
   `fprime_gds_url:=` arg → `$FPRIME_GDS_URL` → launch default. Team default lives in
   `pixi.toml` `[activation.env]`.
@@ -325,54 +327,73 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 
 ---
 
-## 8. People / pose (OpenPose, sim)
+## 8. People / pose (zed-openpose on the rover)
+
+A ROS 2 port of [stereolabs/zed-openpose](https://github.com/stereolabs/zed-openpose): CMU OpenPose
+runs on the Jetson's GPU (CUDA + cuDNN) on the ZED 2's left image, and each keypoint is placed in 3D
+from the ZED's depth. Rover only, with the ZED plugged in; the ground station just views it.
 
 ```bash
-src/perception/people/scripts/get_openpose_models.sh          # once: ~200 MB into ros2_ws/models/
-pixi run -e <env> build --packages-select robot_description chassis_bringup people
-# terminal 1 — sim with one standing person 4 m ahead (or worlds/people_walking.sdf)
-xvfb-run -a ros2 launch chassis_bringup sim_gz.launch.py world_file:=worlds/people.sdf navigation:=true foxglove:=true headless:=true
-# terminal 2 — pose (wait for terminal 1 to settle)
-ros2 launch people people.launch.py net_height:=256
+# [rover] once: OpenPose models (~300 MB into ros2_ws/models/openpose; CMU's server is offline)
+src/perception/zed_openpose/scripts/get_openpose_models.sh
+pixi run -e l4t build --packages-select people_msgs zed_openpose people robot_description
+# [rover] ZED + OpenPose + gestures + robot_state_publisher + foxglove_bridge
+ros2 launch people people_rover.launch.py
+#   …next to the drivetrain (real.launch.py foxglove:=true): add standalone:=false
+#   …replay a ZED recording instead of the camera: svo_path:=/path/rec.svo2
+# [ground] Foxglove → ws://<rover-ip>:8765 → import ros2_ws/src/perception/people/foxglove/people_rover.json
+#          (RViz: fixed frame base_link, MarkerArray /people/markers, Image /people/debug_image)
 ```
-Foxglove → `ws://localhost:8765` → import `ros2_ws/src/perception/people/foxglove/people.json`
-(left: skeleton on the camera image; right: 3D skeleton in `odom`). On a Mac CPU the first
-skeleton takes ~10 s and then updates every few seconds — each one stays up until the next.
-
-Record once, then iterate without Gazebo:
-```bash
-ros2 bag record -o people_run1 /depth_cam/image /depth_cam/depth_image /depth_cam/camera_info /tf /tf_static /gz/odom /clock /robot_description
-ros2 bag play people_run1 --clock        # + people.launch.py; Foxglove can also open the bag directly
-```
-Tests: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest src/perception/people/test`
 
 <details><summary>▸ What this does</summary>
 
-- `openpose_node` syncs the camera's colour image, depth image and `camera_info`, runs the
-  OpenPose COCO model (OpenCV DNN, CPU), takes the strongest peak per joint (**one person**),
-  reads the depth under each joint, back-projects it into `camera_link_optical`, and transforms
-  it into `odom` at the image's timestamp — i.e. where the **rover believes** its camera is.
-- Publishes `/people/debug_image` (2D skeleton) and `/people/markers` (red 3D skeleton).
-- Joints whose depth is far from the body's median are dropped (thin limbs can hit background).
-- `navigation:=true` is required: the EKF owns `odom → base_link` (diff-drive TF is off).
-- Keypoints are COCO-18 — the same order as ZED `BODY_18` and `trt_pose`, so a faster backend
-  can replace the model later without changing the 3D/TF part.
-- Weights come from a pinned mirror (CMU's server is offline) and are checksum-verified.
-- Bags: ~64 MB/s at 1280×720 RGB + depth — keep clips short. Pytest needs
-  `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` because the env's `launch_testing` plugin breaks pytest.
-- The Gazebo people models download from Gazebo Fuel on first launch (needs internet).
-- `headless:=true` runs only the Gazebo server (sensors still render under `xvfb-run`); the
-  hidden GUI otherwise eats about half the CPU OpenPose needs.
-- `net_height` is OpenPose's input height: 368 ≈ 4.7 s/frame, 256 ≈ 2.3 s/frame on a Mac CPU.
-- TF is one chain: `odom → base_footprint` (EKF) `→ base_link` (URDF) `→ camera_link → camera_link_optical`.
-  The EKF is planar (`two_d_mode`), fuses wheel speed + yaw rate and synthetic-VIO x, y, yaw.
-- The skeleton's few-degree heading / sideways error is the synthetic VIO's deliberate noise —
-  the only absolute heading source in sim. Its yaw drift is a random walk that grows with time,
-  **even when parked**. Default `profile: calibration` (nominal error) in
-  `zed2i/config/synthetic_vio.yaml`; `validation` (up to 2× error) reached ~13° in 5 min — use it
-  only for EKF evaluation runs.
-- Run **one sim at a time** per container/machine: two sims share ROS and Gazebo topics (two
-  clocks, two `/gz/odom`), which corrupts TF and can tip or freeze the rover.
+- `zed_openpose_node` (package `zed_openpose`) keeps the sample's pipeline: a ZED thread grabs the
+  left image + XYZ point cloud at 720×405 while an OpenPose thread runs the previous frame through
+  `op::PoseExtractorCaffe` (BODY_25, `net_resolution` 320x240) on the GPU. Every joint takes the
+  XYZ under its pixel, else the nearest valid one within 10 px; a limb is drawn only if shorter
+  than 1 m and within 1.8 m of the person's centre. Multi-person.
+- The sample's windows became topics: `/people/markers` (3D skeletons, its OpenGL view),
+  `/people/debug_image` + `/compressed` (OpenPose's rendering, its OpenCV view), optional
+  `/zed/points` (`publish_cloud:=true`) and `/zed/depth_image` (`publish_depth:=true`).
+  `/people/skeletons` (`people_msgs/Skeletons`) carries every person's 2D + 3D joints.
+- Placement: the ZED reports points in its left lens frame with ROS axes; the node adds the
+  static TF `camera_link → zed_left_camera_frame` (half a baseline to +y) and transforms into
+  `base_link`, so skeletons are **relative to the rover**. The sample's floor-plane alignment is
+  replaced by the URDF mount: measure the real ZED mount and set it in
+  `robot_description/urdf/camera.urdf.xacro`, or every skeleton is off by the difference.
+- The sample's flags are ROS params with the same names: `zed_openpose/config/zed_openpose.yaml`.
+- Build: `docker/Dockerfile.l4t-humble` compiles OpenPose with CUDA/cuDNN for the Orin (sm_87)
+  into `/opt/openpose` (needs the nvidia default runtime at build time, see the README). Off the
+  Jetson, `zed_openpose` builds only its unit test and skips the node.
+- No ZED plugged in → the node exits with `ZED open failed`. No sim or CPU fallback.
+</details>
+
+### 8.1 Gestures
+
+`people_rover.launch.py` also starts `gesture_node`. It takes the person closest to the rover from
+`/people/skeletons` and publishes `/people/gesture` (`people_msgs/Gesture`) once per frame:
+
+| Gesture | Pose | Default `command` |
+|---|---|---|
+| `arms_u` | both arms up in a U: upper arms out + forearms up, or arms straight up | `stop` |
+| `t_pose` | both arms straight out to the sides | `come_here` |
+| `right_arm_up` | the person's right hand above their head, left arm down | `follow_me` |
+| `left_arm_up` | the person's left hand above their head, right arm down | `resume` |
+
+```bash
+ros2 topic echo /people/gesture                  # gesture, command, confidence, position (base_link)
+```
+
+<details><summary>▸ What this does</summary>
+
+- Rules on the **2D** keypoints, in shoulder widths from the neck (any distance, no depth needed);
+  "right/left" are the person's own sides, also when facing away. Works for BODY_25 and COCO.
+- A gesture (or going back to `none`) is reported after `hold_frames` (2) frames in a row.
+- Commands live in `people/config/gestures.yaml` (placeholders); a navigation node subscribes to
+  `/people/gesture` and acts on `command` and `position`.
+- `/people/gesture_marker`: the gesture as yellow text above the person in Foxglove.
+- New gestures: a rule + a test in `people/gestures.py` / `test/test_gestures.py`, a constant in
+  `people_msgs/msg/Gesture.msg`, and a `commands.<name>` line in `gestures.yaml`.
 </details>
 
 ---
@@ -412,6 +433,8 @@ Tests: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest src/perception/people/
 | `package not found` / missing meshes | Not built or not sourced: build (§3), open a new `pixi shell`. |
 | `colcon build` killed (Orin Nano) | RAM: use the low-RAM build in §3. |
 | Gazebo window never appears | Expected headless. Use `xvfb-run -a`, view in RViz/Foxglove. |
+| `xvfb-run: No such file or directory` (x86 devcontainer) | Drop `xvfb-run -a`; the container renders on the host display. |
+| Gazebo segfaults: `unable to find OpenGL 3+ Rendering Subsystem` (x86) | `OGRE2_RESOURCE_PATH` unset — run inside `pixi shell`/`pixi run` (set in `pixi.toml`), or `export OGRE2_RESOURCE_PATH=$CONDA_PREFIX/lib/OGRE-Next`. |
 | RViz empty / gamepad doesn't move rover | Not on the rover's DDS graph — §9. Then `ros2 topic echo /joy` and hold RB. |
 | `joy_node` not found | `ros2 pkg executables joy`; if empty add `ros-humble-joy` to `pixi.toml`. |
 | `/joy` silent | `ls /dev/input/js*`, `jstest`; check `device_id`. |
@@ -422,7 +445,9 @@ Tests: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest src/perception/people/
 | Real: controllers `inactive` | `can0` down or wrong bitrate → `can-up`, check `dmesg`. |
 | Real: hangs "Loading controller" | `use_sim_time:=true` with no `/clock`. Use `real.launch.py` or `-p use_sim_time:=false`. |
 | `vcan0`: no frames | `can-up vcan0` first; expect six `0x07` on activate, `0x0D` while driving. |
-| People: no / very slow skeletons | `pgrep -af "ign gazebo"` — only one sim may run (a stray one fights for topics and CPU; `pkill -9 -f "ign gazebo"`). Use `headless:=true`, `net_height:=256`. Mac: `top` — if `cpptools` is high, **Developer: Reload Window** (limits in `ros2_ws/.vscode/settings.json`) or give Docker/Rancher more RAM. |
-| People world: `Failed to configure controller`, no `odom` | First launch stalls Gazebo while it downloads the person model. Relaunch — it's cached now. |
 | Rover tipped over / frozen, `jump back in time` warnings | Two sims running at once — `pgrep -af "ign gazebo"`; keep one. |
-| Skeleton a few degrees / ~0.3 m off sideways | Expected: the rover's believed heading carries the synthetic VIO's noise, which grows the longer the sim runs (§8). Check `ros2 param get /synthetic_vio profile` is `calibration`; restart the sim to reset the drift. |
+| Sim: `odom` heading a few degrees off, growing while parked | Expected: the synthetic VIO's deliberate yaw drift (a random walk). Check `ros2 param get /synthetic_vio profile` is `calibration` (`validation` = up to 2× error); restart the sim to reset it. |
+| `zed_openpose`: `ZED open failed: CAMERA NOT DETECTED` | ZED not plugged in (USB 3 port) or not visible in the container: `lsusb \| grep 2b03` on host and in the container. |
+| `zed_openpose` build: "skipping the node" on the Jetson | Image built without OpenPose: rebuild the l4t image with the nvidia default runtime (README → Jetson host prep); check `ls /opt/openpose/lib`. |
+| `OpenPose: ... prototxt` / model not found | Run `src/perception/zed_openpose/scripts/get_openpose_models.sh` (inside `pixi shell -e l4t`). |
+| Debug image but no 3D skeleton, `No TF base_link <- zed_left_camera_frame` | No `robot_state_publisher`: use `standalone:=true`, or run `real.launch.py` alongside. |

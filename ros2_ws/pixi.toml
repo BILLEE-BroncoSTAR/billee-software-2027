@@ -15,6 +15,12 @@ platforms = ["linux-64-cuda"]
 [feature.linux-cuda.tasks]
 build = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release' ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' ' -DCMAKE_CXX_FLAGS=\"-Wl,--allow-shlib-undefined\"'"
 
+# conda-forge's libignition-rendering6 6.6.3 bakes in a broken OGRE plugin dir
+# (".../$OGRE_LIB_DIRECTORY/OGRE-Next"), so Gazebo segfaults with "unable to find OpenGL 3+
+# Rendering Subsystem" as soon as a camera sensor renders. Point it at the real dir.
+[feature.linux-cuda.activation.env]
+OGRE2_RESOURCE_PATH = "$CONDA_PREFIX/lib/OGRE-Next"
+
 [feature.linux-cuda.dependencies]
 ros-humble-desktop = ">=0.10.0,<0.11"
 colcon-common-extensions = "*"

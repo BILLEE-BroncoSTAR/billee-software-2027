@@ -142,7 +142,7 @@ Two ways to use it:
    Studio on the host connects to `ws://localhost:8765`; drive with keyboard teleop.
 2. **Remote viewer** — just point Foxglove Studio at the rover's `ws://<rover-ip>:8765`.
 
-See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → §2.3 (Mac setup), §4 (quick launch) and §8 (OpenPose people sim) for the commands.
+See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → §2.3 (Mac setup) and §4 (quick launch) for the commands.
 
 ## NVIDIA Jetson (L4T) rover devcontainer
 
@@ -157,7 +157,7 @@ Host prep, once per board (**done on the Orin Nano; repeat on the AGX Orin**):
 sudo apt install -y nvidia-container curl   # JetPack meta-package: nvidia-container-toolkit
 curl https://get.docker.com | sh && sudo systemctl --now enable docker
 sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
-# then, for GPU access at build time too:
+# then, for GPU access at build time too (required: the image compiles OpenPose with CUDA):
 #   /etc/docker/daemon.json -> "default-runtime": "nvidia"
 sudo usermod -aG docker "$USER"   # then log out / back in
 docker run --rm --runtime nvidia ubuntu:24.04 nvidia-smi   # smoke test
@@ -174,6 +174,7 @@ pixi run --environment l4t build            # later incremental builds
 pixi run --environment l4t ros2 launch chassis_bringup real.launch.py            # real ODESC/CAN
 pixi run --environment l4t ros2 launch chassis_bringup real.launch.py can_interface:=mock  # no motors
 pixi run --environment l4t ros2 launch chassis_bringup viz.launch.py            # rviz + foxglove :8765
+pixi run --environment l4t ros2 launch people people_rover.launch.py            # ZED 2 + OpenPose (CUDA), RUN_GUIDE §8
 ```
 
 Set the VS Code Python interpreter to `.pixi/envs/l4t/bin/python3`.

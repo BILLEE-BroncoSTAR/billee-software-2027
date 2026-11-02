@@ -99,7 +99,7 @@ ros2 launch chassis_bringup sim_gz.launch.py \
   x:=0.0 y:=0.0 z:=0.2 yaw:=0.0
 ```
 
-`world_file` selects the world: a path inside `robot_description` when that file exists (e.g. `world_file:=worlds/people.sdf`), otherwise a Gazebo built-in world name (the default, `empty.sdf`). `headless:=true` runs only the Gazebo server (no GUI) — use it under `xvfb-run` on headless machines to save CPU.
+`world_file` selects the world: a path inside `robot_description` when that file exists, otherwise a Gazebo built-in world name (the default, `empty.sdf`). `headless:=true` runs only the Gazebo server (no GUI) — use it under `xvfb-run` on headless machines to save CPU.
 
 ### Verify it's running
 

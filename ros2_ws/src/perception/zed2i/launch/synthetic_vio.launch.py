@@ -13,7 +13,7 @@ def generate_launch_description():
         [FindPackageShare("zed2i"), "config", "synthetic_vio.yaml"]
     )
     return LaunchDescription([
-        DeclareLaunchArgument("profile", default_value="validation"),
+        DeclareLaunchArgument("profile", default_value="calibration"),
         DeclareLaunchArgument("seed", default_value="42"),
         DeclareLaunchArgument("truth_topic", default_value="/gz/odom"),
         Node(
