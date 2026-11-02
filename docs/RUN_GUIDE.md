@@ -345,6 +345,8 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 
 ## 8. People / pose (zed-openpose on the rover)
 
+How it works, step by step (block diagrams, background, math): [ZED_OpenPose_Implementation.md](ZED_OpenPose_Implementation.md).
+
 A ROS 2 port of [stereolabs/zed-openpose](https://github.com/stereolabs/zed-openpose): CMU OpenPose
 runs on the Jetson's GPU (CUDA + cuDNN) on the ZED 2's left image, and each keypoint is placed in 3D
 from the ZED's depth. Rover only, with the ZED plugged in; the ground station just views it.
