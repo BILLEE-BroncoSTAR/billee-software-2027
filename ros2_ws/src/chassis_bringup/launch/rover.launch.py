@@ -34,6 +34,12 @@ declare_args = [
         "Normally the ground station runs RViz.",
     ),
     DeclareLaunchArgument(
+        "gui",
+        default_value="false",
+        description="mode:=sim only. Open the Gazebo window. The rover has no monitor, so "
+        "run under `xvfb-run -a vglrun -d egl` (GPU rendering, see docs/gazebo.md).",
+    ),
+    DeclareLaunchArgument(
         "can_interface",
         default_value="can2",
         description="mode:=real only. 'mock'/'none' = no CAN (loopback feedback); "
@@ -54,7 +60,8 @@ def _setup(context):
     if mode == "sim":
         target = "sim_gz.launch.py"
         args = {
-            **common
+            **common,
+            "gui": LaunchConfiguration("gui"),
         }
     elif mode == "real":
         target = "real.launch.py"

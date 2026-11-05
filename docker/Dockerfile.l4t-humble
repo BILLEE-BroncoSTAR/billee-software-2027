@@ -113,6 +113,23 @@ RUN OPENPOSE_JOBS=${OPENPOSE_JOBS} sh /tmp/build_openpose.sh /tmp/openpose && \
 COPY docker/gpu_groups.sh /usr/local/bin/gpu_groups.sh
 RUN chmod 755 /usr/local/bin/gpu_groups.sh
 
+# GPU rendering for the Gazebo sim with no monitor (the rover). Gazebo's renderer from pixi
+# (OGRE-Next 2.2.6, conda-forge) only reaches OpenGL through GLX, i.e. through an X server;
+# its camera sensor renders even with no Gazebo window, and without a usable X display the
+# render thread crashes and the sim stops stepping. xvfb provides a virtual X server, and
+# VirtualGL runs the GL calls on the GPU through EGL instead of in software on the CPU:
+#   xvfb-run -a vglrun -d egl ros2 launch chassis_bringup sim_gz.launch.py gui:=false
+# (tooling/sim-up does this automatically). Not packaged by Ubuntu, so the release .deb is
+# pinned by version and checksum. After the OpenPose layers so changing it doesn't rebuild them.
+ARG VIRTUALGL_VERSION=3.1.5
+ARG VIRTUALGL_SHA256=9ac238e8a18c06d84ef65444a591a7a5bb4c4ce9e8cfdd92f8a2aea35edbb5d7
+RUN wget -q -O /tmp/virtualgl.deb \
+      "https://github.com/VirtualGL/virtualgl/releases/download/${VIRTUALGL_VERSION}/virtualgl_${VIRTUALGL_VERSION}_arm64.deb" && \
+    echo "${VIRTUALGL_SHA256}  /tmp/virtualgl.deb" | sha256sum -c - && \
+    apt-get update && apt-get install -y --no-install-recommends xvfb xauth /tmp/virtualgl.deb && \
+    rm -rf /tmp/virtualgl.deb /var/lib/apt/lists/*
+ENV PATH=/opt/VirtualGL/bin:${PATH}
+
 # pixi -> provides ROS 2 Humble + colcon via the `l4t` environment in ros2_ws/pixi.toml
 ENV PIXI_HOME=/opt/pixi
 ENV PATH=${PIXI_HOME}/bin:${PATH}

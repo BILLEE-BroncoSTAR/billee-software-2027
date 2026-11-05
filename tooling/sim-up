@@ -1,12 +1,60 @@
 #!/usr/bin/env bash
-
-# sim-up - bringup the gazebo sim of the rover with odesc vcan simulation and joystick control
-# Example Usage:
-#   ./sim-up true true - bringup the gazebo simulator with controller and foxglove bridge
+# sim-up — start the Gazebo sim of the rover (run inside the dev container).
+#
+#   tooling/sim-up [foxglove] [joystick] [can_sim]     each true|false
+#
+#   tooling/sim-up                    # Foxglove bridge + gamepad teleop (defaults: true true false)
+#   tooling/sim-up true false         # no gamepad
+#   tooling/sim-up true true true     # also run the ODESC driver on vcan0 (tooling/can-up vcan0 on the host first)
+#
+# The pixi env is the active one ($PIXI_ENVIRONMENT_NAME), else picked from the machine.
+# Without a usable display, Gazebo runs headless: xvfb-run + vglrun (GPU), gui:=false.
+set -euo pipefail
 
 start_foxglove="${1:-true}"
 use_controller="${2:-true}"
-bringup_can_sim="${2:-false}"
+bringup_can_sim="${3:-false}"
 
-cd /workspaces/URC-2027/ros2_ws
-pixi run --environment default ros2 launch chassis_bringup sim_gz.launch.py  odesc_shadow:=$bringup_can_sim can_interface:=vcan0 joy_control:=$use_controller foxglove:=$start_foxglove
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$repo_root/ros2_ws"
+
+env="${PIXI_ENVIRONMENT_NAME:-}"
+if [[ -z "$env" ]]; then
+  if [[ "$(uname -m)" == x86_64 ]]; then env=default
+  elif [[ -e /etc/nv_tegra_release ]]; then env=l4t
+  else env=mac-cpu
+  fi
+fi
+
+# A usable display gets the Gazebo window. Otherwise (the rover: no monitor, or a stale
+# $DISPLAY) run the server only, on a virtual X server; vglrun puts the camera rendering on
+# the GPU through EGL (both from docker/Dockerfile.l4t-humble). See docs/gazebo.md.
+display_ok=false
+if [[ -n "${DISPLAY:-}" ]]; then
+  if ! command -v xdpyinfo >/dev/null || timeout 3 xdpyinfo >/dev/null 2>&1; then
+    display_ok=true
+  fi
+fi
+
+wrap=()
+gui=true
+if [[ "$display_ok" != true ]]; then
+  gui=false
+  if ! command -v xvfb-run >/dev/null; then
+    echo "sim-up: no usable display and no xvfb-run. Install it (sudo apt install -y xvfb) or set DISPLAY." >&2
+    exit 1
+  fi
+  wrap=(xvfb-run -a)
+  if command -v vglrun >/dev/null; then
+    wrap+=(vglrun -d egl)
+  else
+    echo "sim-up: no vglrun; Gazebo will render on the CPU (slow). Rebuild the l4t container for VirtualGL." >&2
+  fi
+fi
+
+exec "${wrap[@]}" pixi run --environment "$env" ros2 launch chassis_bringup sim_gz.launch.py \
+  gui:="$gui" \
+  foxglove:="$start_foxglove" \
+  joy_control:="$use_controller" \
+  odesc_shadow:="$bringup_can_sim" \
+  can_interface:=vcan0

@@ -69,6 +69,12 @@ declare_args = [
             default_value="empty.sdf",
             description="Path to the robot world file (relative to the description package share).",
         ),
+        DeclareLaunchArgument(
+            "gui",
+            default_value="true",
+            description="Open the Gazebo window. false = server only (still needs an "
+            "X display for the camera sensor, e.g. xvfb-run on the rover).",
+        ),
         DeclareLaunchArgument("x", default_value="0.0", description="Spawn X (m)."),
         DeclareLaunchArgument("y", default_value="0.0", description="Spawn Y (m)."),
         DeclareLaunchArgument("z", default_value="0.2", description="Spawn Z (m)."),
@@ -112,6 +118,11 @@ def _launch_description(ctx):
     description_pkg = LaunchConfiguration("description_pkg")
     xacro_file = LaunchConfiguration("xacro_file")
     world_file = LaunchConfiguration("world_file")
+    # gui:=false -> server only, no Gazebo window. The server still renders the camera
+    # sensor through GLX, so it still needs an X display (real or xvfb-run): the pixi
+    # OGRE-Next build has no EGL, so --headless-rendering is not an option. Without a
+    # usable display the render thread crashes and the sim never steps.
+    gui = LaunchConfiguration("gui").perform(ctx).lower() in ("true", "1")
 
     # Entity Start Position
     x = LaunchConfiguration("x")
@@ -153,7 +164,7 @@ def _launch_description(ctx):
         # evaluated at runtime so  we must eval here to pass as a gz_arg
         launch_arguments={
             #"gz_args": f"-r -v 4 {world_path.perform(ctx)}",
-            "gz_args": f"-r -v 4 empty.sdf",
+            "gz_args": "-r -v 4 empty.sdf" if gui else "-s -r -v 4 empty.sdf",
             "extra_gz_args": f"--ros-args --params-file {gazebo_params_file}",
             "on_exit_shutdown": "true",
         }.items(),
