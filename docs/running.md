@@ -174,11 +174,14 @@ Jetson + ZED 2i only. The full guide is [people-pose.md](people-pose.md).
 ```bash
 src/perception/zed_openpose/scripts/get_openpose_models.sh      # once, ~300 MB
 pixi run build --packages-select people_msgs zed_openpose people robot_description
-ros2 launch people people_rover.launch.py                        # add standalone:=false next to real.launch.py foxglove:=true
+ros2 launch people people_rover.launch.py                        # OpenPose + point cloud
+ros2 launch people people_rover.launch.py openpose:=false        # point cloud only
+# add standalone:=false next to real.launch.py foxglove:=true
 ```
 
-On the ground station, open Foxglove → `ws://<rover-ip>:8765` and import
-`src/perception/people/foxglove/people_rover.json`.
+On the ground station, import the matching layout: `src/perception/people/foxglove/zed_points.json`
+(point cloud) or `people_rover.json` (OpenPose + point cloud). RViz has
+`people/rviz/zed_points.rviz` and `people_rover.rviz`.
 
 ## Troubleshooting
 

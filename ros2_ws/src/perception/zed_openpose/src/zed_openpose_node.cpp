@@ -12,6 +12,9 @@
 // The sample's floor-plane alignment is replaced by TF: the ZED reports points in its left camera
 // frame with ROS axes, and the URDF says where camera_link sits on the rover.
 //
+// enable_pose:=false is the camera-only mode: no OpenPose thread, no model load, no /people/*;
+// the ZED thread grabs at the camera's own rate and only publishes /zed/points (+ depth).
+//
 // Copyright (c) 2019 Stereolabs, MIT License (LICENSE.zed-openpose). ROS 2 port for BILLEE.
 
 #include <algorithm>
@@ -140,6 +143,8 @@ public:
     svo_path_ = declare_parameter<std::string>("svo_path", "");
     publish_cloud_ = declare_parameter<bool>("publish_cloud", false);    // ogl_ptcloud
     publish_depth_ = declare_parameter<bool>("publish_depth", false);    // depth_display
+    enable_pose_ = declare_parameter<bool>("enable_pose", true);          // false: camera only
+    cloud_max_hz_ = declare_parameter<double>("cloud_max_hz", 10.0);     // 0 = every frame
     // ROS additions.
     camera_resolution_ = declare_parameter<std::string>("camera_resolution", "HD720");
     depth_mode_ = declare_parameter<std::string>("depth_mode", "ULTRA");
@@ -160,14 +165,20 @@ public:
     if (scale_gap_ <= 0. && scale_number_ > 1) {
       throw std::invalid_argument("scale_gap must be > 0 when scale_number > 1");
     }
+    if (!enable_pose_ && !publish_cloud_ && !publish_depth_) {
+      throw std::invalid_argument(
+        "enable_pose, publish_cloud and publish_depth are all false: nothing to publish");
+    }
 
     open_zed();
 
-    skeletons_pub_ = create_publisher<people_msgs::msg::Skeletons>("/people/skeletons", 10);
-    markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/people/markers", 1);
-    image_pub_ = create_publisher<sensor_msgs::msg::Image>("/people/debug_image", 1);
-    compressed_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>(
-      "/people/debug_image/compressed", 1);
+    if (enable_pose_) {
+      skeletons_pub_ = create_publisher<people_msgs::msg::Skeletons>("/people/skeletons", 10);
+      markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/people/markers", 1);
+      image_pub_ = create_publisher<sensor_msgs::msg::Image>("/people/debug_image", 1);
+      compressed_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>(
+        "/people/debug_image/compressed", 1);
+    }
     if (publish_cloud_) {
       cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("/zed/points", 1);
     }
@@ -184,7 +195,11 @@ public:
     image_size_ = op::Point<int>{image_width_, image_height_};
 
     zed_thread_ = std::thread(&ZedOpenPoseNode::run, this);
-    openpose_thread_ = std::thread(&ZedOpenPoseNode::findpose, this);
+    if (enable_pose_) {
+      openpose_thread_ = std::thread(&ZedOpenPoseNode::findpose, this);
+    } else {
+      RCLCPP_INFO(get_logger(), "Camera-only mode (enable_pose:=false): OpenPose not loaded");
+    }
   }
 
   ~ZedOpenPoseNode() override
@@ -252,9 +267,13 @@ private:
     std::vector<op::Point<int>> net_input_sizes;
     std::tie(scale_input_to_net_inputs_, net_input_sizes, scale_input_to_output_, output_resolution_) =
       scale_and_size.extract(image_size_);
+    const double cloud_period = cloud_max_hz_ > 0. ? 1.0 / cloud_max_hz_ : 0.;
+    bool cloud_sent = false;
+    rclcpp::Time last_cloud;
 
     while (!quit_ && rclcpp::ok()) {
-      if (!need_new_image_) {
+      // With OpenPose, grab only once it has taken the last frame; camera-only grabs freely.
+      if (enable_pose_ && !need_new_image_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         continue;
       }
@@ -272,15 +291,29 @@ private:
         continue;
       }
 
-      auto frame = std::make_shared<Frame>();
       // Live: the image's capture time; SVO: now, so TF lookups don't fall behind the recording.
-      frame->stamp = svo_path_.empty() ?
+      const rclcpp::Time stamp = svo_path_.empty() ?
         rclcpp::Time(
         static_cast<int64_t>(zed_.getTimestamp(sl::TIME_REFERENCE::IMAGE).getNanoseconds()),
         RCL_ROS_TIME) : now();
-      zed_.retrieveImage(img_buffer, sl::VIEW::LEFT, sl::MEM::CPU, resolution);
       // XYZBGRA: the sample's XYZRGBA with the colour bytes in ROS's PointCloud2 rgb order.
       zed_.retrieveMeasure(xyz_buffer, sl::MEASURE::XYZBGRA, sl::MEM::CPU, resolution);
+
+      if (publish_depth_) {
+        zed_.retrieveImage(depth_img_buffer, sl::VIEW::DEPTH, sl::MEM::CPU, resolution);
+        publish_image(*depth_pub_, sl_to_cv(depth_img_buffer), "bgra8", stamp, zed_frame_);
+      }
+      if (publish_cloud_ && (!cloud_sent || (stamp - last_cloud).seconds() >= cloud_period)) {
+        publish_cloud(xyz_buffer, stamp);
+        last_cloud = stamp;
+        cloud_sent = true;
+      }
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 10000, "ZED %.1f fps", zed_.getCurrentFPS());
+      if (!enable_pose_) {continue;}
+
+      auto frame = std::make_shared<Frame>();
+      frame->stamp = stamp;
+      zed_.retrieveImage(img_buffer, sl::VIEW::LEFT, sl::MEM::CPU, resolution);
       xyz_buffer.copyTo(frame->xyz, sl::COPY_TYPE::CPU_CPU);
       cv::cvtColor(sl_to_cv(img_buffer), input_bgr, cv::COLOR_BGRA2BGR);
       frame->bgr = input_bgr.clone();
@@ -288,15 +321,6 @@ private:
         OP_CV2OPCONSTMAT(frame->bgr), scale_input_to_output_, output_resolution_);
       frame->net_input = cv_to_input.createArray(
         OP_CV2OPCONSTMAT(frame->bgr), scale_input_to_net_inputs_, net_input_sizes);
-
-      if (publish_depth_) {
-        zed_.retrieveImage(depth_img_buffer, sl::VIEW::DEPTH, sl::MEM::CPU, resolution);
-        publish_image(*depth_pub_, sl_to_cv(depth_img_buffer), "bgra8", frame->stamp, zed_frame_);
-      }
-      if (publish_cloud_) {
-        publish_cloud(frame->xyz, frame->stamp);
-      }
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 10000, "ZED %.1f fps", zed_.getCurrentFPS());
 
       {
         std::lock_guard<std::mutex> lock(data_in_mtx_);
@@ -492,8 +516,8 @@ private:
   std::string model_pose_, model_folder_, net_resolution_, output_resolution_flag_, svo_path_;
   std::string camera_resolution_, depth_mode_, camera_frame_, zed_frame_, target_frame_;
   int num_gpu_start_, scale_number_, image_width_, image_height_, cloud_step_, jpeg_quality_;
-  double scale_gap_, render_threshold_, alpha_pose_;
-  bool disable_blending_, publish_cloud_, publish_depth_;
+  double scale_gap_, render_threshold_, alpha_pose_, cloud_max_hz_;
+  bool disable_blending_, publish_cloud_, publish_depth_, enable_pose_;
 
   // ZED + OpenPose state shared by the two threads (the sample's globals).
   sl::Camera zed_;

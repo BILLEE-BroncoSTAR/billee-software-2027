@@ -74,7 +74,7 @@ For the real drivetrain, the two-machine setup and everything else, see
 |---|---|
 | [docs/running.md](docs/running.md) | Sim, real drivetrain, rover + ground station, CAN, people/pose, troubleshooting |
 | [docs/architecture.md](docs/architecture.md) | How the drivetrain control stack fits together |
-| [docs/people-pose.md](docs/people-pose.md) | ZED 2i + OpenPose person and gesture detection (Jetson) |
+| [docs/people-pose.md](docs/people-pose.md) | ZED 2i point cloud, and OpenPose person and gesture detection (Jetson) |
 | [docs/gazebo.md](docs/gazebo.md) | Gazebo rendering, GPU, and model notes |
 | [docs/cheatsheet.md](docs/cheatsheet.md) | pixi and ROS 2 CLI commands |
 

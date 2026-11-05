@@ -1,10 +1,11 @@
-# People / pose: ZED 2i + OpenPose
+# People / pose: ZED 2i + OpenPose + point cloud
 
 The rover finds people in the ZED 2i image with CMU OpenPose on the Jetson's GPU, places their
-joints in 3D relative to `base_link`, and turns arm poses into gesture commands. This is a ROS 2
-port of [stereolabs/zed-openpose](https://github.com/stereolabs/zed-openpose). It runs only in the
-Jetson `l4t` container, because only that image has the ZED SDK and OpenPose. Other machines build
-just the tests.
+joints in 3D relative to `base_link`, and turns arm poses into gesture commands. The same node
+publishes the ZED point cloud, and can also run as the point cloud alone (`openpose:=false`). This is
+a ROS 2 port of [stereolabs/zed-openpose](https://github.com/stereolabs/zed-openpose). It runs only
+in the Jetson `l4t` container, because only that image has the ZED SDK and OpenPose. Other machines
+build just the tests.
 
 ```mermaid
 flowchart LR
@@ -26,19 +27,35 @@ In the `l4t` container:
 cd ros2_ws
 src/perception/zed_openpose/scripts/get_openpose_models.sh      # once: ~300 MB into ros2_ws/models/openpose
 pixi run build --packages-select people_msgs zed_openpose people robot_description
-ros2 launch people people_rover.launch.py
+ros2 launch people people_rover.launch.py                     # OpenPose + point cloud
+ros2 launch people people_rover.launch.py openpose:=false     # point cloud only
 ```
+
+Next to the real drivetrain, add `standalone:=false`, since `real.launch.py foxglove:=true`
+already runs `robot_state_publisher` and the bridge.
 
 | Arg | Default | |
 |---|---|---|
+| `openpose` | `true` | Run OpenPose and `gesture_node`. `false` = camera only: no model load, no `/people/*`, starts in seconds. |
+| `point_cloud` | `true` | Publish `/zed/points` |
 | `standalone` | `true` | Also start `robot_state_publisher` + `foxglove_bridge`. Set `false` when `real.launch.py foxglove:=true` is already running them. |
 | `svo_path` | `""` | Replay a ZED `.svo2` recording instead of the live camera |
 | `model_pose` | `BODY_25` | `COCO` needs its own model files |
 | `target_frame` | `base_link` | frame of all 3D output |
 
-**View it:** on the ground station, open Foxglove → `ws://<rover-ip>:8765` and import
-`src/perception/people/foxglove/people_rover.json`. In RViz, use fixed frame `base_link`,
-MarkerArray `/people/markers`, and Image `/people/debug_image`.
+**View it:** pick the layout that matches the mode. Both use fixed frame `base_link` and show the
+rover model.
+
+| Mode | Foxglove (`ws://<rover-ip>:8765`, Layouts → Import) | RViz |
+|---|---|---|
+| point cloud only | `src/perception/people/foxglove/zed_points.json` | `zed_points.rviz` |
+| OpenPose + point cloud | `src/perception/people/foxglove/people_rover.json` | `people_rover.rviz` |
+
+```bash
+# RViz on the ground station (configs are installed with the people package)
+ros2 launch chassis_bringup viz.launch.py foxglove:=false \
+  rviz_config:=$(ros2 pkg prefix --share people)/rviz/zed_points.rviz    # or people_rover.rviz
+```
 
 **ZED udev rule:** install this once on the Jetson **host**:
 
@@ -70,7 +87,8 @@ are fast.
 | `/people/debug_image` (+ `/compressed`) | `Image` | OpenPose rendering. Use `/compressed` over Wi-Fi. |
 | `/people/gesture` | `people_msgs/Gesture` | `gesture`, `command`, `confidence`, `position` |
 | `/people/gesture_marker` | `Marker` | text label above the person |
-| `/zed/points`, `/zed/depth_image` | | off by default (`publish_cloud`, `publish_depth`), heavy |
+| `/zed/points` | `PointCloud2` | XYZ + colour in `zed_left_camera_frame`. Every 4th pixel of the 720×405 depth map (~18k points, ~290 kB), at most `cloud_max_hz` (10). With OpenPose it runs at the OpenPose rate (~6 fps on the Nano). |
+| `/zed/depth_image` | `Image` | off by default (`publish_depth`) |
 
 ## How it works
 
@@ -107,6 +125,8 @@ are fast.
 | `depth_mode` | `ULTRA` | `NEURAL_LIGHT` has fewer depth holes and costs more GPU |
 | `camera_resolution` | `HD720` | Higher costs USB bandwidth. The OpenPose input stays 720×405. |
 | `render_threshold` | `0.12` | Keypoints below this are neither drawn nor lifted |
+| `cloud_step` | `4` | Keep every Nth pixel in `/zed/points`. Lower is denser and heavier. |
+| `cloud_max_hz` | `10.0` | Rate cap on `/zed/points`. `0` = every camera frame. |
 | `conf_threshold` (gesture) | `0.2` | Arm joints below this give `none` |
 | `hold_frames` (gesture) | `2` | Higher is steadier but slower to react |
 
@@ -154,15 +174,20 @@ Dev container problems, already fixed:
 
 ## Status
 
-The current L4T 36.4 image has **not** been built or tested yet. The node, the 3D math, the
-gestures, and the unit tests (`test_skeleton_3d`, plus 24 gesture cases) passed on 2026-11-02 with
-an earlier JetPack 7.2 image (CUDA 13.2) on the dev Orin Nano. That run had no camera. Measured
-OpenPose speed on the Nano was about 160 ms per frame (~6 fps). **Nothing has been tested with a
-ZED connected** (live depth, 3D accuracy, gestures on real people, end-to-end rate).
+On the current L4T 36.4 (Isaac ROS) image, on the dev Orin Nano (2026-11-05), the workspace
+builds, `zed_openpose` compiles against the image's OpenPose and ZED SDK, the unit tests
+(`test_skeleton_3d`, plus 24 gesture cases) pass, and both launch modes start up to opening the
+camera. OpenPose inference has not been rerun on this image yet. It last ran on 2026-11-02 on an
+earlier JetPack 7.2 image (CUDA 13.2), at about 160 ms per frame (~6 fps) on the Nano. **Nothing has been tested with a
+ZED connected** (live depth, 3D accuracy, gestures on real people, end-to-end rate, and the
+point cloud in either mode).
 
 ```bash
-pixi run -e l4t colcon test --packages-select zed_openpose people
+pixi run -e l4t colcon test --packages-select zed_openpose
 pixi run -e l4t colcon test-result --verbose
+# people: colcon's pytest run currently crashes at startup (pytest 9 vs the launch_testing
+# plugin). Run its tests directly with plugin autoload off:
+cd src/perception/people && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q test
 ```
 
 Limitations: depth error grows with distance squared. Joints over textureless surfaces may stay

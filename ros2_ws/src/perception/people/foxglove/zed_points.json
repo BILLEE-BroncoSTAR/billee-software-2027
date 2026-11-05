@@ -1,0 +1,100 @@
+{
+  "configById": {
+    "3D!zed": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 7,
+        "phi": 60,
+        "thetaOffset": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.01,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_link",
+      "scene": {
+        "transforms": {
+          "showLabel": false,
+          "axisScale": 0.3
+        },
+        "backgroundColor": "#202020",
+        "meshUpAxis": "z_up"
+      },
+      "transforms": {},
+      "topics": {
+        "/zed/points": {
+          "visible": true,
+          "pointSize": 2,
+          "colorMode": "rgb",
+          "colorField": "rgb"
+        }
+      },
+      "layers": {
+        "grid": {
+          "layerId": "foxglove.Grid",
+          "instanceId": "grid",
+          "label": "Grid",
+          "visible": true,
+          "frameLocked": true,
+          "frameId": "base_link",
+          "order": 1,
+          "size": 20,
+          "divisions": 20,
+          "lineWidth": 1,
+          "color": "#a0a0a4ff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "urdf": {
+          "layerId": "foxglove.Urdf",
+          "instanceId": "urdf",
+          "label": "Robot Model",
+          "visible": true,
+          "frameLocked": false,
+          "order": 2,
+          "sourceType": "topic",
+          "topic": "/robot_description"
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26
+      }
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": "3D!zed"
+}

@@ -1,6 +1,7 @@
 """zed_openpose_node alone: ZED 2 + CUDA OpenPose -> /people/skeletons, markers, debug image.
 
     ros2 launch zed_openpose zed_openpose.launch.py [svo_path:=/path/rec.svo2] [model_pose:=COCO]
+    ros2 launch zed_openpose zed_openpose.launch.py openpose:=false     # camera + /zed/points only
 
 Usually started through `ros2 launch people people_rover.launch.py`, which adds the gesture node,
 robot_state_publisher and foxglove_bridge.
@@ -31,6 +32,10 @@ def generate_launch_description():
         DeclareLaunchArgument("svo_path", default_value="",
                               description="Replay a ZED recording instead of the live camera."),
         DeclareLaunchArgument("target_frame", default_value="base_link"),
+        DeclareLaunchArgument("openpose", default_value="true",
+                              description="Run OpenPose (/people/*). false = camera only."),
+        DeclareLaunchArgument("point_cloud", default_value="true",
+                              description="Publish /zed/points (base_link via TF)."),
         Node(
             package="zed_openpose",
             executable="zed_openpose_node",
@@ -43,6 +48,8 @@ def generate_launch_description():
                     "model_pose": LaunchConfiguration("model_pose"),
                     "svo_path": LaunchConfiguration("svo_path"),
                     "target_frame": LaunchConfiguration("target_frame"),
+                    "enable_pose": LaunchConfiguration("openpose"),
+                    "publish_cloud": LaunchConfiguration("point_cloud"),
                 },
             ],
         ),

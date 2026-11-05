@@ -6,9 +6,13 @@
     # next to a running drivetrain (real.launch.py foxglove:=true already has both)
     ros2 launch people people_rover.launch.py standalone:=false
 
+    # modes: OpenPose + point cloud (default), or the point cloud alone (no OpenPose, no gestures)
+    ros2 launch people people_rover.launch.py openpose:=false
+
 Skeletons are placed in base_link, i.e. relative to the rover, using the URDF's
-base_link -> camera_link mount. Ground station: Foxglove -> ws://<rover>:8765 with
-people/foxglove/people_rover.json, or RViz on /people/markers.
+base_link -> camera_link mount. Ground station layouts, one per mode:
+  Foxglove (ws://<rover>:8765): people/foxglove/people_rover.json | zed_points.json
+  RViz: people/rviz/people_rover.rviz | zed_points.rviz
 """
 
 from launch import LaunchDescription
@@ -23,6 +27,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     standalone = LaunchConfiguration("standalone")
+    openpose = LaunchConfiguration("openpose")
     robot_description = ParameterValue(
         Command(["xacro ",
                  PathJoinSubstitution([FindPackageShare("robot_description"),
@@ -40,6 +45,10 @@ def generate_launch_description():
                               description="OpenPose model: BODY_25, COCO or MPI."),
         DeclareLaunchArgument("svo_path", default_value="",
                               description="Replay a ZED recording instead of the live camera."),
+        DeclareLaunchArgument("openpose", default_value="true",
+                              description="Run OpenPose + gestures. false = point cloud only."),
+        DeclareLaunchArgument("point_cloud", default_value="true",
+                              description="Publish the ZED point cloud on /zed/points."),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -49,6 +58,8 @@ def generate_launch_description():
                 "target_frame": LaunchConfiguration("target_frame"),
                 "model_pose": LaunchConfiguration("model_pose"),
                 "svo_path": LaunchConfiguration("svo_path"),
+                "openpose": openpose,
+                "point_cloud": LaunchConfiguration("point_cloud"),
             }.items(),
         ),
         Node(
@@ -58,6 +69,7 @@ def generate_launch_description():
             parameters=[
                 PathJoinSubstitution([FindPackageShare("people"), "config", "gestures.yaml"]),
             ],
+            condition=IfCondition(openpose),
         ),
 
         Node(

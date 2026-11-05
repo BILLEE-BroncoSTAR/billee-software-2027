@@ -89,8 +89,10 @@
           "visible": true
         },
         "/zed/points": {
-          "visible": false,
-          "pointSize": 2
+          "visible": true,
+          "pointSize": 2,
+          "colorMode": "rgb",
+          "colorField": "rgb"
         }
       },
       "layers": {
