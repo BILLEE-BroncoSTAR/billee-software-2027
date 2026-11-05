@@ -23,7 +23,7 @@ ever sees the six wheel-joint `position`/`velocity` state interfaces and one
    ign_ros2_control (Gazebo)              OdescSystemHardware (this pkg)
                                             │ SocketCAN, motor turns / turns·s⁻¹
                                             ▼
-                                   6× ODESC V4.2 + NEO on can0
+                                   6× ODESC V4.2 + NEO on can2
 ```
 
 ## Gear-ratio conversion (the only place it lives)
@@ -73,7 +73,7 @@ inside `<xacro:unless value="${use_sim}">`:
 
 | scope | param | default | notes |
 |---|---|---|---|
-| `<hardware>` | `can_interface` | `can0` | SocketCAN interface. Confirm against the actual Jetson / USB-CAN enumeration. Special values `mock` / `none` → **mock mode** (below). Overridable from the launch file: `real.launch.py can_interface:=…`. |
+| `<hardware>` | `can_interface` | `can2` | SocketCAN interface. Special values `mock` / `none` → **mock mode** (below). Overridable from the launch file: `real.launch.py can_interface:=…`. |
 | `<hardware>` | `gear_ratio` | `48.0` | Motor-shaft turns per wheel turn. `48.0` for the ODESC V4.2 + NEO REV v1.1 drivetrain (team, 2026-09-06). One-line override (`real.launch.py gear_ratio:=…`), not a code change. Still validated by the §5.4 drive-a-known-distance bench test. |
 | per `<joint>` | `node_id` | *(required)* | CAN node ID 0–5. Canonical map: [`config/node_map.yaml`](config/node_map.yaml). |
 
