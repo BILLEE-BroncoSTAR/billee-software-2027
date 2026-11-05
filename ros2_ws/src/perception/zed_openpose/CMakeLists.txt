@@ -34,9 +34,11 @@ endif()
 find_package(ZED REQUIRED PATHS /usr/local/zed NO_DEFAULT_PATH)
 find_package(CUDA REQUIRED)
 # The image's system OpenCV, which OpenPose was built against - never the pixi env's own OpenCV.
-# /usr as the prefix finds both NVIDIA's Jetson-repo build (/usr/lib/cmake/opencv4, what the l4t
-# image gets) and Ubuntu's (/usr/lib/<arch>/cmake/opencv4).
-find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs PATHS /usr NO_DEFAULT_PATH)
+# In the l4t image that is Ubuntu's 4.5.4 from the Isaac ROS base, in /usr/lib/<arch>/cmake/opencv4.
+# That directory is named explicitly: pixi's conda compiler reports no multiarch directory, so a
+# plain /usr prefix only searches /usr/lib/cmake/opencv4 (where NVIDIA's Jetson-repo build goes).
+find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs
+  PATHS /usr/lib/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu/cmake/opencv4 /usr NO_DEFAULT_PATH)
 find_package(rclcpp REQUIRED)
 find_package(people_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)

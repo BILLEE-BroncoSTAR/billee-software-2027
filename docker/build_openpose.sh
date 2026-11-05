@@ -34,6 +34,30 @@ fi
 # include <thrust/...> are compiled by plain g++. (CUDA 12 has them in include/: no-op there.)
 export CPATH="/usr/local/cuda/include/cccl${CPATH:+:$CPATH}"
 
+# The Isaac ROS base installs protobuf 26 (+ abseil) into /usr/local, which shadows Ubuntu's
+# protobuf 3.12 that this Caffe needs: OpenPose's and Caffe's FindProtobuf would pick
+# /usr/local's library and protoc, and g++ searches /usr/local/include before /usr/include.
+# /usr first on CMAKE_PREFIX_PATH makes CMake find Ubuntu's library and protoc; a directory with
+# only Ubuntu's google/ headers on CPATH is searched before every system include directory.
+# Nothing is recorded in the installed libraries. No-op on bases without /usr/local's protobuf.
+if [ -e /usr/local/include/google/protobuf ]; then
+  mkdir -p "$SRC/protobuf-system-include"
+  ln -sfn /usr/include/google "$SRC/protobuf-system-include/google"
+  export CPATH="$SRC/protobuf-system-include:$CPATH"
+  export CMAKE_PREFIX_PATH="/usr${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
+fi
+
+# The Isaac ROS base also builds Boost 1.80 into /usr: its headers replace Ubuntu's 1.74 ones in
+# /usr/include/boost, but CMake finds Ubuntu's 1.74 config in /usr/lib/<arch>/cmake first, so
+# Caffe would compile against 1.80 and link 1.74 (undefined boost::filesystem::path::*_v3).
+# Boost_DIR (read from the environment by every find_package(Boost), Caffe's included) selects
+# the config of the Boost whose headers are installed. No-op where that is Ubuntu's own.
+boost=$(sed -n 's/^#define BOOST_LIB_VERSION "\([0-9]*\)_\([0-9]*\)"/\1.\2/p' \
+  /usr/include/boost/version.hpp)
+if [ -f "/usr/lib/cmake/Boost-$boost.0/BoostConfig.cmake" ]; then
+  export Boost_DIR="/usr/lib/cmake/Boost-$boost.0"
+fi
+
 mkdir -p "$SRC/build"
 cd "$SRC/build"
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/openpose \
