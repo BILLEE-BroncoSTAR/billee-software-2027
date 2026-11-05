@@ -7,7 +7,7 @@ OdescSystemHardware SocketCAN plugin is loaded instead of ign_ros2_control, and
 it starts a standalone controller_manager (ros2_control_node) rather than letting
 Gazebo host it.
 
-    # real ODESC/NEO drivetrain on can0:
+    # real ODESC/NEO drivetrain on can2:
     ros2 launch chassis_bringup real.launch.py
 
     # no motor hardware — exercise the full feedback -> odom -> TF -> viewer path:

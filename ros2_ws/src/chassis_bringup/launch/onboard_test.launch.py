@@ -19,7 +19,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     can_interface = DeclareLaunchArgument(
         "can_interface",
-        default_value="can0",
+        default_value="can2",
         description="SocketCAN interface passed to the ODESC hardware backend.",
     )
     gear_ratio = DeclareLaunchArgument(

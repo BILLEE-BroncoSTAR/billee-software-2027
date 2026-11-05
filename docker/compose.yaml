@@ -1,7 +1,9 @@
 services:
   rover:
     build:
-      dockerfile: Dockerfile.l4t-humble
+      # The Dockerfile COPYs docker/*, so the context is the repo root.
+      context: ..
+      dockerfile: docker/Dockerfile.l4t-humble
     image: rover-ros-humble:l4t-aarch64
     container_name: rover
     hostname: rover
@@ -28,7 +30,8 @@ services:
       - /dev/shm:/dev/shm
       # kept only for optional local debugging on a Jetson with a display attached
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ../:/workspaces/URC-2027
+      - ../:/workspaces/billee-software-2027
+    working_dir: /workspaces/billee-software-2027/ros2_ws
 
     stdin_open: true
     tty: true

@@ -7,7 +7,7 @@ image="zed-ros2-desktop:latest"
 
 usage() {
   cat <<'EOF'
-Usage: scripts/desktop-ros2 <build|run|shell> [arguments...]
+Usage: tooling/desktop-ros2 <build|run|shell> [arguments...]
 
   build  Build zed-ros2-desktop:latest from docker/Dockerfile.desktop.humble.
   run    Start the image with the same host, GPU, device, X11, and workspace
@@ -16,10 +16,10 @@ Usage: scripts/desktop-ros2 <build|run|shell> [arguments...]
   shell  Open a Bash shell with those same settings, bypassing the entrypoint.
 
 Examples:
-  scripts/desktop-ros2 build
-  scripts/desktop-ros2 run
-  scripts/desktop-ros2 shell
-  scripts/desktop-ros2 run pixi run build
+  tooling/desktop-ros2 build
+  tooling/desktop-ros2 run
+  tooling/desktop-ros2 shell
+  tooling/desktop-ros2 run pixi run build
 EOF
 }
 
@@ -31,7 +31,7 @@ fi
 case "$action" in
   build)
     exec docker build \
-      --file "$repo_root/scripts/Dockerfile.desktop.humble" \
+      --file "$repo_root/docker/Dockerfile.desktop.humble" \
       --tag "$image" \
       "$@" \
       "$repo_root"
@@ -49,7 +49,8 @@ case "$action" in
       --volume /tmp/.X11-unix:/tmp/.X11-unix
       --volume /dev:/dev
       --volume /dev/shm:/dev/shm
-      --mount "type=bind,source=$repo_root/ros2_ws,target=/root/ros2_ws"
+      --mount "type=bind,source=$repo_root/ros2_ws,target=/home/ros_user/ros2_ws"
+      --workdir /home/ros_user/ros2_ws
       --env ROS_DISTRO=humble
       --env "DISPLAY=${DISPLAY:-}"
       --env "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"

@@ -3,7 +3,13 @@
 # Initialize ROS 2 from the Pixi environment selected for this shell.  The
 # fallback supports opening a regular dev-container terminal before `pixi
 # shell`; a Jetson `pixi shell -e l4t` selects the l4t prefix automatically.
-_billee_ws=/workspaces/URC-2027/ros2_ws
+# The workspace is wherever the repo is mounted: <repo>/ros2_ws (x86 devcontainer,
+# /workspaces/<repo-folder>), or ros2_ws itself (Mac devcontainer, tooling/*-ros2).
+_billee_ws=
+for _d in "$PWD/ros2_ws" "$PWD" /workspaces/*/ros2_ws "$HOME/ros2_ws"; do
+  if [ -f "$_d/pixi.toml" ]; then _billee_ws=$_d; break; fi
+done
+unset _d
 _billee_pixi_env=${PIXI_ENVIRONMENT_NAME:-default}
 _billee_pixi_prefix=$_billee_ws/.pixi/envs/$_billee_pixi_env
 
@@ -21,11 +27,11 @@ if [ -f "$_billee_ws/install/local_setup.bash" ]; then
   source "$_billee_ws/install/local_setup.bash"
 fi
 
-unset _billee_ws _billee_pixi_env _billee_pixi_prefix
 # Override GNU Readline defaults to display ambiguous autocomplete matches on first tab (instead of second)
 bind 'set show-all-if-ambiguous on'
 # Navigate to ros2_ws
-cd ros2_ws
+if [ -n "$_billee_ws" ]; then cd "$_billee_ws"; fi
+unset _billee_ws _billee_pixi_env _billee_pixi_prefix
 
 # Dynamic welcome message based on the active Pixi environment
 if [ -n "$PIXI_ENVIRONMENT_NAME" ]; then
