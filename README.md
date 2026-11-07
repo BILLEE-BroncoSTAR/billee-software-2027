@@ -17,7 +17,23 @@ Pick the configuration for your machine (VS Code: **Dev Containers: Reopen in Co
 Host requirements:
 
 - **x86:** Docker, NVIDIA driver, NVIDIA Container Toolkit, an X session (the container runs
-  `xhost +local:` on start).
+  `xhost +local:` on start). Check the driver with `nvidia-smi`, then install the toolkit once:
+
+  ```sh
+  curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+    | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+  curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+    | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+    | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+  sudo apt update && sudo apt install -y nvidia-container-toolkit
+  sudo nvidia-ctk runtime configure --runtime=docker
+  sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml   # re-run after a driver upgrade
+  sudo systemctl restart docker
+  docker run --rm --gpus all ubuntu:22.04 nvidia-smi           # should list your GPU
+  ```
+
+  Without this, the image builds but the container fails to start with
+  `failed to discover GPU vendor from CDI: no known GPU vendor found`.
 - **Mac:** Docker Desktop.
 - **Jetson:** Docker with the `nvidia` runtime. Do this once, and again after every reflash:
 
