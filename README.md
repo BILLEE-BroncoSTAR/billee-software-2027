@@ -53,36 +53,42 @@ Host requirements:
 Without VS Code, `tooling/desktop-ros2` (x86) and `tooling/rover-ros2` (Jetson) take
 `build|run|shell` to build and run the same images.
 
-## 2. Build and run
+## 2. Build (on every machine you use)
 
-Everything runs from `ros2_ws`. Enter the environment once per terminal, then use plain
-`colcon` and `ros2` commands:
+Each machine builds its own workspace: the Jetson, the ground station, or both. Everything runs
+from `ros2_ws`. Enter the environment once per terminal, then use plain `colcon` and `ros2`
+commands:
 
 ```bash
 cd ros2_ws
-pixi shell -e default        # or: -e l4t (Jetson), -e mac-cpu (Mac)
+pixi shell -e default        # x86 ground station / dev box. Jetson: -e l4t. Mac: -e mac-cpu
 pixi run build               # inside the shell: builds with the active env
 ```
 
-After a build that adds a new package, run `source install/local_setup.bash` or reopen the
-shell. To run a single command without entering the shell, use `pixi run -e <env> <cmd>`.
+After the **first** build, or any build that adds a package, run
+`source install/local_setup.bash` in every shell that was already open, or reopen it.
+Otherwise `ros2 launch` fails with `Package 'chassis_bringup' not found`. To run a single command without entering the shell, use `pixi run -e <env> <cmd>`.
 
 On an 8 GB Jetson, a full build can run out of RAM. Use
 `pixi run build --parallel-workers 2 --executor sequential`.
 
-Drive the simulated rover:
+## 3. Run
 
-```bash
-ros2 launch chassis_bringup sim_gz.launch.py foxglove:=true    # or: tooling/sim-up
-```
+The usual setup is the sim (or the real drivetrain) on the **Jetson**, driven from the
+**ground station**:
 
-Then open Foxglove Studio, connect to `ws://localhost:8765`, and import the layout
-`ros2_ws/src/chassis_bringup/foxglove/drivetrain.json`. To drive, hold **RB** and move the two
-sticks up and down (tank drive). With no monitor (e.g. the Jetson), use `tooling/sim-up`. It runs
-Gazebo on a virtual display with GPU rendering (see [docs/gazebo.md](docs/gazebo.md)).
+| Machine | Command |
+|---|---|
+| Jetson | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py` (real motors: `ros2 launch chassis_bringup rover.launch.py mode:=real`) |
+| Ground station | `ros2 launch chassis_bringup ground_station.launch.py` (real motors: add `use_sim_time:=false`) |
 
-For the real drivetrain, the two-machine setup and everything else, see
-**[docs/running.md](docs/running.md)**.
+Then, on the ground station, open Foxglove Studio (desktop app, installed on the host, not in
+the container), connect to `ws://localhost:8765`, and import
+`ros2_ws/src/chassis_bringup/foxglove/drivetrain.json`. To drive, hold **RB** on the gamepad and
+move the two sticks up and down.
+
+Everything else, including the sim on one machine, a bench test, CAN, people/pose, Foxglove
+details and troubleshooting, is in **[docs/running.md](docs/running.md)**.
 
 ## Documentation
 
