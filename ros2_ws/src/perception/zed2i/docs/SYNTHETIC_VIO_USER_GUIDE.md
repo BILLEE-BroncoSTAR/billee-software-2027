@@ -35,9 +35,9 @@ are used only when configured, normally through the `stress` profile.
 
    ```bash
    cd ros2_ws
-   pixi run --environment default -- colcon build \
-     --packages-select zed2i --symlink-install
-   source install/setup.bash
+   pixi shell -e default
+   pixi run build --packages-select zed2i
+   source install/local_setup.bash
    ```
 
 The node does not publish TF. Let the EKF remain the sole publisher of
@@ -45,7 +45,10 @@ The node does not publish TF. Let the EKF remain the sole publisher of
 
 ## Launch
 
-The default output is `/sim/zed/vio/odom`.
+The output is `/depth_cam/vio/odom`, set by
+[`../config/synthetic_vio.yaml`](../config/synthetic_vio.yaml). Both this launch file and
+`navigation/launch/pose_estim.launch.py` load that file, and the EKF
+(`navigation/config/ekf_sim.yaml`) subscribes to that topic.
 
 ```bash
 ros2 launch zed2i synthetic_vio.launch.py \
@@ -64,7 +67,7 @@ You can also run the executable directly:
 ros2 run zed2i synthetic_vio_node --ros-args \
   -p use_sim_time:=true \
   -p truth_topic:=/gz/odom \
-  -p vio_topic:=/sim/zed/vio/odom \
+  -p vio_topic:=/depth_cam/vio/odom \
   -p profile:=calibration \
   -p seed:=42
 ```
@@ -75,7 +78,8 @@ The default parameter file is
 ## EKF wiring
 
 Treat the synthetic VIO measurement as pose only. Treat wheel odometry as velocity
-only. For `robot_localization`, a representative planar configuration is:
+only. This is what the workspace's EKF does (`navigation/config/ekf_sim.yaml`, started by
+`sim_gz.launch.py navigation:=true`). For `robot_localization`, the planar configuration is:
 
 ```yaml
 odom0: /diff_drive_controller/odom
@@ -85,7 +89,7 @@ odom0_config: [false, false, false,
                false, false, true,
                false, false, false]
 
-odom1: /sim/zed/vio/odom
+odom1: /depth_cam/vio/odom
 odom1_config: [true, true, false,
                false, false, true,
                false, false, false,
@@ -124,14 +128,17 @@ The settings below are ROS parameters in `synthetic_vio.yaml`.
 
 ### Topics and frames
 
-| Parameter | Default | Meaning |
-| --- | --- | --- |
-| `truth_topic` | `/gz/odom` | ROS 2 ground-truth `nav_msgs/msg/Odometry` input. |
-| `vio_topic` | `/sim/zed/vio/odom` | Synthetic VIO odometry output. |
-| `output_frame_id` | `odom` | Output `Odometry.header.frame_id`. |
-| `child_frame_id` | `base_link` | Output `Odometry.child_frame_id`. |
-| `profile` | `calibration` | `calibration`, `validation`, `stress`, or alias `nominal`. |
-| `seed` | `-1` | Non-negative deterministic seed; `-1` chooses a seed and logs it. |
+"Launched" is the value from `synthetic_vio.yaml` and the launch files; "built-in" is the
+node's own default, used only when it runs without that file.
+
+| Parameter | Launched | Built-in | Meaning |
+| --- | --- | --- | --- |
+| `truth_topic` | `/gz/odom` | `/gz/odom` | ROS 2 ground-truth `nav_msgs/msg/Odometry` input. |
+| `vio_topic` | `/depth_cam/vio/odom` | `/sim/zed/vio/odom` | Synthetic VIO odometry output. |
+| `output_frame_id` | `odom` | `odom` | Output `Odometry.header.frame_id`. |
+| `child_frame_id` | `base_link` | `base_link` | Output `Odometry.child_frame_id`. |
+| `profile` | `validation` | `calibration` | `calibration`, `validation`, `stress`, or alias `nominal`. |
+| `seed` | `42` | `-1` | Non-negative deterministic seed; `-1` chooses a seed and logs it. |
 
 ### Base measurement model
 
@@ -195,7 +202,7 @@ debugging and reproducibility; a set of held-out seeds is for evaluating the fil
 
 | Symptom | Check |
 | --- | --- |
-| No `/sim/zed/vio/odom` output | Confirm `truth_topic` exists, is type `nav_msgs/msg/Odometry`, and has non-zero timestamps. |
+| No `/depth_cam/vio/odom` output | Confirm `truth_topic` exists, is type `nav_msgs/msg/Odometry`, and has non-zero timestamps. |
 | VIO publishes immediately despite configured latency | Confirm the node has `use_sim_time:=true` and Gazebo is publishing `/clock`. |
 | EKF becomes implausibly certain | Verify the truth source is not wheel odometry, fuse VIO pose only, and do not report covariance below the actual nominal model during calibration. |
 | Two `odom -> base_link` TF publishers | Disable TF output on measurement sources; only the EKF should publish that transform. |

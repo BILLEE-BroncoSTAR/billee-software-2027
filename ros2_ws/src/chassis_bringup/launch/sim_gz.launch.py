@@ -97,9 +97,11 @@ declare_args = [
         ),
         DeclareLaunchArgument(
             "navigation",
-            default_value="false",
+            default_value="true",
             description=(
-                "Start the simulation pose estimator and local costmap."
+                "Start the simulation pose estimator (synthetic VIO + EKF) and the Nav2 "
+                "controller/planner servers. The EKF is the only odom -> base_link TF "
+                "source, so the viewers' odom fixed frame needs this."
             ),
         ),
         DeclareLaunchArgument(

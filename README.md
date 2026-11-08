@@ -112,7 +112,7 @@ ros2_ws/src/
   robot_description/ URDF/xacro, meshes, controllers.yaml
   odesc/             ros2_control hardware plugin for the ODESC motor controllers (SocketCAN)
   teleop/            gamepad → cmd_vel
-  navigation/        EKF pose estimate + costmap (sim)
+  navigation/        EKF pose estimate + Nav2 controller/planner servers (sim)
   perception/        zed_openpose, people, people_msgs, zed2i (synthetic VIO)
   comms/, pxx/       in progress
   roboclaw_*         git submodules (upstream RoboClaw drivers)

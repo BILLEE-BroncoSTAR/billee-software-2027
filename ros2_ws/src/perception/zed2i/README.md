@@ -24,7 +24,10 @@ ros2 launch zed2i synthetic_vio.launch.py \
 Use `seed:=-1` to select a new seed; the resolved seed is printed at startup and can
 be reused to reproduce the run.
 
-The output defaults to `/sim/zed/vio/odom`. Fuse only its `x`, `y`, and `yaw` fields;
+The output topic is `/depth_cam/vio/odom`, set by `config/synthetic_vio.yaml`, which both
+this launch file and `navigation/launch/pose_estim.launch.py` load. The EKF in
+`navigation/config/ekf_sim.yaml` subscribes to it. (Running the bare executable without
+that file falls back to the built-in default `/sim/zed/vio/odom`.) Fuse only its `x`, `y`, and `yaw` fields;
 fuse wheel odometry as twist (`vx`, `vyaw`) so the EKF is not given the same wheel
 measurement twice.
 

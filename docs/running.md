@@ -35,7 +35,10 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 ros2 launch chassis_bringup sim_gz.launch.py foxglove:=true
 ```
 
-This starts Gazebo, the rover, `diff_drive_controller`, and gamepad teleop.
+This starts Gazebo, the rover, `diff_drive_controller`, gamepad teleop, and the navigation
+stack (synthetic VIO + EKF, which publishes `odom → base_link`, plus the Nav2 controller and
+planner servers). On a slow machine, `navigation:=false` skips the navigation stack, but then
+there is no `odom` frame (see [Troubleshooting](#troubleshooting)).
 
 **No monitor** (the rover, SSH): Gazebo needs an X display even without its window, because the
 simulated camera is rendered through X. Run it on a virtual display, with the rendering on the GPU:
@@ -57,7 +60,7 @@ working display it switches to `xvfb-run` + `vglrun` with `gui:=false`.
 | `foxglove` | `false` | Foxglove bridge on `:8765` |
 | `rviz` | `false` | RViz with `rviz/drivetrain.rviz` (needs a display) |
 | `joy_control` | `true` | gamepad teleop nodes |
-| `navigation` | `false` | EKF pose estimate (synthetic VIO + wheel odom) and local costmap. This is the only `odom → base_link` TF source, see [below](#troubleshooting). |
+| `navigation` | `true` | Synthetic VIO + EKF pose estimate (VIO pose, wheel-odom velocity) and the Nav2 controller/planner servers. The EKF is the only `odom → base_link` TF source, see [below](#troubleshooting). |
 | `odesc_shadow` | `false` | Also run the real ODESC driver against `vcan0`, see [CAN testing](#can-testing-without-motors) |
 | `x` `y` `z` `yaw` | `0 0 0.2 0` | spawn pose |
 
@@ -81,6 +84,10 @@ ros2 launch chassis_bringup rover.launch.py mode:=real               # real ODES
 ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock   # no motors
 ```
 
+The rover runs no gamepad teleop (`joy_control` defaults to `false`), because the ground station
+runs it. If both ran it, each would react to the ground station's `/joy` and every drive command
+would be published twice. Pass `joy_control:=true` only when no ground station is involved.
+
 **Ground station:**
 
 ```bash
@@ -89,8 +96,8 @@ ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false   # rov
 ```
 
 `ground_station.launch.py` args: `joystick`, `rviz`, `foxglove` (all `true` by default) and
-`fprime_gds` (`false`). `fprime_gds:=true` opens the F' GDS web UI at `$FPRIME_GDS_URL`, which is
-set in `pixi.toml`. To override it for one run, pass `fprime_gds_url:=http://host:port`.
+`fprime_gds` (`false`). `fprime_gds:=true` opens the F' GDS web UI at `fprime_gds_url`
+(default `http://192.168.4.73:5000`).
 
 For the two machines to see each other:
 
@@ -157,7 +164,7 @@ Then either:
 
 ```bash
 # Gazebo drives the rover, and the real ODESC driver + a 6-node ODrive emulator run alongside it
-ros2 launch chassis_bringup sim_gz.launch.py odesc_shadow:=true can_interface:=vcan0
+ros2 launch chassis_bringup sim_gz.launch.py odesc_shadow:=true    # always uses vcan0
 
 # or: real stack against the emulator only (two terminals)
 ros2 run odesc odesc_vcan_emulator.py --interface vcan0
@@ -190,7 +197,7 @@ On the ground station, import the matching layout: `src/perception/people/foxglo
 | Build killed or the Jetson hangs | Out of RAM: `pixi run build --parallel-workers 2 --executor sequential` |
 | `package 'chassis_bringup' not found` | Not built, or the shell was opened before the build. Run `source install/local_setup.bash`. |
 | `the task 'build' is ambiguous` | You're outside `pixi shell`. Pass `-e <env>`. |
-| Robot model doesn't move in RViz/Foxglove, or there's no `odom` frame | `diff_drive_controller` doesn't publish `odom → base_link` (`enable_odom_tf: false`). The EKF does, but only with `sim_gz.launch.py navigation:=true`. The real path has no `odom` TF yet, so use fixed frame `base_link`. |
+| Robot model doesn't move in RViz/Foxglove, or there's no `odom` frame | `diff_drive_controller` doesn't publish `odom → base_link` (`enable_odom_tf: false`). The EKF does, but only in sim with `navigation:=true` (the default). If you passed `navigation:=false`, drop it. The real path has no `odom` TF yet, so use fixed frame `base_link` there. |
 | Gamepad connected but the rover doesn't move | Hold RB. Check `ros2 topic echo /joy`, then `ros2 topic echo /diff_drive_controller/cmd_vel_unstamped`. |
 | `/joy` is silent | `ls /dev/input/js*`. Set `device_id` in `teleop/config/joystick.yaml`. |
 | Ground station sees no rover topics | `ROS_DOMAIN_ID` mismatch (`echo $ROS_DOMAIN_ID` should be `42` on both), a different LAN, or a firewall |

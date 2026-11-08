@@ -10,11 +10,14 @@ Wraps the existing backends and always starts the foxglove bridge:
 `mode:=real` -> real.launch.py    (standalone controller_manager + OdescSystemHardware)
 
 The rover is headless, so `rviz` defaults false; the foxglove bridge (:8765) is always on.
-The ground station runs its own view with `ground_station.launch.py`.
+The ground station runs its own view and the gamepad teleop with `ground_station.launch.py`,
+so `joy_control` defaults false here: a second joy_tank_drive on the rover would also
+react to the ground station's /joy and publish every drive command twice.
 """
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
@@ -32,6 +35,12 @@ declare_args = [
         default_value="false",
         description="Also start RViz on the rover (needs a display / xvfb-run). "
         "Normally the ground station runs RViz.",
+    ),
+    DeclareLaunchArgument(
+        "joy_control",
+        default_value="false",
+        description="Start gamepad teleop on the rover. Normally the ground station runs it; "
+        "true only with no ground station (e.g. onboard_test.launch.py).",
     ),
     DeclareLaunchArgument(
         "gui",
@@ -56,12 +65,14 @@ declare_args = [
 def _setup(context):
     mode = LaunchConfiguration("mode").perform(context)
     common = {"foxglove": "true", "rviz": LaunchConfiguration("rviz")}
+    actions = []
 
     if mode == "sim":
         target = "sim_gz.launch.py"
         args = {
             **common,
             "gui": LaunchConfiguration("gui"),
+            "joy_control": LaunchConfiguration("joy_control"),
         }
     elif mode == "real":
         target = "real.launch.py"
@@ -70,6 +81,17 @@ def _setup(context):
             "can_interface": LaunchConfiguration("can_interface"),
             "gear_ratio": LaunchConfiguration("gear_ratio")
         }
+        # real.launch.py has no teleop of its own (sim_gz does, via joy_control).
+        actions.append(
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [FindPackageShare("teleop"), "launch", "teleop.launch.py"]
+                    )
+                ),
+                condition=IfCondition(LaunchConfiguration("joy_control")),
+            )
+        )
     else:  # DeclareLaunchArgument(choices=...) already guards this
         raise RuntimeError(f"rover.launch.py: unknown mode {mode!r} (use sim|real)")
 
@@ -81,7 +103,8 @@ def _setup(context):
                 )
             ),
             launch_arguments=args.items(),
-        )
+        ),
+        *actions,
     ]
 
 

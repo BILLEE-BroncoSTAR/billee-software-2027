@@ -8,8 +8,7 @@ Starts:
   - viz.launch.py  -> rviz2 (drivetrain.rviz) + foxglove_bridge on :8765
   - teleop.launch.py -> joy_node + joy_tank_drive  (publishes cmd_vel over DDS);
     skip with joystick:=false (e.g. headless / Mac container / Foxglove-only station)
-  - optionally opens the F' GDS web UI in a browser (fprime_gds:=true); the address is
-    $FPRIME_GDS_URL (set in ros2_ws/pixi.toml) or fprime_gds_url:=
+  - optionally opens the F' GDS web UI in a browser (fprime_gds:=true) at fprime_gds_url:=
 
 The ground station shares ROS_DOMAIN_ID (pixi.toml) and LAN with the rover, so the local
 bridge exposes the rover's topics; point Foxglove Studio at ws://localhost:8765.
@@ -19,11 +18,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import (
-    EnvironmentVariable,
-    LaunchConfiguration,
-    PathJoinSubstitution,
-)
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
 declare_args = [
@@ -52,11 +47,8 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "fprime_gds_url",
-        default_value=EnvironmentVariable(
-            "FPRIME_GDS_URL", default_value="http://192.168.4.74:5000"
-        ),
-        description="Address opened when fprime_gds:=true. Defaults to $FPRIME_GDS_URL "
-        "(set in ros2_ws/pixi.toml), else http://192.168.4.74:5000.",
+        default_value="http://192.168.4.73:5000",
+        description="Address opened when fprime_gds:=true.",
     ),
 ]
 

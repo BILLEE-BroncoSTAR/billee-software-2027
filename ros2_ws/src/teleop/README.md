@@ -34,8 +34,13 @@ ros2 topic echo /joy                                     # find axis/button indi
 ros2 topic echo /diff_drive_controller/cmd_vel_unstamped
 ```
 
-`sim_gz.launch.py` (with `joy_control:=true`) and `ground_station.launch.py` (with `joystick:=true`)
-include this launch.
+These launches include it:
+
+- `sim_gz.launch.py`, with `joy_control:=true` (the default)
+- `ground_station.launch.py`, with `joystick:=true` (the default)
+- `rover.launch.py`, only with `joy_control:=true` (default `false`, because the ground station
+  runs teleop and two `joy_tank_drive` nodes would publish every command twice)
+- `onboard_test.launch.py`, with `joy_control:=true` (the default), through `rover.launch.py`
 
 The callback doesn't bounds-check the axis and button indices. A wrong index for your pad
 crashes the node.

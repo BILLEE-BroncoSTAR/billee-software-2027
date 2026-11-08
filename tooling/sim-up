@@ -56,5 +56,4 @@ exec "${wrap[@]}" pixi run --environment "$env" ros2 launch chassis_bringup sim_
   gui:="$gui" \
   foxglove:="$start_foxglove" \
   joy_control:="$use_controller" \
-  odesc_shadow:="$bringup_can_sim" \
-  can_interface:=vcan0
+  odesc_shadow:="$bringup_can_sim"

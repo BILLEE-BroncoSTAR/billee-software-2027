@@ -10,7 +10,8 @@ Gazebo host it.
     # real ODESC/NEO drivetrain on can2:
     ros2 launch chassis_bringup real.launch.py
 
-    # no motor hardware — exercise the full feedback -> odom -> TF -> viewer path:
+    # no motor hardware — exercise the encoder feedback -> /diff_drive_controller/odom
+    # + /joint_states -> viewer path (no odom TF on this path; use fixed frame base_link):
     ros2 launch chassis_bringup real.launch.py can_interface:=mock rviz:=true
 
     # protocol-level test against a virtual CAN bus (see tooling/can-up):

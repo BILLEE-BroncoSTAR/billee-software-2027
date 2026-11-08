@@ -4,9 +4,9 @@ Launch files for the BILLEE drivetrain. How to use them is in [docs/running.md](
 
 | Launch | Starts |
 |---|---|
-| `sim_gz.launch.py` | Gazebo + rover + `diff_drive_controller`, gamepad teleop (`joy_control`). Optional: `gui` (Gazebo window, default `true`), `foxglove`, `rviz`, `navigation` (EKF + costmap), `odesc_shadow` |
+| `sim_gz.launch.py` | Gazebo + rover + `diff_drive_controller`, gamepad teleop (`joy_control`). Also `navigation` (default `true`: synthetic VIO + EKF, the `odom → base_link` TF source, and the Nav2 controller/planner servers). Optional: `gui` (Gazebo window, default `true`), `foxglove`, `rviz`, `odesc_shadow` (always on `vcan0`) |
 | `real.launch.py` | Standalone `controller_manager` + `odesc/OdescSystemHardware` (`can_interface`: `can2` / `vcan0` / `mock`), `gear_ratio`, `foxglove`, `rviz` |
-| `rover.launch.py` | `mode:=sim` → `sim_gz` (`gui` default `false`), `mode:=real` → `real`, always with the Foxglove bridge |
+| `rover.launch.py` | `mode:=sim` → `sim_gz` (`gui` default `false`), `mode:=real` → `real`, always with the Foxglove bridge. `joy_control` defaults to `false` (the ground station runs teleop) |
 | `ground_station.launch.py` | RViz + Foxglove bridge + gamepad teleop. Optional: F' GDS browser tab (`fprime_gds:=true`) |
 | `viz.launch.py` | RViz and/or the Foxglove bridge on their own |
 | `onboard_test.launch.py` | real drivetrain + teleop + viewers, all on the rover (bench tests) |
@@ -17,7 +17,7 @@ Launch files for the BILLEE drivetrain. How to use them is in [docs/running.md](
 | `config/config.yaml` | Gazebo → ROS bridge (`/clock`) |
 | `config/zed_config.yaml` | Gazebo camera topics (`/depth_cam/*`) and ground-truth `/gz/odom` |
 | `config/gz_params.yaml` | Gazebo params |
-| `rviz/drivetrain.rviz`, `foxglove/drivetrain.json` | matching viewer layouts (fixed frame `odom`) |
+| `rviz/drivetrain.rviz`, `foxglove/drivetrain.json` | matching viewer layouts (RViz fixed frame `odom`, which needs the sim's `navigation:=true`. On the real drivetrain, switch it to `base_link`) |
 
 Notes:
 

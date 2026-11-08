@@ -3,7 +3,8 @@ ekf_filter_node:
     ros__parameters:
         frequency: 30.0
 
-        two_d_mode: false
+        # Planar rover: the synthetic VIO only models x, y, yaw.
+        two_d_mode: true
         publish_acceleration: true
         publish_tf: true
 
@@ -21,18 +22,22 @@ ekf_filter_node:
         base_link_frame: base_link  # Defaults to "base_link" if unspecified
         world_frame: odom           # Defaults to the value of odom_frame if unspecified
 
-        odom0: /odom
-        odom0_config: [true, true, false,
-                      false, false, true,
-                      true, true, false,
-                      false, false, true,
-                      false, false, false]
+        # Wheel odometry: velocity only (vx, vyaw). Its pose would double-count
+        # position with the VIO pose below and make the filter overconfident.
+        odom0: /diff_drive_controller/odom
+        odom0_config: [false, false, false,  # X, Y, Z
+                       false, false, false,  # Roll, Pitch, Yaw
+                       true,  false, false,  # Vx, Vy, Vz
+                       false, false, true,   # Vroll, Vpitch, Vyaw
+                       false, false, false]  # Ax, Ay, Az
+        # Synthetic VIO (zed2i): pose only (x, y, yaw). Its z/roll/pitch and twist
+        # carry a deliberately huge covariance and are not meant to be fused.
         odom1: /depth_cam/vio/odom
-        odom1_config: [true,  true,  true,  # X, Y, Z
-                    true,  true,  true,  # Roll, Pitch, Yaw
-                    false, false, false, # Vx, Vy, Vz
-                    false, false, false,  # Vroll, Vpitch, Vyaw
-                    false, false, false] # Ax, Ay, Az
+        odom1_config: [true,  true,  false,  # X, Y, Z
+                       false, false, true,   # Roll, Pitch, Yaw
+                       false, false, false,  # Vx, Vy, Vz
+                       false, false, false,  # Vroll, Vpitch, Vyaw
+                       false, false, false]  # Ax, Ay, Az
 
         odom1_differential: false
         odom1_relative: true

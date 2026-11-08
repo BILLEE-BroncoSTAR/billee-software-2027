@@ -39,6 +39,8 @@ answers) counts as none; `xdpyinfo` tells you which. Without `vglrun`, Xvfb rend
 it should say `NVIDIA Tegra Orin`.
 
 **Speed:** on the dev Orin Nano the sim runs at about 0.33× real time, with or without VirtualGL.
+That was measured before `navigation` defaulted to `true`. The EKF and Nav2 servers it adds
+haven't been measured on the Nano yet; `navigation:=false` removes them.
 Gazebo slows sim time until each 10 Hz camera frame (1280×720 RGB-D, image + depth + point cloud)
 is done. The time goes to CPU work in the Gazebo server, about 1.5 cores, not to rendering. The
 camera publishes about 3 fps of wall-clock time, which is its full 10 Hz in sim time.

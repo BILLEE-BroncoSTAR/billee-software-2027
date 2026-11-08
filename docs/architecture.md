@@ -38,7 +38,8 @@ flowchart TB
     RM --- REALB
 
     JSB -->|"/joint_states"| RSP["robot_state_publisher"] --> TF["/tf, /tf_static"]
-    VIO["synthetic VIO (zed2i pkg)<br/>/depth_cam/vio/odom"] --> EKF["robot_localization EKF<br/>(navigation:=true, sim only)"]
+    VIO["synthetic VIO (zed2i pkg)<br/>/depth_cam/vio/odom"] -->|"pose x, y, yaw"| EKF["robot_localization EKF<br/>(navigation:=true, sim only)"]
+    DDC -->|"/diff_drive_controller/odom<br/>vx, vyaw"| EKF
     EKF -->|"odom → base_link"| TF
     TF --> FB["foxglove_bridge :8765"] <--> FGS
 ```
@@ -72,8 +73,11 @@ The CAN node ID ↔ wheel map has two copies, kept in sync by hand: `odesc/confi
 
 `diff_drive_controller` publishes `/diff_drive_controller/odom` but not the `odom → base_link`
 TF (`enable_odom_tf: false`). The TF comes from the EKF in `navigation/launch/pose_estim.launch.py`,
-which only runs in sim (`sim_gz.launch.py navigation:=true`). The EKF's wheel-odometry input
-(`odom0`) is `/odom`, which nothing publishes, so for now it fuses only the synthetic VIO.
+which only runs in sim (`sim_gz.launch.py navigation:=true`, the default). The EKF
+(`navigation/config/ekf_sim.yaml`, `two_d_mode: true`) fuses wheel odometry
+(`/diff_drive_controller/odom`) as velocity only (`vx`, `vyaw`) and the synthetic VIO
+(`/depth_cam/vio/odom`) as pose only (`x`, `y`, `yaw`), so position isn't counted twice.
+The real path has no EKF yet, and so no `odom` frame.
 
 ## Time
 

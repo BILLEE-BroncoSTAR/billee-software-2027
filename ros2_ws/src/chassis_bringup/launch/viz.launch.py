@@ -11,7 +11,8 @@ launch instead:
     ros2 launch chassis_bringup real.launch.py  can_interface:=mock rviz:=true
 
 Both readers show the same thing: the robot model + TF tree + wheel odometry,
-fixed frame `odom`. RViz needs a display (use `xvfb-run -a` for headless checks);
+fixed frame `odom`. Only the sim EKF (sim_gz navigation:=true, the default) publishes
+`odom`; on the real path switch the fixed frame to `base_link`. RViz needs a display (use `xvfb-run -a` for headless checks);
 Foxglove Studio connects from a laptop to `ws://<jetson-ip>:8765` and needs none.
 """
 
