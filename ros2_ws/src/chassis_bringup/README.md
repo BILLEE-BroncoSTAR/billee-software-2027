@@ -4,7 +4,7 @@ Launch files for the BILLEE drivetrain. How to use them is in [docs/running.md](
 
 | Launch | Starts |
 |---|---|
-| `sim_gz.launch.py` | Gazebo + rover + `diff_drive_controller`, gamepad teleop (`joy_control`). Also `navigation` (default `true`: synthetic VIO + EKF, the `odom → base_link` TF source, and the Nav2 controller/planner servers). Optional: `gui` (Gazebo window, default `true`), `foxglove`, `rviz`, `odesc_shadow` (always on `vcan0`) |
+| `sim_gz.launch.py` | Gazebo + rover + `diff_drive_controller`, gamepad teleop (`joy_control`). Also `navigation` (default `true`: synthetic VIO + EKF, the `odom → base_footprint` TF source, and the Nav2 controller/planner servers). Optional: `gui` (Gazebo window, default `true`), `foxglove`, `rviz`, `odesc_shadow` (always on `vcan0`) |
 | `real.launch.py` | Standalone `controller_manager` + `odesc/OdescSystemHardware` (`can_interface`: `can2` / `vcan0` / `mock`), `gear_ratio`, `foxglove`, `rviz` |
 | `rover.launch.py` | `mode:=sim` → `sim_gz` (`gui` default `false`), `mode:=real` → `real`, always with the Foxglove bridge. `joy_control` defaults to `false` (the ground station runs teleop) |
 | `ground_station.launch.py` | RViz + Foxglove bridge + gamepad teleop. Optional: F' GDS browser tab (`fprime_gds:=true`) |

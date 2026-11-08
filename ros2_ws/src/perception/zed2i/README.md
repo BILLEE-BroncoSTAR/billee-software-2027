@@ -3,7 +3,7 @@
 `synthetic_vio_node` publishes a controllably degraded VIO-like `nav_msgs/Odometry`
 measurement from Gazebo **ground truth**. It is for EKF simulation, not a ZED SDK or
 camera emulator. It intentionally does not publish TF; the EKF should be the only
-publisher of `odom -> base_link`.
+publisher of `odom -> base_footprint`.
 
 See the [Synthetic VIO User Guide](docs/SYNTHETIC_VIO_USER_GUIDE.md) for required
 Gazebo wiring, profile behaviour, all parameters, EKF configuration, and experiment

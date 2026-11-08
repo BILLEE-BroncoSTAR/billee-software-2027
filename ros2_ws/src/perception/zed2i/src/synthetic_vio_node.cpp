@@ -122,7 +122,7 @@ public:
     RCLCPP_INFO(
       get_logger(),
       "Synthetic VIO profile='%s', seed=%llu, source='%s', output='%s'. "
-      "This node publishes no TF; let the EKF be the sole odom->base_link publisher.",
+      "This node publishes no TF; let the EKF be the sole odom->base_footprint publisher.",
       profile_.c_str(), static_cast<unsigned long long>(resolved_seed_), truth_topic_.c_str(),
       vio_topic_.c_str());
   }

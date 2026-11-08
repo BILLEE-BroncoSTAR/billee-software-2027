@@ -100,7 +100,7 @@ declare_args = [
             default_value="true",
             description=(
                 "Start the simulation pose estimator (synthetic VIO + EKF) and the Nav2 "
-                "controller/planner servers. The EKF is the only odom -> base_link TF "
+                "controller/planner servers. The EKF is the only odom -> base_footprint TF "
                 "source, so the viewers' odom fixed frame needs this."
             ),
         ),

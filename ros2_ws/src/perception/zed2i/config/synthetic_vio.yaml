@@ -5,7 +5,7 @@ synthetic_vio:
     truth_topic: /gz/odom
     vio_topic: /depth_cam/vio/odom
     output_frame_id: odom
-    child_frame_id: base_link
+    child_frame_id: base_footprint
 
     # calibration is for initial covariance tuning; validation samples plausible
     # model parameters per run; stress also introduces latency, outliers and dropouts.

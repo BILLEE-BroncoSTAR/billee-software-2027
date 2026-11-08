@@ -13,7 +13,7 @@ ever sees the six wheel-joint `position`/`velocity` state interfaces and one
 `velocity` command interface per joint.
 
 `diff_drive_controller` publishes wheel odometry on `/diff_drive_controller/odom`
-but not the `odom → base_link` TF. That TF belongs to the EKF (see
+but not the `odom → base_footprint` TF. That TF belongs to the EKF (see
 [docs/architecture.md](../../../docs/architecture.md#odometry-and-tf)).
 
 ```

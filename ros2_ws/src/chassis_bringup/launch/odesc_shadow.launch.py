@@ -27,7 +27,7 @@ def _controllers_file(context):
     config.setdefault("controller_manager", {}).setdefault("ros__parameters", {})[
         "use_sim_time"
     ] = False
-    # The shadow must not publish the Gazebo rover's odom -> base_link TF. Its
+    # The shadow must not publish the Gazebo rover's odom -> base_footprint TF. Its
     # namespaced odometry remains available for comparison, but Gazebo is the
     # single authoritative TF publisher in this integration test.
     shadow_diff_drive = config.setdefault("diff_drive_controller", {}).setdefault(

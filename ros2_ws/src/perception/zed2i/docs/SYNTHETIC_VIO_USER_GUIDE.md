@@ -41,7 +41,7 @@ are used only when configured, normally through the `stress` profile.
    ```
 
 The node does not publish TF. Let the EKF remain the sole publisher of
-`odom -> base_link`.
+`odom -> base_footprint`.
 
 ## Launch
 
@@ -103,7 +103,7 @@ frame names and available wheel fields to the rover configuration. Do not also f
 the synthetic VIO twist fields; they intentionally have very large covariance.
 
 The synthetic VIO message uses `output_frame_id` (`odom` by default) and
-`child_frame_id` (`base_link` by default). These names must be compatible with the
+`child_frame_id` (`base_footprint` from `synthetic_vio.yaml`, `base_link` built in). These names must be compatible with the
 EKF frame configuration.
 
 ## Profiles
@@ -136,7 +136,7 @@ node's own default, used only when it runs without that file.
 | `truth_topic` | `/gz/odom` | `/gz/odom` | ROS 2 ground-truth `nav_msgs/msg/Odometry` input. |
 | `vio_topic` | `/depth_cam/vio/odom` | `/sim/zed/vio/odom` | Synthetic VIO odometry output. |
 | `output_frame_id` | `odom` | `odom` | Output `Odometry.header.frame_id`. |
-| `child_frame_id` | `base_link` | `base_link` | Output `Odometry.child_frame_id`. |
+| `child_frame_id` | `base_footprint` | `base_link` | Output `Odometry.child_frame_id`. |
 | `profile` | `validation` | `calibration` | `calibration`, `validation`, `stress`, or alias `nominal`. |
 | `seed` | `42` | `-1` | Non-negative deterministic seed; `-1` chooses a seed and logs it. |
 
@@ -205,5 +205,5 @@ debugging and reproducibility; a set of held-out seeds is for evaluating the fil
 | No `/depth_cam/vio/odom` output | Confirm `truth_topic` exists, is type `nav_msgs/msg/Odometry`, and has non-zero timestamps. |
 | VIO publishes immediately despite configured latency | Confirm the node has `use_sim_time:=true` and Gazebo is publishing `/clock`. |
 | EKF becomes implausibly certain | Verify the truth source is not wheel odometry, fuse VIO pose only, and do not report covariance below the actual nominal model during calibration. |
-| Two `odom -> base_link` TF publishers | Disable TF output on measurement sources; only the EKF should publish that transform. |
+| Two `odom -> base_footprint` TF publishers | Disable TF output on measurement sources; only the EKF should publish that transform. |
 | A result cannot be reproduced | Use the resolved seed printed at node startup and the same profile and parameter values. |
