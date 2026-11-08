@@ -21,7 +21,7 @@
       },
       "transforms": {},
       "topics": {
-        "/diff_drive_controller/odom": {
+        "/odometry/filtered": {
           "visible": true,
           "type": "axis",
           "axisScale": 0.2,

@@ -10,8 +10,10 @@
   <joint name="dummy_joint" type="fixed">
     <parent link="base_footprint"/>
     <child link="base_link"/>
-    <!-- base_link is located midway between the two centre wheel axes. -->
-    <origin rpy="0.0 0.0 0.0" xyz="0.3624 0 0.115"/>
+    <!-- base_link is midway between the two centre wheel axes (the turning centre).
+         base_footprint is directly below it on the ground (REP-105), so wheel odometry
+         (base_link), the EKF and Gazebo ground truth (base_footprint) share one x/y. -->
+    <origin rpy="0.0 0.0 0.0" xyz="0 0 0.115"/>
   </joint>
   <link name="base_link">
     <inertial>
