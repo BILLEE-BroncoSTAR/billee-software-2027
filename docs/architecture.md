@@ -40,7 +40,7 @@ flowchart TB
     JSB -->|"/joint_states"| RSP["robot_state_publisher"] --> TF["/tf, /tf_static"]
     VIO["synthetic VIO (zed2i pkg)<br/>/depth_cam/vio/odom"] -->|"pose x, y, yaw"| EKF["robot_localization EKF<br/>(navigation:=true, sim only)"]
     DDC -->|"/diff_drive_controller/odom<br/>vx, vyaw"| EKF
-    EKF -->|"odom → base_link"| TF
+    EKF -->|"odom → base_footprint"| TF
     TF --> FB["foxglove_bridge :8765"] <--> FGS
 ```
 
@@ -71,13 +71,20 @@ The CAN node ID ↔ wheel map has two copies, kept in sync by hand: `odesc/confi
 
 ## Odometry and TF
 
-`diff_drive_controller` publishes `/diff_drive_controller/odom` but not the `odom → base_link`
-TF (`enable_odom_tf: false`). The TF comes from the EKF in `navigation/launch/pose_estim.launch.py`,
+The TF tree is `odom → base_footprint → base_link → …`. `base_footprint` is the URDF root, on
+the ground directly below `base_link` (the turning centre), and `robot_state_publisher` publishes everything below it. `diff_drive_controller`
+publishes `/diff_drive_controller/odom` but no TF (`enable_odom_tf: false`). The
+`odom → base_footprint` TF comes from the EKF in `navigation/launch/pose_estim.launch.py`,
 which only runs in sim (`sim_gz.launch.py navigation:=true`, the default). The EKF
 (`navigation/config/ekf_sim.yaml`, `two_d_mode: true`) fuses wheel odometry
 (`/diff_drive_controller/odom`) as velocity only (`vx`, `vyaw`) and the synthetic VIO
 (`/depth_cam/vio/odom`) as pose only (`x`, `y`, `yaw`), so position isn't counted twice.
 The real path has no EKF yet, and so no `odom` frame.
+
+Wheel odometry alone drifts quickly when the rover turns. The six wheels skid sideways, and
+`diff_drive_controller` assumes they don't. In Gazebo it reports about 1.6× the real turn rate
+(commanded 0.5 rad/s, actual 0.31 rad/s). The VIO pose corrects this in the EKF, so the viewers
+show the EKF output (`/odometry/filtered`), not `/diff_drive_controller/odom`.
 
 ## Time
 
