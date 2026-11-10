@@ -5,7 +5,8 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.substitutions import PathJoinSubstitution
+from launch.substitutions import PathJoinSubstitution, PythonExpression
+from launch.conditions import IfCondition
 from ament_index_python.packages import get_package_share_directory
 import os
 
@@ -76,6 +77,24 @@ def generate_launch_description():
 
         )
     )
+    # Sim only: the Gazebo bridge publishes /gps with zero covariance, which the EKF
+    # treats as exact. The relay republishes it with covariance on /gps/with_cov.
+    # On hardware, comms/GpsNode already fills covariance on /gps.
+    launch_nodes.append(
+        Node(
+            package='navigation',
+            executable='gps_covariance_relay',
+            name='gps_covariance_relay',
+            output='screen',
+            condition=IfCondition(use_sim),
+            parameters=[{'use_sim_time': use_sim}],
+            remappings=[('gps', '/gps'), ('gps/with_cov', '/gps/with_cov')],
+        )
+    )
+    gps_fix_topic = PythonExpression(
+        ["'/gps/with_cov' if '", use_sim, "'.lower() == 'true' else '/gps'"]
+    )
+
     # Navsat transform node
     launch_nodes.append(
         Node(
@@ -89,7 +108,7 @@ def generate_launch_description():
             ],
             remappings=[
             ('imu', '/imu/data'),
-            ('gps/fix', '/gps'),
+            ('gps/fix', gps_fix_topic),
             ('odometry/filtered', '/odometry/global'),
             ('odometry/gps', '/odometry/gps'),
             ('gps/filtered', '/gps/filtered'),],
@@ -122,6 +141,7 @@ def generate_launch_description():
             name='lifecycle_manager_planner',
             output='screen',
             parameters=[{
+                'use_sim_time': use_sim,
                 'autostart': True,
                 'node_names': ['planner_server']
             }]

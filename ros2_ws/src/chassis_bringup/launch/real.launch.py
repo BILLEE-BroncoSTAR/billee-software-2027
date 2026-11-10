@@ -93,6 +93,10 @@ def _write_wallclock_controllers(context):
     cm = cfg.setdefault("controller_manager", {}).setdefault("ros__parameters", {})
     cm["use_sim_time"] = False
 
+    # The skid-steer multiplier in controllers.yaml is calibrated in Gazebo only.
+    dd = cfg.setdefault("diff_drive_controller", {}).setdefault("ros__parameters", {})
+    dd["wheel_separation_multiplier"] = 1.0
+
     fd, path = tempfile.mkstemp(prefix="controllers_real_", suffix=".yaml")
     with os.fdopen(fd, "w") as fh:
         yaml.safe_dump(cfg, fh, default_flow_style=False)

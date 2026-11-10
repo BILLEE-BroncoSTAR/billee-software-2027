@@ -14,6 +14,7 @@ find_package(nav2_util REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 
 pluginlib_export_plugin_description_file(nav2_core global_planner_plugin.xml)
@@ -39,8 +40,17 @@ ament_target_dependencies(nav2_straightline_planner_plugin
   tf2_ros
 )
 
+# Sim-only: adds covariance to Gazebo GPS fixes (the bridge publishes zeros)
+add_executable(gps_covariance_relay src/gps_covariance_relay.cpp)
+ament_target_dependencies(gps_covariance_relay rclcpp sensor_msgs)
+
 install(DIRECTORY config launch
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(
+  TARGETS gps_covariance_relay
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
 install(

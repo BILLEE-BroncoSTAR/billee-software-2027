@@ -3,7 +3,9 @@ ekf_filter_node_odom:
     ros__parameters:
         frequency: 30.0
 
-        two_d_mode: false
+        # The sim world is flat and nothing measures z/roll/pitch (VIO and wheel odom both
+        # report 1e6 variance for them). Revisit when a real IMU supplies roll and pitch.
+        two_d_mode: true
         publish_acceleration: true
         publish_tf: true
 
@@ -21,11 +23,12 @@ ekf_filter_node_odom:
         base_link_frame: base_link  # Defaults to "base_link" if unspecified
         world_frame: odom           # Defaults to the value of odom_frame if unspecified
 
-        #odom 0 = wheel odometry
+        #odom 0 = wheel odometry velocities only; VIO is the single absolute pose source,
+        #since two disagreeing absolute poses make the filter jump between them
         odom0: /diff_drive_controller/odom
-        odom0_config: [true, true, false,
-                      false, false, true,
-                      true, true, false,
+        odom0_config: [false, false, false,
+                      false, false, false,
+                      true,  true,  false,
                       false, false, true,
                       false, false, false]
 
