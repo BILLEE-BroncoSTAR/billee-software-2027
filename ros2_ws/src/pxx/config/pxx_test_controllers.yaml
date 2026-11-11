@@ -1,0 +1,17 @@
+# Controllers for launch/pxx_test.launch.py (bench / vcan testing of the pxx plugin
+# without the full arm description).
+controller_manager:
+  ros__parameters:
+    update_rate: 100
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    arm_position_controller:
+      type: position_controllers/JointGroupPositionController
+
+arm_position_controller:
+  ros__parameters:
+    joints:
+      - joint_arm_1
+      - joint_arm_2

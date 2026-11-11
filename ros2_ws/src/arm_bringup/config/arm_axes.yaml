@@ -1,0 +1,124 @@
+# arm_axes.yaml — physical constants for every BILLEE arm axis.
+#
+# SINGLE SOURCE OF TRUTH. arm.launch.py reads this file and generates the
+# ros2_control URDF and the controller joint lists from it, so there is
+# nothing to hand-copy anywhere else. arm_slow_jog.py reads it for speed and
+# limit checks.
+#
+# !!! EVERY VALUE BELOW IS A PLACEHOLDER !!!
+# Each axis has `verified: false` until someone has measured it on the bench
+# (docs/ARM_BRINGUP_GUIDE.md §6). arm.launch.py prints a warning for every
+# unverified axis. Flip it to true only after the measurement checks out.
+#
+# ---------------------------------------------------------------------------
+# Units: radians and radians/second, at the JOINT (after all gearing).
+#
+# Common fields
+#   joint               joint name used by ros2_control, the controllers and /joint_states
+#   driver              pxx (P17/P20 over CANopen) | roboclaw (BasicMicro over packet serial)
+#   motor               part number, for the record
+#   builtin_reduction   motor-shaft turns per actuator-output turn (the reducer
+#                       inside the actuator / the gearmotor's gearbox)
+#   external_reduction  actuator-output turns per joint turn (belts, gears,
+#                       harmonic drives after the actuator). 1.0 = direct drive.
+#   direction           +1 or -1. Flips the sign so +rad matches the URDF's
+#                       positive joint direction.
+#   limits.min_position / max_position   rad. Enforced by arm_slow_jog.py only.
+#                       See the guide §1.3 for drive-level soft limits.
+#   limits.max_velocity rad/s. Hard ceiling for any command.
+#   test_velocity       rad/s used for bring-up / jog tests. Keep it SLOW.
+#
+# driver: pxx
+#   node_id             CANopen node ID 1-127 (stored on the drive in 2001h:01)
+#   -> launch derives gear_ratio = builtin_reduction * external_reduction * direction
+#      (pxx converts 6064h at 65536 counts per motor-shaft rev)
+#
+# driver: roboclaw
+#   address             packet-serial address 128-135 (set in Motion Studio)
+#   channel             M1 | M2
+#   encoder_cpr         encoder counts per MOTOR-shaft rev, as the RoboClaw
+#                       counts them (quadrature = 4 x the encoder's PPR / lines)
+#   -> launch derives qppr = round(encoder_cpr * builtin_reduction *
+#      external_reduction) * direction  (counts per JOINT rev)
+#   tuning              record of the values saved in the RoboClaw's EEPROM via
+#                       Motion Studio. NOT pushed by the launch; kept here so a
+#                       replaced / factory-reset unit can be restored.
+# ---------------------------------------------------------------------------
+
+axes:
+  # TODO: replace this whole list with the real arm axes once the wiring is known.
+
+  - joint: joint_arm_1             # TODO: real name (e.g. base_yaw)
+    verified: false
+    driver: pxx
+    motor: P20-90-PRO-121-B
+    node_id: 1
+    builtin_reduction: 121.0       # 121:1 reducer built into the P20-90-PRO-121-B
+    external_reduction: 1.0        # TODO: measure
+    direction: 1                   # TODO: check on the bench
+    limits:
+      min_position: -1.57          # TODO
+      max_position: 1.57           # TODO
+      max_velocity: 0.5            # TODO
+    test_velocity: 0.05            # ~2.9 deg/s
+
+  - joint: joint_arm_2             # TODO: real name (e.g. shoulder_pitch)
+    verified: false
+    driver: pxx
+    motor: P17                     # TODO: full part number
+    node_id: 2
+    builtin_reduction: 121.0       # TODO: P17 reducer ratio is UNKNOWN; 121 is a guess
+    external_reduction: 1.0        # TODO: measure
+    direction: 1                   # TODO
+    limits:
+      min_position: -1.0           # TODO
+      max_position: 1.0            # TODO
+      max_velocity: 0.5            # TODO
+    test_velocity: 0.05
+
+  - joint: joint_arm_3             # TODO: real name (e.g. wrist_pitch)
+    verified: false
+    driver: roboclaw
+    motor: TODO                    # gearmotor part number
+    address: 128
+    channel: M1
+    encoder_cpr: 48                # TODO: quadrature counts per motor rev
+    builtin_reduction: 100.0       # TODO: gearmotor gearbox ratio
+    external_reduction: 1.0        # TODO
+    direction: 1                   # TODO
+    limits:
+      min_position: -1.0           # TODO (relative to power-up pose, see guide §1.3)
+      max_position: 1.0            # TODO
+      max_velocity: 0.5            # TODO
+    test_velocity: 0.05
+    tuning:                        # copy from Motion Studio after auto-tune
+      qpps: null                   # max measured speed, counts/s at the MOTOR encoder
+      velocity_pid: {p: null, i: null, d: null}
+      max_current_a: null
+
+  - joint: joint_arm_4             # TODO: real name (e.g. wrist_roll)
+    verified: false
+    driver: roboclaw
+    motor: TODO
+    address: 128
+    channel: M2
+    encoder_cpr: 48                # TODO
+    builtin_reduction: 100.0       # TODO
+    external_reduction: 1.0        # TODO
+    direction: 1                   # TODO
+    limits:
+      min_position: -3.14          # TODO
+      max_position: 3.14           # TODO
+      max_velocity: 0.5            # TODO
+    test_velocity: 0.05
+    tuning:
+      qpps: null
+      velocity_pid: {p: null, i: null, d: null}
+      max_current_a: null
+
+  # A second RoboClaw on the same UART just uses the next address, e.g.:
+  # - joint: gripper
+  #   driver: roboclaw
+  #   address: 129
+  #   channel: M1
+  #   ...

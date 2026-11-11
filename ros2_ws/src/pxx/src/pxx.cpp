@@ -89,7 +89,7 @@ hardware_interface::CallbackReturn PxxSystemHardware::on_init(
       RCLCPP_FATAL(
         rclcpp::get_logger(kLogger),
         "joint '%s' is missing the required <param name=\"node_id\"> "
-        "(canonical map: pxx/config/node_map.yaml).",
+        "(canonical map: arm_bringup/config/arm_axes.yaml).",
         joint.name.c_str());
       return hardware_interface::CallbackReturn::ERROR;
     }

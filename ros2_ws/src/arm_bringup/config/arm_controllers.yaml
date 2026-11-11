@@ -1,0 +1,36 @@
+# Controller template for arm.launch.py.
+#
+# The `joints:` lists are EMPTY on purpose: arm.launch.py fills them from
+# config/arm_axes.yaml (pxx axes -> arm_can_controller, roboclaw axes ->
+# arm_roboclaw_controller) and drops a controller whose list would be empty.
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz. Also the CANopen SYNC rate on the pxx bus.
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # P17 / P20 (position command). Trajectories, not raw steps: in CSP the
+    # drives run to each new target at full speed, so motion speed has to come
+    # from the trajectory timing.
+    arm_can_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    # RoboClaw (velocity command; the driver only supports velocity).
+    arm_roboclaw_controller:
+      type: velocity_controllers/JointGroupVelocityController
+
+arm_can_controller:
+  ros__parameters:
+    joints: []                       # filled by arm.launch.py
+    command_interfaces: [position]
+    state_interfaces: [position, velocity]
+    allow_partial_joints_goal: true  # lets arm_slow_jog.py move one joint at a time
+    state_publish_rate: 50.0
+    constraints:
+      stopped_velocity_tolerance: 0.02
+      goal_time: 2.0                 # s of slack after the last point before aborting
+
+arm_roboclaw_controller:
+  ros__parameters:
+    joints: []                       # filled by arm.launch.py

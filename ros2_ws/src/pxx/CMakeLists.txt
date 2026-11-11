@@ -49,8 +49,13 @@ install(DIRECTORY include/
 install(FILES pxx_plugin.xml
   DESTINATION share/${PROJECT_NAME}
 )
-install(DIRECTORY config
+install(DIRECTORY config launch
   DESTINATION share/${PROJECT_NAME}
+)
+# CANopen drive emulator for vcan testing (used by pxx_test.launch.py and
+# arm_bringup/arm.launch.py).
+install(PROGRAMS scripts/pxx_vcan_emulator.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_export_include_directories(include)
