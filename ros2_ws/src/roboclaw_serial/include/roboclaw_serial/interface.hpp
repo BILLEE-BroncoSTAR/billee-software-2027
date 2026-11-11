@@ -24,6 +24,10 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <type_traits>
 #include <vector>
 
 #include "roboclaw_serial/command.hpp"
@@ -61,14 +65,15 @@ public:
       crc16::update(crc_, byte);
     }
 
+    // BILLEE: drop stale input so a previous late reply can't desync this one.
+    device_->flushInput();
+
     // Write the buffer to the serial device
     device_->write(buffer_.data(), buffer_.size());
 
-    // Set the buffer to the size of the fields, size of CRC
-    buffer_.resize(buffer_.max_size());
-
-    // Read the response from the device
-    std::size_t bytes_read = device_->read(buffer_.data(), buffer_.size());
+    // BILLEE: read until the whole reply has arrived. Upstream took a single
+    // read(), which over a real UART usually returns only the first byte(s).
+    std::size_t bytes_read = readReply(ReplyPayloadSize<typename Request::ArgsTuple>::value);
 
     buffer_.resize(bytes_read);
 
@@ -114,6 +119,9 @@ public:
     // Initialize buffer with Write request, fields, and CRC
     this->bufferSetupWrite<Request>(address, fields);
 
+    // BILLEE: drop stale input so a leftover byte isn't mistaken for the ACK.
+    device_->flushInput();
+
     // Write the request
     device_->write(buffer_.data(), buffer_.size());
 
@@ -123,6 +131,55 @@ public:
   }
 
 private:
+  // Payload bytes in a reply with these fields, excluding the CRC.
+  // 0 means variable length (a std::string field, e.g. the firmware version).
+  template<typename Tuple>
+  struct ReplyPayloadSize;
+
+  template<typename ... Ts>
+  struct ReplyPayloadSize<std::tuple<Ts...>>
+  {
+    static constexpr bool variable = (std::is_same_v<Ts, std::string>|| ...);
+    static constexpr std::size_t value = variable ? 0 : (std::size_t{0} + ... + sizeof(Ts));
+  };
+
+  static constexpr std::size_t kCrcSize = sizeof(uint16_t);
+
+  // True once buffer_[0, received) holds a complete reply.
+  bool replyComplete(std::size_t received, std::size_t payload_size) const
+  {
+    if (payload_size != 0) {
+      return received >= payload_size + kCrcSize;
+    }
+    // Variable length: text, a '\0' terminator, then the CRC.
+    for (std::size_t i = 0; i < received; ++i) {
+      if (buffer_[i] == std::byte{0}) {
+        return received >= i + 1 + kCrcSize;
+      }
+    }
+    return false;
+  }
+
+  // Read a whole reply into buffer_ and return its length. Each device read
+  // throws on its own timeout, so a reply that stops arriving can't hang here.
+  std::size_t readReply(std::size_t payload_size)
+  {
+    const std::size_t wanted = payload_size != 0 ? payload_size + kCrcSize : buffer_.max_size();
+    buffer_.resize(buffer_.max_size());
+    std::size_t received = 0;
+    while (!replyComplete(received, payload_size)) {
+      if (received >= wanted) {
+        throw std::overflow_error("RoboClaw reply did not fit in the receive buffer");
+      }
+      const std::size_t n = device_->read(buffer_.data() + received, wanted - received);
+      if (n == 0) {
+        throw std::runtime_error("Read timeout!");
+      }
+      received += n;
+    }
+    return received;
+  }
+
   template<typename Request>
   void bufferPackFields(const typename Request::ArgsTuple & fields)
   {
@@ -188,7 +245,9 @@ private:
   {
     // We only expect an ACK from the roboclaw
     buffer_.resize(1);
-    device_->read(buffer_.data(), buffer_.size());
+    if (device_->read(buffer_.data(), buffer_.size()) == 0) {
+      return false;  // BILLEE: upstream compared a stale byte when nothing was read
+    }
 
     return buffer_.pop_back() == ACK;
   }

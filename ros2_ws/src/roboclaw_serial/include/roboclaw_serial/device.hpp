@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace roboclaw_serial
@@ -31,10 +32,48 @@ class SerialDevice
 public:
   typedef std::shared_ptr<SerialDevice> SharedPtr;
 
+  // RoboClaw factory-default packet serial baud rate.
+  static constexpr int kDefaultBaudRate = 38400;
+
   SerialDevice() = default;
 
-  explicit SerialDevice(const std::string device) {connect(device);}
+  // BILLEE: baud_rate added. Ignored by USB (CDC-ACM) ports, but a real UART
+  // (e.g. Jetson /dev/ttyTHSx) must match the RoboClaw's Motion Studio setting.
+  explicit SerialDevice(const std::string device, int baud_rate = kDefaultBaudRate)
+  : speed_(toSpeed(baud_rate))
+  {
+    connect(device);
+  }
   virtual ~SerialDevice() {disconnect();}
+
+  // Map a numeric baud rate onto a termios speed. Covers every rate the
+  // RoboClaw's packet serial mode supports.
+  static speed_t toSpeed(int baud_rate)
+  {
+    switch (baud_rate) {
+      case 2400: return B2400;
+      case 9600: return B9600;
+      case 19200: return B19200;
+      case 38400: return B38400;
+      case 57600: return B57600;
+      case 115200: return B115200;
+      case 230400: return B230400;
+      case 460800: return B460800;
+      default:
+        throw std::invalid_argument(
+                "Unsupported RoboClaw baud rate " + std::to_string(baud_rate) +
+                " (use 2400, 9600, 19200, 38400, 57600, 115200, 230400 or 460800)");
+    }
+  }
+
+  // BILLEE: discard any unread input (e.g. the tail of a late reply) so the
+  // next request starts in sync.
+  virtual void flushInput()
+  {
+    if (connected_) {
+      tcflush(fd_, TCIFLUSH);
+    }
+  }
 
   virtual bool connect(const std::string & device)
   {
@@ -112,6 +151,10 @@ private:
     options.c_iflag = IGNPAR;
     options.c_oflag = 0;
     options.c_lflag = 0;
+    // BILLEE: upstream never set a speed, which left the port at B0. Harmless
+    // over USB, wrong on a real UART.
+    cfsetispeed(&options, speed_);
+    cfsetospeed(&options, speed_);
     tcflush(fd_, TCIFLUSH);
     tcsetattr(fd_, TCSANOW, &options);
 
@@ -120,6 +163,7 @@ private:
   }
 
   int fd_ = -1;
+  speed_t speed_ = B38400;
 };
 
 }  // namespace roboclaw_serial

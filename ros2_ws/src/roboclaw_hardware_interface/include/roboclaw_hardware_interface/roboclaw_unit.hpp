@@ -39,6 +39,9 @@ public:
   // Conver the velocity command to tick rate request and write to the roboclaw
   void write();
 
+  // BILLEE: for log messages, e.g. "RoboClaw 128"
+  std::string name() const {return "RoboClaw " + std::to_string(address_);}
+
 private:
   roboclaw_serial::Interface::SharedPtr interface_;
   const uint8_t address_;

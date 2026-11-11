@@ -17,11 +17,26 @@
 #include <iostream>
 #include <roboclaw_serial/device.hpp>
 
+#include "lifecycle_msgs/msg/state.hpp"
+#include "rclcpp/logging.hpp"
+
+namespace
+{
+const rclcpp::Logger kLogger = rclcpp::get_logger("RoboClawHardwareInterface");
+}  // namespace
+
 namespace roboclaw_hardware_interface
 {
 
 CallbackReturn RoboClawHardwareInterface::on_init(const HardwareInfo & hardware_info)
 {
+  // BILLEE: upstream skipped the base on_init, so info_ (and the component's
+  // name) was never stored. The resource manager then logged it as hardware ''
+  // and `ros2 control set_hardware_component_state` couldn't address it.
+  if (SystemInterface::on_init(hardware_info) != CallbackReturn::SUCCESS) {
+    return CallbackReturn::ERROR;
+  }
+
   // Validate serial port parameter
   std::string serial_port;
   try {
@@ -31,15 +46,33 @@ CallbackReturn RoboClawHardwareInterface::on_init(const HardwareInfo & hardware_
     return CallbackReturn::ERROR;
   }
 
+  // BILLEE: optional baud_rate param. Must match Motion Studio's packet serial
+  // baud on a real UART; ignored by USB ports.
+  int baud_rate = roboclaw_serial::SerialDevice::kDefaultBaudRate;
+  if (hardware_info.hardware_parameters.count("baud_rate")) {
+    try {
+      baud_rate = std::stoi(hardware_info.hardware_parameters.at("baud_rate"));
+    } catch (const std::exception &) {
+      RCLCPP_FATAL(kLogger, "baud_rate must be an integer");
+      return CallbackReturn::ERROR;
+    }
+  }
+
   // Try to establish a connection to the roboclaw
   try {
     // Read the serial port from hardware parameters
-    auto device = std::make_shared<roboclaw_serial::SerialDevice>(serial_port);
+    auto device = std::make_shared<roboclaw_serial::SerialDevice>(serial_port, baud_rate);
+    if (!device->connected()) {
+      // BILLEE: upstream carried on with a closed port and failed on first use.
+      RCLCPP_FATAL(kLogger, "could not open serial port '%s'", serial_port.c_str());
+      return CallbackReturn::FAILURE;
+    }
     interface_ = std::make_shared<roboclaw_serial::Interface>(device);
   } catch (const std::exception & e) {
-    std::cerr << e.what() << std::endl;
+    RCLCPP_FATAL(kLogger, "serial port '%s': %s", serial_port.c_str(), e.what());
     return CallbackReturn::FAILURE;
   }
+  RCLCPP_INFO(kLogger, "opened '%s' at %d baud", serial_port.c_str(), baud_rate);
 
   // Validate parameters describing roboclaw joint configurations
   RoboClawConfiguration config;
@@ -85,20 +118,86 @@ std::vector<CommandInterface> RoboClawHardwareInterface::export_command_interfac
   return command_interfaces;
 }
 
+// BILLEE: upstream let serial exceptions escape read()/write(), which
+// terminates ros2_control_node (and every other hardware system in it). Now a
+// failed cycle is logged and skipped; only kMaxConsecutiveErrors failures in a
+// row report ERROR, which makes controller_manager deactivate this hardware.
+// Each unit is tried separately, so one bad unit doesn't starve the others.
 return_type RoboClawHardwareInterface::write(const rclcpp::Time &, const rclcpp::Duration &)
 {
-  for (auto & roboclaw : roboclaw_units_) {
-    roboclaw.write();
+  // BILLEE: Humble keeps calling write() on INACTIVE hardware, with whatever
+  // the (possibly still active) controller left in the command interfaces.
+  // Never drive the motors unless this hardware is ACTIVE.
+  if (get_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+    for (auto & roboclaw : roboclaw_units_) {
+      for (auto & joint : roboclaw.joints) {
+        if (joint) {
+          *joint->getVelocityCommandPtr() = 0.0;
+        }
+      }
+    }
   }
-  return return_type::OK;
+
+  bool ok = true;
+  for (auto & roboclaw : roboclaw_units_) {
+    try {
+      roboclaw.write();
+    } catch (const std::exception & e) {
+      ok = false;
+      RCLCPP_WARN(kLogger, "write to %s failed: %s", roboclaw.name().c_str(), e.what());
+    }
+  }
+  return count_errors(ok, write_errors_, "write");
 }
 
 return_type RoboClawHardwareInterface::read(const rclcpp::Time &, const rclcpp::Duration &)
 {
+  bool ok = true;
   for (auto & roboclaw : roboclaw_units_) {
-    roboclaw.read();
+    try {
+      roboclaw.read();
+    } catch (const std::exception & e) {
+      ok = false;
+      RCLCPP_WARN(kLogger, "read from %s failed: %s", roboclaw.name().c_str(), e.what());
+    }
   }
-  return return_type::OK;
+  return count_errors(ok, read_errors_, "read");
+}
+
+return_type RoboClawHardwareInterface::count_errors(bool ok, int & counter, const char * what)
+{
+  if (ok) {
+    counter = 0;
+    return return_type::OK;
+  }
+  if (++counter < kMaxConsecutiveErrors) {
+    return return_type::OK;  // skip this cycle, keep going
+  }
+  RCLCPP_ERROR(
+    kLogger, "%d consecutive %s failures; reporting hardware ERROR", counter, what);
+  return return_type::ERROR;
+}
+
+// BILLEE: stop the motors when the hardware is deactivated / shut down.
+// Upstream left the last speed command running on the RoboClaws (until their
+// own serial timeout, if one is configured).
+CallbackReturn RoboClawHardwareInterface::on_deactivate(const rclcpp_lifecycle::State &)
+{
+  for (auto & roboclaw : roboclaw_units_) {
+    for (auto & joint : roboclaw.joints) {
+      if (joint) {
+        *joint->getVelocityCommandPtr() = 0.0;
+      }
+    }
+    try {
+      roboclaw.write();
+    } catch (const std::exception & e) {
+      RCLCPP_ERROR(
+        kLogger, "could not send zero speed to %s on deactivate: %s",
+        roboclaw.name().c_str(), e.what());
+    }
+  }
+  return CallbackReturn::SUCCESS;
 }
 
 RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
@@ -129,7 +228,7 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
       roboclaw_address = static_cast<uint8_t>(stoi(joint.parameters.at("address")));
 
       if (roboclaw_address < 0x80 || roboclaw_address > 0x87) {
-        throw std::runtime_error(joint.name + ": Addresses must be in the range [128:136]");
+        throw std::runtime_error(joint.name + ": Addresses must be in the range [128:135]");
       }
     } catch (const std::invalid_argument & e) {
       std::cerr << e.what() << std::endl;

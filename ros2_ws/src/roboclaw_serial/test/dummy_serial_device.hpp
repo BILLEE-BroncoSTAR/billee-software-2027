@@ -43,6 +43,7 @@ public:
   {
     // Track if the data we received matched what is expected
     write_okay_ = verifyWriteBuffer(buffer, count);
+    read_offset_ = 0;  // a new request starts a new reply
 
     // Return the number of bytes written
     return count;
@@ -60,7 +61,16 @@ public:
     }
   }
 
+  // No real port to flush.
+  void flushInput() override {}
+
+  // BILLEE: hand the reply out at most this many bytes per read(), the way a
+  // real UART delivers it a few bytes at a time. 0 = all at once (upstream).
+  void setMaxBytesPerRead(std::size_t n) {max_bytes_per_read_ = n;}
+
 private:
+  std::size_t max_bytes_per_read_ = 0;
+  std::size_t read_offset_ = 0;
   // Track whether the data received from the interface is what was expected
   bool write_okay_ = false;
 
@@ -93,13 +103,17 @@ private:
     std::byte * byte_ptr = static_cast<std::byte *>(buffer);
 
     // Determine how many bytes to write; this will be the minimum of how many we should (count)
-    // and how many we can (expected_read_buffer_.size())
-    size_t n_bytes = std::min(count, expected_read_buffer_.size());
+    // and how many we have left of the reply
+    size_t n_bytes = std::min(count, expected_read_buffer_.size() - read_offset_);
+    if (max_bytes_per_read_ != 0) {
+      n_bytes = std::min(n_bytes, max_bytes_per_read_);
+    }
 
     for (size_t i = 0; i < n_bytes; ++i) {
       // Write the response byte to the buffer
-      byte_ptr[i] = expected_read_buffer_[i];
+      byte_ptr[i] = expected_read_buffer_[read_offset_ + i];
     }
+    read_offset_ += n_bytes;
 
     // Return the number of bytes written
     return n_bytes;

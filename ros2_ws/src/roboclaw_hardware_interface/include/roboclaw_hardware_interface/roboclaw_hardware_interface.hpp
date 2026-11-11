@@ -128,6 +128,17 @@ private:
 
   /// Vector of uniqely addressable roboclaw units
   std::vector<RoboClawUnit> roboclaw_units_;
+
+  // BILLEE: tolerate occasional serial errors (see read()/write()).
+  /// Reset `counter` on success; return ERROR once it reaches kMaxConsecutiveErrors.
+  return_type count_errors(bool ok, int & counter, const char * what);
+  static constexpr int kMaxConsecutiveErrors = 5;  // 50 ms at 100 Hz
+  int read_errors_ = 0;
+  int write_errors_ = 0;
+
+public:
+  /// BILLEE: command zero speed to every motor when the hardware is deactivated.
+  CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state) override;
 };
 }  // namespace roboclaw_hardware_interface
 
