@@ -1,5 +1,6 @@
 #include "odesc/can_helpers.hpp"
 #include "odesc/can_simple_messages.hpp"
+#include "odesc/config_validator.hpp"
 #include "hardware_interface/system_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "odesc/odrive_enums.h"
@@ -8,12 +9,11 @@
 #include "odesc/socket_can.hpp"
 
 #include <cmath>
-#include <exception>
 #include <string>
+#include <unordered_map>
 
 namespace
 {
-constexpr double kTwoPi = 2.0 * M_PI;
 constexpr const char * kLogger = "OdescHardwareInterface";
 }  // namespace
 
@@ -108,44 +108,61 @@ namespace odesc_ros2_control{
       return CallbackReturn::ERROR;
     }
 
-    try {
-      gearing_ = std::stod(gear_ratio->second);
-    } catch (const std::exception & error) {
-      RCLCPP_ERROR(rclcpp::get_logger(kLogger), "invalid gear_ratio '%s': %s",
-        gear_ratio->second.c_str(), error.what());
+    double parsed_gearing = 0.0;
+    if (!odesc::validation::parse_positive_finite_double(gear_ratio->second, parsed_gearing)) {
+      RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+        "gear_ratio must be a positive finite number, got '%s'", gear_ratio->second.c_str());
       return CallbackReturn::ERROR;
     }
-    if (!std::isfinite(gearing_) || gearing_ <= 0.0) {
-      RCLCPP_ERROR(rclcpp::get_logger(kLogger),
-        "gear_ratio must be a positive finite number, got %f", gearing_);
-      return CallbackReturn::ERROR;
+    gearing_ = parsed_gearing;
+
+    // CANSimple reserves six bits of a standard CAN ID for the node ID.
+    // Validate the entire map before replacing the driver's active axis map.
+    std::vector<Axis> configured_axes;
+    configured_axes.reserve(info_.joints.size());
+    std::unordered_map<uint32_t, std::string> node_owners;
+    for (const auto & joint : info_.joints) {
+      const auto node_id_parameter = joint.parameters.find("node_id");
+      if (node_id_parameter == joint.parameters.end()) {
+        RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+          "joint '%s' is missing required node_id parameter", joint.name.c_str());
+        return CallbackReturn::ERROR;
+      }
+
+      uint32_t node_id = 0;
+      if (!odesc::validation::parse_can_simple_node_id(node_id_parameter->second, node_id)) {
+        RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+          "joint '%s' has invalid node_id '%s'; expected a decimal value in [0, 63]",
+          joint.name.c_str(), node_id_parameter->second.c_str());
+        return CallbackReturn::ERROR;
+      }
+
+      const auto existing_node = node_owners.find(node_id);
+      if (existing_node != node_owners.end()) {
+        RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+          "joint '%s' duplicates CAN node_id %u already assigned to joint '%s'",
+          joint.name.c_str(), node_id, existing_node->second.c_str());
+        return CallbackReturn::ERROR;
+      }
+      node_owners.emplace(node_id, joint.name);
+
+      bool invert = false;
+      const auto invert_parameter = joint.parameters.find("invert");
+      if (invert_parameter != joint.parameters.end()) {
+        if (!odesc::validation::parse_boolean(invert_parameter->second, invert)) {
+          RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+            "joint '%s' has invalid invert value '%s' (use true or false)",
+            joint.name.c_str(), invert_parameter->second.c_str());
+          return CallbackReturn::ERROR;
+        }
+      }
+
+      configured_axes.emplace_back(
+        &can_interface_, node_id, invert, static_cast<float>(gearing_));
     }
 
     can_interface_name_ = can_interface->second;
-    axes_.clear();
-    axes_.reserve(info_.joints.size());
-    try {
-      for (const auto & joint : info_.joints) {
-        bool invert = false;
-        const auto invert_parameter = joint.parameters.find("invert");
-        if (invert_parameter != joint.parameters.end()) {
-          if (invert_parameter->second == "true" || invert_parameter->second == "1") {
-            invert = true;
-          } else if (invert_parameter->second != "false" && invert_parameter->second != "0") {
-            RCLCPP_ERROR(rclcpp::get_logger(kLogger),
-              "joint '%s' has invalid invert value '%s' (use true or false)",
-              joint.name.c_str(), invert_parameter->second.c_str());
-            return CallbackReturn::ERROR;
-          }
-        }
-        axes_.emplace_back(
-          &can_interface_, static_cast<uint32_t>(std::stoul(joint.parameters.at("node_id"))),
-          invert, static_cast<float>(gearing_));
-      }
-    } catch (const std::exception & error) {
-      RCLCPP_ERROR(rclcpp::get_logger(kLogger), "invalid joint node_id: %s", error.what());
-      return CallbackReturn::ERROR;
-    }
+    axes_ = std::move(configured_axes);
 
     return CallbackReturn::SUCCESS;
 
@@ -224,7 +241,7 @@ namespace odesc_ros2_control{
         Set_Input_Vel_msg_t msg;
         msg.Input_Vel = axis.invert_ ? -(axis.vel_setpoint_) : axis.vel_setpoint_;
         // ros2_control commands wheel rad/s; CANSimple expects motor turns/s.
-        msg.Input_Vel *= axis.gearing_ / kTwoPi;
+        msg.Input_Vel *= axis.gearing_ / (2 * M_PI);
         if (!axis.send(msg)) {
           RCLCPP_ERROR(rclcpp::get_logger(kLogger),
             "failed to send velocity command to CAN node %u", axis.node_id_);

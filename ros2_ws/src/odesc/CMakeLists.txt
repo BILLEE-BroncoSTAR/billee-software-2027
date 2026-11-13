@@ -29,6 +29,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_package(rclcpp_lifecycle REQUIRED)
 
   add_library(odesc SHARED
+    src/config_validator.cpp
     src/epoll_event_loop.cpp
     src/mock_drive_backend.cpp
     src/odesc.cpp
