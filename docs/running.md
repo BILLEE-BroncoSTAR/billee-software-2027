@@ -221,7 +221,7 @@ and drive with the keyboard (below).
 
 ## Controls
 
-Xbox or PlayStation gamepad (USB `/dev/input/js0`) on the machine that runs teleop:
+Xbox or PlayStation (PS5 DualSense tested) gamepad over USB, on the machine that runs teleop:
 
 - **Hold RB / R1** to drive. Release it and the rover stops.
 - **Left stick up/down** drives the left wheels, **right stick up/down** the right wheels.
@@ -282,7 +282,7 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | Ground station sees no Jetson topics | Check `echo $ROS_DOMAIN_ID` is `42` on both, both are on the same subnet, and nothing blocks multicast or UDP. Foxglove to `ws://<jetson-ip>:8765` still works without DDS. |
 | Foxglove "connection refused" | No bridge on that machine, or wrong IP. On that machine, `ss -ltn \| grep 8765` should show it listening. |
 | Gamepad connected but the rover doesn't move | Hold RB. Check `ros2 topic echo /joy`, then `ros2 topic echo /diff_drive_controller/cmd_vel_unstamped`. |
-| `/joy` is silent | `ls /dev/input/js*`, then set `device_id` in `teleop/config/joystick.yaml`. |
+| `/joy` is silent | `ros2 run joy joy_enumerate_devices` lists the gamepads `joy_node` can open; set that `ID` as `device_id` in `teleop/config/joystick.yaml`. It is not the `N` of `/dev/input/jsN`. |
 | Every command seems doubled | Teleop runs on both machines. Use `rover.launch.py` (no teleop) on the Jetson, not `tooling/sim-up`. |
 | RViz/Foxglove: no `odom` frame | Real drivetrain: expected (no EKF yet); `ground_station.launch.py use_sim_time:=false` uses fixed frame `base_link`. Sim: don't pass `navigation:=false`. |
 | Sim: `Switch controller timed out`, or `Couldn't open X display` | No usable display. On the Jetson, prefix the launch with `xvfb-run -a vglrun -d egl`. |

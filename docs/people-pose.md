@@ -93,7 +93,7 @@ only gets RAM that is actually free, and OpenPose failed at startup when most RA
 | `/people/debug_image` (+ `/compressed`) | `Image` | OpenPose rendering. Use `/compressed` over Wi-Fi. |
 | `/people/gesture` | `people_msgs/Gesture` | `gesture`, `command`, `confidence`, `position` |
 | `/people/gesture_marker` | `Marker` | text label above the person |
-| `/zed/points` | `PointCloud2` | XYZ + colour in `zed_left_camera_frame`. Every 4th pixel of the 720×405 depth map (~18k points, ~290 kB), at most `cloud_max_hz` (10). With OpenPose it runs at the OpenPose rate (~6 fps on the Nano). |
+| `/zed/points` | `PointCloud2` | XYZ + colour in `zed_left_camera_frame`. Every 4th pixel of the 720×405 depth map (~18k points, ~290 kB), at most `cloud_max_hz` (10). With OpenPose it runs at the OpenPose rate (5 Hz on the Orin Nano). |
 | `/zed/depth_image` | `Image` | off by default (`publish_depth`) |
 
 ## How it works
@@ -107,7 +107,8 @@ only gets RAM that is actually free, and OpenPose failed at startup when most RA
   catches joints that picked up background depth.
 - **Frames.** The ZED reports in ROS axes (`RIGHT_HANDED_Z_UP_X_FWD`) relative to the left lens.
   The node publishes a static `camera_link → zed_left_camera_frame` transform (+0.06 m y) and
-  transforms joints to `base_link` with TF at the image timestamp. If there's no TF, 2D is still
+  transforms joints to `base_link` with TF at the image timestamp (the camera's capture time; sim
+  time when `use_sim_time` is set, next to the Jetson sim). If there's no TF, 2D is still
   published and 3D is NaN.
 - **Gestures** (`gesture_node`). Only the person closest to the rover counts. Classification uses
   2D keypoints only, measured relative to the neck and scaled by body size. If any arm joint has

@@ -1,7 +1,7 @@
 # teleop
 
-Gamepad → drive command. `teleop.launch.py` starts `joy_node`, which reads `/dev/input/js<device_id>`
-and publishes `/joy`, and `joy_tank_drive`, which publishes a `Twist` on
+Gamepad → drive command. `teleop.launch.py` starts `joy_node`, which opens gamepad `device_id`
+(SDL's index, listed by `ros2 run joy joy_enumerate_devices`) and publishes `/joy`, and `joy_tank_drive`, which publishes a `Twist` on
 `/diff_drive_controller/cmd_vel_unstamped`.
 
 It is a tank drive gated by a deadman button:
@@ -20,7 +20,7 @@ Parameters (`config/joystick.yaml`, which you can edit without rebuilding):
 
 | Param | Value | |
 |---|---|---|
-| `device_id` | `0` | joystick index |
+| `device_id` | `0` | SDL joystick index (not the `N` of `/dev/input/jsN`) |
 | `deadzone` | `0.05` | |
 | `left_axis` | `1` | left stick Y |
 | `right_axis` | `4` | right stick Y |
