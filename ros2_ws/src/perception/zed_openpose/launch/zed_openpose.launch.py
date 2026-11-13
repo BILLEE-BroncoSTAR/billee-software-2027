@@ -26,6 +26,7 @@ from launch.substitutions import (
     PathJoinSubstitution,
 )
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -45,6 +46,8 @@ def _node():
                 "target_frame": LaunchConfiguration("target_frame"),
                 "enable_pose": LaunchConfiguration("openpose"),
                 "publish_cloud": LaunchConfiguration("point_cloud"),
+                "use_sim_time": ParameterValue(LaunchConfiguration("use_sim_time"),
+                                               value_type=bool),
             },
         ],
     )
@@ -79,5 +82,7 @@ def generate_launch_description():
                               description="Run OpenPose (/people/*). false = camera only."),
         DeclareLaunchArgument("point_cloud", default_value="true",
                               description="Publish /zed/points (base_link via TF)."),
+        DeclareLaunchArgument("use_sim_time", default_value="false",
+                              description="true next to the Jetson sim: stamp with sim time."),
         OpaqueFunction(function=_start),
     ])

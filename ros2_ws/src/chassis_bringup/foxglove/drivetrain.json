@@ -6,9 +6,22 @@
         "distance": 4,
         "phi": 58,
         "thetaOffset": 46,
-        "target": [0, 0, 0],
-        "targetOffset": [0, 0, 0],
-        "targetOrientation": [0, 0, 0, 1],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
         "fovy": 45,
         "near": 0.01,
         "far": 5000
@@ -16,7 +29,11 @@
       "followMode": "follow-position",
       "followTf": "base_link",
       "scene": {
-        "transforms": { "showLabel": true, "labelSize": 0.06, "axisScale": 0.3 },
+        "transforms": {
+          "showLabel": true,
+          "labelSize": 0.06,
+          "axisScale": 0.3
+        },
         "backgroundColor": "#303030"
       },
       "transforms": {},
@@ -40,8 +57,16 @@
           "divisions": 20,
           "lineWidth": 1,
           "color": "#a0a0a4ff",
-          "position": [0, 0, 0],
-          "rotation": [0, 0, 0]
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
         },
         "urdf": {
           "layerId": "foxglove.Urdf",
@@ -63,10 +88,38 @@
         "poseEstimateYDeviation": 0.5,
         "poseEstimateThetaDeviation": 0.26
       }
+    },
+    "RawMessages!joy": {
+      "topicPath": "/joy",
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "fontSize": 14
+    },
+    "RawMessages!cmd_vel": {
+      "topicPath": "/diff_drive_controller/cmd_vel_unstamped",
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "fontSize": 14
     }
   },
   "globalVariables": {},
   "userNodes": {},
-  "playbackConfig": { "speed": 1 },
-  "layout": "3D!drivetrain"
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": "3D!drivetrain",
+    "second": {
+      "first": "RawMessages!joy",
+      "second": "RawMessages!cmd_vel",
+      "direction": "column",
+      "splitPercentage": 60
+    },
+    "direction": "row",
+    "splitPercentage": 68
+  }
 }

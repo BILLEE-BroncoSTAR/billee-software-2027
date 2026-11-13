@@ -167,14 +167,14 @@ the ODESCs):
 | `both` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=both` |
 
 `view:=` picks the RViz layout. For Foxglove, import the matching layout ([Foxglove](#foxglove)).
-The real drivetrain has no `odom` frame yet (no EKF), so with no camera set RViz's **Fixed Frame**
-to `base_link`. The camera layouts already use `base_link`.
+RViz's fixed frame follows `use_sim_time`: `odom` in the sim (the rover moves across the grid),
+`base_link` on the real drivetrain, which has no `odom` frame yet (the view moves with the rover).
 
 ### Camera rates and RAM (Orin Nano, 2026-11-13)
 
 | Jetson `camera:=` | Real drivetrain (mock) | Sim |
 |---|---|---|
-| `cloud` | `/zed/points` 8.5 Hz | `/zed/points` 8.4 Hz |
+| `cloud` | `/zed/points` 8.5 Hz | `/zed/points` 2.8 Hz (10 per second of sim time) |
 | `openpose` | `/people/skeletons` 5.0 Hz | `/people/skeletons` 3.9 Hz |
 | `both` | both topics 5.0 Hz | `/zed/points` 2.7 Hz, `/people/skeletons` 4.4 Hz |
 
@@ -210,7 +210,7 @@ networking, so the host can reach their port 8765.
 
    | Jetson runs | Layout |
    |---|---|
-   | no `camera:=` | `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json` |
+   | no `camera:=` | `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json` (3D view, `/joy`, `/diff_drive_controller/cmd_vel_unstamped`) |
    | `camera:=cloud` | `ros2_ws/src/perception/people/foxglove/zed_points.json` |
    | `camera:=openpose` or `camera:=both` | `ros2_ws/src/perception/people/foxglove/people_rover.json` |
 
@@ -284,7 +284,7 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | Gamepad connected but the rover doesn't move | Hold RB. Check `ros2 topic echo /joy`, then `ros2 topic echo /diff_drive_controller/cmd_vel_unstamped`. |
 | `/joy` is silent | `ls /dev/input/js*`, then set `device_id` in `teleop/config/joystick.yaml`. |
 | Every command seems doubled | Teleop runs on both machines. Use `rover.launch.py` (no teleop) on the Jetson, not `tooling/sim-up`. |
-| RViz/Foxglove: no `odom` frame | Real drivetrain: expected, use fixed frame `base_link`. Sim: don't pass `navigation:=false`. |
+| RViz/Foxglove: no `odom` frame | Real drivetrain: expected (no EKF yet); `ground_station.launch.py use_sim_time:=false` uses fixed frame `base_link`. Sim: don't pass `navigation:=false`. |
 | Sim: `Switch controller timed out`, or `Couldn't open X display` | No usable display. On the Jetson, prefix the launch with `xvfb-run -a vglrun -d egl`. |
 | Real: controllers `inactive`, wheels dead | CAN down or wrong bitrate. Run `tooling/can-up` on the host and check `dmesg`. |
 | `vcan0` but no frames | Create `vcan0` on the host first, then check with `candump -L vcan0`. |

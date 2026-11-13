@@ -138,6 +138,7 @@ def _setup(context):
                     "standalone": "false",
                     "openpose": CAMERA_MODES[camera][0],
                     "point_cloud": CAMERA_MODES[camera][1],
+                    "use_sim_time": "true" if mode == "sim" else "false",
                 }.items(),
             )
         )

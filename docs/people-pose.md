@@ -56,9 +56,10 @@ This also starts `robot_state_publisher` and the Foxglove bridge (`standalone:=t
 | `svo_path` | `""` | Replay a ZED `.svo2` recording instead of the live camera |
 | `model_pose` | `BODY_25` | `COCO` needs its own model files |
 | `target_frame` | `base_link` | frame of all 3D output |
+| `use_sim_time` | `false` | Stamp with sim time. `rover.launch.py camera:=…` sets it in the sim (`mode:=sim`), where the camera's own clock would put every message "in the future" for the viewers. |
 
-**View it** on the ground station. Both layouts use fixed frame `base_link` and show the rover
-model.
+**View it** on the ground station. Both layouts show the rover model. RViz's fixed frame is
+`odom` on sim time and `base_link` otherwise (`ground_station.launch.py`).
 
 | Mode | Foxglove (Layouts → Import) | RViz (`ground_station.launch.py use_sim_time:=false …`) |
 |---|---|---|

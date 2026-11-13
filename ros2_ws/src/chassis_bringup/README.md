@@ -17,7 +17,7 @@ Launch files for the BILLEE drivetrain. How to use them is in [docs/running.md](
 | `config/config.yaml` | Gazebo → ROS bridge (`/clock`) |
 | `config/zed_config.yaml` | Gazebo camera topics (`/depth_cam/*`) and ground-truth `/gz/odom` |
 | `config/gz_params.yaml` | Gazebo params |
-| `rviz/drivetrain.rviz`, `foxglove/drivetrain.json` | matching viewer layouts (RViz fixed frame `odom`, which needs the sim's `navigation:=true`. On the real drivetrain, switch it to `base_link`) |
+| `rviz/drivetrain.rviz`, `foxglove/drivetrain.json` | matching viewer layouts (Foxglove: 3D view, `/joy`, drive command). `ground_station.launch.py` sets RViz's fixed frame: `odom` on sim time (needs the sim's `navigation:=true`), `base_link` otherwise |
 
 Notes:
 

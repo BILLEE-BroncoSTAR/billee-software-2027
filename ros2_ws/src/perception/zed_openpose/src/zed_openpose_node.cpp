@@ -141,6 +141,9 @@ public:
     render_threshold_ = declare_parameter<double>("render_threshold", 0.12);
     alpha_pose_ = declare_parameter<double>("alpha_pose", 0.6);
     svo_path_ = declare_parameter<std::string>("svo_path", "");
+    // In the sim (use_sim_time), stamp with the sim clock like the rest of the graph: the ZED's
+    // own capture time is wall-clock time, which viewers on sim time drop as "in the future".
+    use_ros_clock_ = get_parameter("use_sim_time").as_bool();
     publish_cloud_ = declare_parameter<bool>("publish_cloud", false);    // ogl_ptcloud
     publish_depth_ = declare_parameter<bool>("publish_depth", false);    // depth_display
     enable_pose_ = declare_parameter<bool>("enable_pose", true);          // false: camera only
@@ -291,8 +294,9 @@ private:
         continue;
       }
 
-      // Live: the image's capture time; SVO: now, so TF lookups don't fall behind the recording.
-      const rclcpp::Time stamp = svo_path_.empty() ?
+      // Live: the image's capture time. SVO: now, so TF lookups don't fall behind the recording.
+      // Sim (use_sim_time): now, i.e. sim time.
+      const rclcpp::Time stamp = svo_path_.empty() && !use_ros_clock_ ?
         rclcpp::Time(
         static_cast<int64_t>(zed_.getTimestamp(sl::TIME_REFERENCE::IMAGE).getNanoseconds()),
         RCL_ROS_TIME) : now();
@@ -517,7 +521,7 @@ private:
   std::string camera_resolution_, depth_mode_, camera_frame_, zed_frame_, target_frame_;
   int num_gpu_start_, scale_number_, image_width_, image_height_, cloud_step_, jpeg_quality_;
   double scale_gap_, render_threshold_, alpha_pose_, cloud_max_hz_;
-  bool disable_blending_, publish_cloud_, publish_depth_, enable_pose_;
+  bool disable_blending_, publish_cloud_, publish_depth_, enable_pose_, use_ros_clock_;
 
   // ZED + OpenPose state shared by the two threads (the sample's globals).
   sl::Camera zed_;

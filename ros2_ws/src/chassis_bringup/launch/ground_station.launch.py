@@ -76,6 +76,7 @@ RVIZ_CONFIGS = {  # view:= -> (package, file under share/<package>/rviz/)
 
 def _viz(context):
     package, config = RVIZ_CONFIGS[LaunchConfiguration("view").perform(context)]
+    sim = LaunchConfiguration("use_sim_time").perform(context).lower() in ("true", "1")
     return [IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([FindPackageShare("chassis_bringup"), "launch", "viz.launch.py"])
@@ -85,6 +86,9 @@ def _viz(context):
             "foxglove": LaunchConfiguration("foxglove"),
             "use_sim_time": LaunchConfiguration("use_sim_time"),
             "rviz_config": PathJoinSubstitution([FindPackageShare(package), "rviz", config]),
+            # The sim has odom (its EKF), so the rover moves in the view; the real drivetrain
+            # has no odom frame yet, so the view follows base_link.
+            "fixed_frame": "odom" if sim else "base_link",
         }.items(),
     )]
 

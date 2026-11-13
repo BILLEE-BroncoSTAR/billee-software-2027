@@ -49,6 +49,8 @@ def generate_launch_description():
                               description="Run OpenPose + gestures. false = point cloud only."),
         DeclareLaunchArgument("point_cloud", default_value="true",
                               description="Publish the ZED point cloud on /zed/points."),
+        DeclareLaunchArgument("use_sim_time", default_value="false",
+                              description="true next to the Jetson sim: stamp with sim time."),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -60,6 +62,7 @@ def generate_launch_description():
                 "svo_path": LaunchConfiguration("svo_path"),
                 "openpose": openpose,
                 "point_cloud": LaunchConfiguration("point_cloud"),
+                "use_sim_time": LaunchConfiguration("use_sim_time"),
             }.items(),
         ),
         Node(
@@ -68,6 +71,8 @@ def generate_launch_description():
             output="screen",
             parameters=[
                 PathJoinSubstitution([FindPackageShare("people"), "config", "gestures.yaml"]),
+                {"use_sim_time": ParameterValue(LaunchConfiguration("use_sim_time"),
+                                                value_type=bool)},
             ],
             condition=IfCondition(openpose),
         ),
