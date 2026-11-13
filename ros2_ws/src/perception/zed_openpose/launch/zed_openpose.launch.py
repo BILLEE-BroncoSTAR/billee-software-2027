@@ -6,10 +6,11 @@
 Usually started through `ros2 launch people people_rover.launch.py`, which adds the gesture node,
 robot_state_publisher and foxglove_bridge.
 
-With openpose:=true the node starts after the kernel's page cache is dropped (sudo -n, which the
-Jetson container allows). On the Orin the GPU allocates from RAM that is actually free, not from
-reclaimable cache: with most RAM held as cache (after a build or a download), OpenPose died at
-startup with CUDNN_STATUS_INTERNAL_ERROR / out of memory although `free` showed GBs "available".
+The node starts after the kernel's page cache is dropped (sudo -n, which the Jetson container
+allows). On the Orin the GPU allocates from RAM that is actually free, not from reclaimable cache:
+with most RAM held as cache, OpenPose died with CUDNN_STATUS_INTERNAL_ERROR / out of memory, and
+the camera itself failed with NOT ENOUGH GPU MEMORY or CAMERA STREAM FAILED TO START, although
+`free` showed GBs "available".
 """
 
 from launch import LaunchDescription
@@ -54,8 +55,6 @@ def _node():
 
 
 def _start(context):
-    if LaunchConfiguration("openpose").perform(context).lower() not in ("true", "1"):
-        return [_node()]
     drop = ExecuteProcess(
         # env -u LD_PRELOAD: under vglrun (the Jetson sim), sudo can't load VirtualGL's preloads
         cmd=["env", "-u", "LD_PRELOAD", "sudo", "-n", "sh", "-c",

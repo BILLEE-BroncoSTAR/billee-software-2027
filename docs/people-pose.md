@@ -70,8 +70,8 @@ Measured on the dev Orin Nano (2026-11-13, HD720, depth `ULTRA`): the camera run
 Point cloud alone: `/zed/points` at 8.5 Hz. OpenPose alone, or with the point cloud: 5 Hz, the
 first skeleton about 10 s after launch, and the whole rover stack uses about 2.9 GB of RAM. Rates
 with the Jetson sim are lower: [running.md](running.md#camera-rates-and-ram-orin-nano-2026-11-13).
-With `openpose:=true` the launch first drops the kernel's file cache (`sudo -n`): on the Orin the GPU
-only gets RAM that is actually free, and OpenPose failed at startup when most RAM was cache.
+The launch first drops the kernel's file cache (`sudo -n`): on the Orin the GPU only gets RAM that
+is actually free, and the camera and OpenPose failed at startup when most RAM was cache.
 
 ## Code
 
