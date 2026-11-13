@@ -45,8 +45,8 @@ Gazebo slows sim time until each 10 Hz camera frame (1280×720 RGB-D, image + de
 is done. The time goes to CPU work in the Gazebo server, about 1.5 cores, not to rendering. The
 camera publishes about 3 fps of wall-clock time, which is its full 10 Hz in sim time.
 
-`vglrun` needs the GPU device groups. A terminal opened after the container starts has them
-(`docker/gpu_groups.sh`). Check with `id`: you should see `video`.
+`vglrun` needs the GPU device groups, which the container gives every process
+(`--group-add` in `.devcontainer/l4t/devcontainer.json`). Check with `id`: you should see `44`.
 
 ## Model
 

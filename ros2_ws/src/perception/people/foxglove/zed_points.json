@@ -1,11 +1,11 @@
 {
   "configById": {
-    "3D!zed": {
+    "3D!drivetrain": {
       "cameraState": {
         "perspective": true,
-        "distance": 7,
-        "phi": 60,
-        "thetaOffset": 60,
+        "distance": 4,
+        "phi": 58,
+        "thetaOffset": 46,
         "target": [
           0,
           0,
@@ -26,29 +26,30 @@
         "near": 0.01,
         "far": 5000
       },
-      "followMode": "follow-pose",
+      "followMode": "follow-position",
       "followTf": "base_link",
       "scene": {
         "transforms": {
-          "showLabel": false,
+          "showLabel": true,
+          "labelSize": 0.06,
           "axisScale": 0.3
         },
-        "backgroundColor": "#202020",
+        "backgroundColor": "#303030",
         "meshUpAxis": "z_up"
       },
       "transforms": {},
       "topics": {
-        "/zed/points": {
-          "visible": true,
-          "pointSize": 2,
-          "colorMode": "rgb",
-          "colorField": "rgb"
-        },
         "/odometry/filtered": {
           "visible": true,
           "type": "axis",
           "axisScale": 0.2,
           "historySize": 100
+        },
+        "/zed/points": {
+          "visible": true,
+          "pointSize": 2,
+          "colorMode": "rgb",
+          "colorField": "rgb"
         }
       },
       "layers": {
@@ -58,7 +59,6 @@
           "label": "Grid",
           "visible": true,
           "frameLocked": true,
-          "frameId": "base_link",
           "order": 1,
           "size": 20,
           "divisions": 20,
@@ -95,6 +95,22 @@
         "poseEstimateYDeviation": 0.5,
         "poseEstimateThetaDeviation": 0.26
       }
+    },
+    "RawMessages!joy": {
+      "topicPath": "/joy",
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "fontSize": 14
+    },
+    "RawMessages!cmd_vel": {
+      "topicPath": "/diff_drive_controller/cmd_vel_unstamped",
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "fontSize": 14
     }
   },
   "globalVariables": {},
@@ -102,5 +118,15 @@
   "playbackConfig": {
     "speed": 1
   },
-  "layout": "3D!zed"
+  "layout": {
+    "first": "3D!drivetrain",
+    "second": {
+      "first": "RawMessages!joy",
+      "second": "RawMessages!cmd_vel",
+      "direction": "column",
+      "splitPercentage": 60
+    },
+    "direction": "row",
+    "splitPercentage": 68
+  }
 }

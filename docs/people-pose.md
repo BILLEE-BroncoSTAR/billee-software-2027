@@ -172,10 +172,14 @@ Dev container problems, already fixed:
 - **UID remap.** VS Code remaps `ros_user`'s uid to your host uid, so `/usr/local/zed` (owned by
   uid 1000) became unreadable and the build silently skipped `zed_openpose`. The Dockerfile now
   makes it world-readable, and makes `settings/` and `resources/` writable.
-- **GPU groups.** `docker exec` terminals only get groups listed in the container's `/etc/group`,
-  and the host GPU device groups (video, render, ...) aren't there, so CUDA failed with error 100
-  or 801. `docker/gpu_groups.sh` runs on container start and adds `ros_user` to each GPU device's
-  group.
+- **GPU groups.** The GPU device nodes belong to host groups: video (44), and on the dev Jetson
+  render (104) and debug (995). Without them CUDA fails (error 100 or 801) and the ZED fails
+  (`NvRmMemInitNvmap failed with Permission denied`, then `CAMERA STREAM FAILED TO START` or
+  `NO GPU DETECTED`). `.devcontainer/l4t/devcontainer.json` adds them with `--group-add`, so every
+  process has them, VS Code's terminals included. (`docker/gpu_groups.sh` at container start adds
+  them to `/etc/group`, but VS Code's terminals are children of its server, which started before
+  that, so they never got them.) After a reflash, check the gids on the host with
+  `stat -c '%G %g %n' /dev/nvmap /dev/dri/renderD128 /dev/nvhost-dbg-gpu`.
 - **ZED udev rule.** Without Stereolabs' rule on the host, the ZED's sensor (HID) device is
   root-only and the camera fails to open (`[ZED][MCU] Permissions denied`). `docker/zed_udev.sh`
   runs on container start and installs the image's `99-slabs.rules` on the host, through the
@@ -219,7 +223,7 @@ on `/people/gesture`.
 | `ZED open failed: CAMERA NOT DETECTED` | No camera (this is expected without one), or a USB 2 port. Check `lsusb \| grep 2b03` on the host. |
 | `[ZED][MCU] Permissions denied`, then `NOT VALID SERIAL NUMBER FOR SENSORS MODULE MCU` | No ZED udev rule on the host. On the host, `ls /etc/udev/rules.d/99-slabs.rules`; if it's missing, **Rebuild Container** (the container start installs it). |
 | `out of memory` (`syncedmem.cpp`), `CUDNN_STATUS_INTERNAL_ERROR`, `NvMapMemAlloc… error 12` | Not enough RAM, which the GPU shares. On the host, `free -m` must show at least 3000 MB `available` before launching. An image built before 2026-11-13 also needs **Rebuild Container** (zero-workspace patch above). |
-| `CUDA error 100` / `801`, `NvRmMemInitNvmap failed` | GPU groups missing: `docker exec -u root <container> gpu_groups.sh`, or rebuild the container |
+| `CUDA error 100` / `801`, `NvRmMemInitNvmap failed with Permission denied`, `NO GPU DETECTED` | GPU groups missing (above). In a Jetson container terminal, `id` must list `44` (video), `104` and `995`. If not, **Rebuild Container**. |
 | `OpenPose: ... prototxt ... not found` | Run `get_openpose_models.sh` |
 | `No TF base_link <- zed_left_camera_frame` | `robot_state_publisher` isn't running. Use `standalone:=true` or start the drivetrain. |
 | `libgio-2.0.so.0: undefined symbol` | The GLib link lines in `zed_openpose/CMakeLists.txt` were changed. Restore them. |

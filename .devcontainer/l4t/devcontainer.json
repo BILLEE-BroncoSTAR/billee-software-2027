@@ -22,6 +22,15 @@
     "--ipc=host",
     "--hostname=rover",
     "--add-host=rover:127.0.1.1",  // else every sudo prints "unable to resolve host rover"
+    // GPU device groups for every process, including VS Code's server and so its terminals
+    // (gpu_groups.sh below runs after the server has started, too late for them). Without these
+    // the ZED fails: NvRmMemInitNvmap Permission denied, CAMERA STREAM FAILED TO START.
+    // video (44) owns /dev/nvmap and /dev/nvgpu; 104 (render) and 995 (debug) are this Jetson's
+    // gids for /dev/dri/renderD128 and /dev/nvhost-*-gpu. After a reflash, check them on the host:
+    //   stat -c '%G %g %n' /dev/nvmap /dev/dri/renderD128 /dev/nvhost-dbg-gpu
+    "--group-add=video",
+    "--group-add=104",
+    "--group-add=995",
     "--volume", "/dev:/dev",
     "--volume", "/dev/shm:/dev/shm",
     // zed_udev.sh installs the ZED udev rule on the host through these (see postStartCommand)
@@ -31,8 +40,8 @@
     "--volume", "/tmp/.X11-unix:/tmp/.X11-unix"
   ],
 
-  // gpu_groups.sh: CUDA as ros_user (zed_openpose) needs the host groups that own the GPU device
-  // nodes; VS Code's `docker exec` terminals only get groups listed in the container's /etc/group.
+  // gpu_groups.sh: adds ros_user to the GPU device groups in /etc/group, for shells started later
+  // with `docker exec` (VS Code's own terminals get them from --group-add above).
   // zed_udev.sh: the ZED's sensor device is root-only on the host without Stereolabs' udev rule.
   // configs/zed/SN*.conf: the ZED's factory calibration; without it the SDK downloads it on the
   // first open, which needs internet.

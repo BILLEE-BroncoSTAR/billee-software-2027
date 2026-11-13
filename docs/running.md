@@ -211,8 +211,8 @@ networking, so the host can reach their port 8765.
    | Jetson runs | Layout |
    |---|---|
    | no `camera:=` | `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json` (3D view, `/joy`, `/diff_drive_controller/cmd_vel_unstamped`) |
-   | `camera:=cloud` | `ros2_ws/src/perception/people/foxglove/zed_points.json` |
-   | `camera:=openpose` or `camera:=both` | `ros2_ws/src/perception/people/foxglove/people_rover.json` |
+   | `camera:=cloud` | `ros2_ws/src/perception/people/foxglove/zed_points.json` (`drivetrain.json` + `/zed/points`) |
+   | `camera:=openpose` or `camera:=both` | `ros2_ws/src/perception/people/foxglove/people_rover.json` (`drivetrain.json` + point cloud, skeletons, OpenPose image, `/people/gesture`) |
 
 **Mac:** run Foxglove on macOS and connect to `ws://localhost:8765`. The Mac container forwards
 the port. The Mac container has no GPU and no gamepad, so run the sim as
@@ -289,6 +289,7 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | Real: controllers `inactive`, wheels dead | CAN down or wrong bitrate. Run `tooling/can-up` on the host and check `dmesg`. |
 | `vcan0` but no frames | Create `vcan0` on the host first, then check with `candump -L vcan0`. |
 | `rover.launch.py: camera:=… ignored, zed_openpose_node isn't built here` | You're not in the Jetson container, or `zed_openpose` wasn't built there: `pixi run build --packages-select zed_openpose people`. The drivetrain still runs. |
+| ZED: `NvRmMemInitNvmap failed with Permission denied`, then `CAMERA STREAM FAILED TO START` or `NO GPU DETECTED` | The terminal lacks the GPU device groups. In a Jetson container terminal, `id` must list `44` (video), `104` and `995`. If not, the container was created before 2026-11-13: **Rebuild Container**. Meanwhile, `exec sudo -iu ros_user` in that terminal gives it the groups. |
 | `ZED open failed: CAMERA STREAM FAILED TO START` or `NOT ENOUGH GPU MEMORY` | Not enough free RAM for the camera (the GPU shares it); the launch already frees the kernel's file cache first, and the node retries 5 times, 3 s apart. Free RAM: on the Jetson host, check `ps -eo rss,args --sort=-rss \| head` (the F' GDS on port 5001 grows by about 2 GB an hour: `sudo systemctl restart billee-scm-lan-gds`), then launch again. If RAM is fine, unplug and replug the ZED. |
 | Sim: Gazebo keeps running after the launch is stopped (`ps -eo pid,args \| grep "[i]gn gazebo"` lists it) | It ignores Ctrl-C and SIGTERM. In the Jetson container: `kill -9 <pid>`. A leftover Gazebo conflicts with the next sim. |
 | `ZED open failed: CAMERA NOT DETECTED` | On the host, `lsusb \| grep 2b03` must list `ZED 2i`. Use a USB 3 port. |
