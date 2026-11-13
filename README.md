@@ -74,21 +74,25 @@ On an 8 GB Jetson, a full build can run out of RAM. Use
 
 ## 3. Run
 
-The usual setup is the sim (or the real drivetrain) on the **Jetson**, driven from the
-**ground station**:
+The rover's real drivetrain on the **Jetson**, driven from the **ground station**. First-time
+setup of both machines (clone, container, build, OpenPose models) is in
+[docs/running.md → First-time setup](docs/running.md#first-time-setup).
 
-| Machine | Command |
+| Where | Command |
 |---|---|
-| Jetson | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py` (real motors: `ros2 launch chassis_bringup rover.launch.py mode:=real`) |
-| Ground station | `ros2 launch chassis_bringup ground_station.launch.py` (real motors: add `use_sim_time:=false`) |
+| Jetson host, once per boot | `cd ~/billee-software-2027 && tooling/can-up` |
+| Jetson container | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=<none\|cloud\|openpose>` |
+| Ground-station container | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=<drivetrain\|cloud\|openpose>` |
 
-Then, on the ground station, open Foxglove Studio (desktop app, installed on the host, not in
-the container), connect to `ws://localhost:8765`, and import
-`ros2_ws/src/chassis_bringup/foxglove/drivetrain.json`. To drive, hold **RB** on the gamepad and
-move the two sticks up and down.
+- `camera:=cloud` adds the ZED point cloud, `camera:=openpose` the point cloud and OpenPose. Use
+  the ground station's `view:=` that matches (`none` ↔ `drivetrain`).
+- No motors connected: add `can_interface:=mock` on the Jetson and skip `can-up`.
+- On the ground-station **host**, open Foxglove Studio, connect to `ws://localhost:8765`, and
+  import the layout for the camera mode ([docs/running.md → Foxglove](docs/running.md#foxglove)).
+- To drive, hold **RB / R1** on the gamepad and move the two sticks up and down.
 
-Everything else, including the sim on one machine, a bench test, CAN, people/pose, Foxglove
-details and troubleshooting, is in **[docs/running.md](docs/running.md)**.
+The simulator, a bench test, CAN testing and troubleshooting are in
+**[docs/running.md](docs/running.md)**.
 
 ## Documentation
 

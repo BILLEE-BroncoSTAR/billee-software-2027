@@ -3,9 +3,9 @@
   "build": {
     "dockerfile": "../../docker/Dockerfile.l4t-humble",
     "context": "../../",
-    // Parallel OpenPose compile jobs; empty = all cores. `export OPENPOSE_JOBS=2` on the host
-    // before "Rebuild Container" if nvcc runs out of RAM.
-    "args": { "OPENPOSE_JOBS": "${localEnv:OPENPOSE_JOBS}" }
+    // Parallel OpenPose compile jobs. 3 builds in ~21 min on the 8 GB Orin Nano without running
+    // out of RAM (2026-11-13); empty = all cores.
+    "args": { "OPENPOSE_JOBS": "3" }
   },
 
   "containerUser": "ros_user",
@@ -21,15 +21,22 @@
     "--pid=host",
     "--ipc=host",
     "--hostname=rover",
+    "--add-host=rover:127.0.1.1",  // else every sudo prints "unable to resolve host rover"
     "--volume", "/dev:/dev",
     "--volume", "/dev/shm:/dev/shm",
+    // zed_udev.sh installs the ZED udev rule on the host through these (see postStartCommand)
+    "--volume", "/etc/udev/rules.d:/host/udev/rules.d",
+    "--volume", "/run/udev:/run/udev",
     // kept only for optional local debugging on a Jetson with a display attached
     "--volume", "/tmp/.X11-unix:/tmp/.X11-unix"
   ],
 
   // gpu_groups.sh: CUDA as ros_user (zed_openpose) needs the host groups that own the GPU device
   // nodes; VS Code's `docker exec` terminals only get groups listed in the container's /etc/group.
-  "postStartCommand": "sudo /usr/local/bin/gpu_groups.sh && cd ros2_ws && pixi install --environment l4t",
+  // zed_udev.sh: the ZED's sensor device is root-only on the host without Stereolabs' udev rule.
+  // configs/zed/SN*.conf: the ZED's factory calibration; without it the SDK downloads it on the
+  // first open, which needs internet.
+  "postStartCommand": "sudo /usr/local/bin/gpu_groups.sh && sudo /usr/local/bin/zed_udev.sh && cp -n configs/zed/SN*.conf /usr/local/zed/settings/ && cd ros2_ws && pixi install --environment l4t",
 
   "containerEnv": {
     "ROS_DISTRO": "humble",

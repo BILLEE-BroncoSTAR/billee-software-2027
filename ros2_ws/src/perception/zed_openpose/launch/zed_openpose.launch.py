@@ -5,10 +5,21 @@
 
 Usually started through `ros2 launch people people_rover.launch.py`, which adds the gesture node,
 robot_state_publisher and foxglove_bridge.
+
+With openpose:=true the node starts after the kernel's page cache is dropped (sudo -n, which the
+Jetson container allows). On the Orin the GPU allocates from RAM that is actually free, not from
+reclaimable cache: with most RAM held as cache (after a build or a download), OpenPose died at
+startup with CUDNN_STATUS_INTERNAL_ERROR / out of memory although `free` showed GBs "available".
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    OpaqueFunction,
+    RegisterEventHandler,
+)
+from launch.event_handlers import OnProcessExit
 from launch.substitutions import (
     EnvironmentVariable,
     LaunchConfiguration,
@@ -16,6 +27,36 @@ from launch.substitutions import (
 )
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+
+
+def _node():
+    return Node(
+        package="zed_openpose",
+        executable="zed_openpose_node",
+        name="zed_openpose",
+        output="screen",
+        parameters=[
+            PathJoinSubstitution(
+                [FindPackageShare("zed_openpose"), "config", "zed_openpose.yaml"]),
+            {
+                "model_folder": LaunchConfiguration("model_folder"),
+                "model_pose": LaunchConfiguration("model_pose"),
+                "svo_path": LaunchConfiguration("svo_path"),
+                "target_frame": LaunchConfiguration("target_frame"),
+                "enable_pose": LaunchConfiguration("openpose"),
+                "publish_cloud": LaunchConfiguration("point_cloud"),
+            },
+        ],
+    )
+
+
+def _start(context):
+    if LaunchConfiguration("openpose").perform(context).lower() not in ("true", "1"):
+        return [_node()]
+    drop = ExecuteProcess(
+        cmd=["sudo", "-n", "sh", "-c", "sync && echo 3 > /proc/sys/vm/drop_caches"],
+        name="drop_page_cache", output="screen")
+    return [drop, RegisterEventHandler(OnProcessExit(target_action=drop, on_exit=[_node()]))]
 
 
 def generate_launch_description():
@@ -36,21 +77,5 @@ def generate_launch_description():
                               description="Run OpenPose (/people/*). false = camera only."),
         DeclareLaunchArgument("point_cloud", default_value="true",
                               description="Publish /zed/points (base_link via TF)."),
-        Node(
-            package="zed_openpose",
-            executable="zed_openpose_node",
-            name="zed_openpose",
-            output="screen",
-            parameters=[
-                PathJoinSubstitution([FindPackageShare("zed_openpose"), "config", "zed_openpose.yaml"]),
-                {
-                    "model_folder": LaunchConfiguration("model_folder"),
-                    "model_pose": LaunchConfiguration("model_pose"),
-                    "svo_path": LaunchConfiguration("svo_path"),
-                    "target_frame": LaunchConfiguration("target_frame"),
-                    "enable_pose": LaunchConfiguration("openpose"),
-                    "publish_cloud": LaunchConfiguration("point_cloud"),
-                },
-            ],
-        ),
+        OpaqueFunction(function=_start),
     ])

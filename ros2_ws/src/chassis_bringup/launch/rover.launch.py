@@ -5,6 +5,8 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py                       # sim, no ODESC
     ros2 launch chassis_bringup rover.launch.py mode:=real            # ODESC over CAN
     ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock
+    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose  # + cloud, OpenPose
+    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud     # + ZED cloud
 
 `mode:=sim`  -> sim_gz.launch.py  (Gazebo + ign_ros2_control, no CAN)
 `mode:=real` -> real.launch.py    (standalone controller_manager + OdescSystemHardware)
@@ -15,8 +17,11 @@ so `joy_control` defaults false here: a second joy_tank_drive on the rover would
 react to the ground station's /joy and publish every drive command twice.
 """
 
+import os
+
+from ament_index_python.packages import PackageNotFoundError, get_package_prefix
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -59,6 +64,13 @@ declare_args = [
         default_value="48.0",
         description="mode:=real only. Motor-shaft turns per wheel turn.",
     ),
+    DeclareLaunchArgument(
+        "camera",
+        default_value="none",
+        choices=["none", "cloud", "openpose"],
+        description="ZED 2i on the Jetson: none; cloud = point cloud only (/zed/points); "
+        "openpose = point cloud + OpenPose people/gestures. Jetson (l4t) only.",
+    ),
 ]
 
 
@@ -95,6 +107,32 @@ def _setup(context):
     else:  # DeclareLaunchArgument(choices=...) already guards this
         raise RuntimeError(f"rover.launch.py: unknown mode {mode!r} (use sim|real)")
 
+    camera = LaunchConfiguration("camera").perform(context)
+    if camera != "none" and not _camera_node_built():
+        # zed_openpose only builds its node where the ZED SDK and OpenPose are installed (the
+        # Jetson l4t image). Without it, keep the drivetrain running rather than abort the launch.
+        actions.append(LogInfo(msg=(
+            f"rover.launch.py: camera:={camera} ignored, zed_openpose_node isn't built here. "
+            "Build it in the Jetson (l4t) container: "
+            "pixi run build --packages-select zed_openpose people")))
+        camera = "none"
+    if camera != "none":
+        # The drivetrain launch above already runs robot_state_publisher and the foxglove
+        # bridge, so the camera launch runs without its own (standalone:=false).
+        actions.append(
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [FindPackageShare("people"), "launch", "people_rover.launch.py"]
+                    )
+                ),
+                launch_arguments={
+                    "standalone": "false",
+                    "openpose": "true" if camera == "openpose" else "false",
+                }.items(),
+            )
+        )
+
     return [
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -106,6 +144,14 @@ def _setup(context):
         ),
         *actions,
     ]
+
+
+def _camera_node_built():
+    try:
+        prefix = get_package_prefix("zed_openpose")
+    except PackageNotFoundError:
+        return False
+    return os.access(os.path.join(prefix, "lib", "zed_openpose", "zed_openpose_node"), os.X_OK)
 
 
 def generate_launch_description():

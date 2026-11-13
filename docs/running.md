@@ -10,31 +10,70 @@ There are two machines:
 Every command below runs **inside the dev container, in `ros2_ws`, inside `pixi shell -e <env>`**,
 on the machine named above it. The only exceptions are marked **host** (outside the container).
 
-- [Before the first run](#before-the-first-run)
+- [First-time setup](#first-time-setup)
 - [Pick a setup](#pick-a-setup)
 - [Foxglove](#foxglove)
 - [Controls](#controls)
 - [Launch options](#launch-options)
 - [CAN testing without motors](#can-testing-without-motors)
-- [People / pose](#people--pose)
 - [Troubleshooting](#troubleshooting)
 
-## Before the first run
+## First-time setup
 
-On **each** machine you use:
+### Jetson
+
+1. **Host**, once per JetPack flash: Docker with the `nvidia` runtime
+   ([README §1](../README.md#1-open-the-dev-container)).
+2. **Host:**
+   ```bash
+   git clone https://github.com/BILLEE-BroncoSTAR/billee-software-2027.git ~/billee-software-2027
+   ```
+3. **Host:** open `~/billee-software-2027` in VS Code (Remote-SSH from a laptop works), then
+   **Dev Containers: Reopen in Container** → `rover-roshumble_l4t-aarch64`. Building the image
+   compiles OpenPose: 21 min on the Orin Nano, plus the download of the 12.6 GB base image the
+   first time.
+
+   Every container start then runs `postStartCommand` (about 1 min the first time): GPU access
+   for `ros_user`, the ZED udev rule on the host (`docker/zed_udev.sh`), the ZED's calibration from
+   `configs/zed/`, and `pixi install`.
+4. **Jetson container:**
+   ```bash
+   cd ros2_ws
+   pixi shell -e l4t                                            # ignore "Could not find activation scripts" before the first build
+   pixi run build --parallel-workers 2 --executor sequential    # ~4 min
+   source install/local_setup.bash
+   src/perception/zed_openpose/scripts/get_openpose_models.sh   # OpenPose weights, ~300 MB
+   ```
+5. Plug the ZED 2i into a **USB 3** port. On the **host**, `lsusb | grep 2b03` must list
+   `STEREOLABS ZED 2i`.
+
+### Ground station
+
+1. **Host:** the x86 requirements in [README §1](../README.md#1-open-the-dev-container), and
+   [Foxglove Studio](https://foxglove.dev/download) (the desktop app; it is not in the container).
+2. **Host:** clone the repo as above, open it in VS Code, then **Dev Containers: Reopen in
+   Container** → `desktop-roshumble_dev-x862`.
+3. **Ground-station container:**
+   ```bash
+   cd ros2_ws
+   pixi shell -e default
+   pixi run build
+   source install/local_setup.bash
+   ```
+4. Plug the gamepad into the ground station.
+
+### Network
+
+- Both machines are on the same LAN, and the network allows multicast. Some Wi-Fi access points
+  block traffic between clients.
+- Both use `ROS_DOMAIN_ID=42`. Pixi sets it. A shell outside pixi needs `export ROS_DOMAIN_ID=42`.
+
+### Every new terminal
 
 ```bash
 cd ros2_ws
-pixi shell -e l4t                 # Jetson.  Ground station: pixi shell -e default
-pixi run build                    # 8 GB Jetson: add --parallel-workers 2 --executor sequential
-source install/local_setup.bash   # only in shells that were open before the build
+pixi shell -e l4t        # Jetson. Ground station: pixi shell -e default
 ```
-
-For two machines to talk:
-
-- Both are on the same LAN, and the network allows multicast. Some Wi-Fi access points block
-  traffic between clients.
-- Both use `ROS_DOMAIN_ID=42`. Pixi sets it. A shell outside pixi needs `export ROS_DOMAIN_ID=42`.
 
 ## Pick a setup
 
@@ -42,7 +81,7 @@ For two machines to talk:
 |---|---|---|
 | [1. Sim on one machine](#1-sim-on-one-machine) | nothing | Gazebo, rover, teleop, Foxglove bridge |
 | [2. Sim on the Jetson](#2-sim-on-the-jetson-driven-from-the-ground-station) | Gazebo, rover, Foxglove bridge | teleop, RViz, Foxglove bridge |
-| [3. Real drivetrain](#3-real-drivetrain-driven-from-the-ground-station) | ODESC drivetrain, Foxglove bridge | teleop, RViz, Foxglove bridge |
+| [3. The rover](#3-the-rover-real-drivetrain-optional-camera-driven-from-the-ground-station) | ODESC drivetrain, optional ZED point cloud and OpenPose, Foxglove bridge | teleop, RViz, Foxglove bridge |
 | [4. Bench test](#4-bench-test-everything-on-the-jetson) | drivetrain, teleop, viewers | nothing |
 
 Teleop (the gamepad nodes) must run on exactly **one** machine. If it runs on both, every drive
@@ -80,36 +119,46 @@ ros2 topic list | grep diff_drive     # in a second terminal: should list /diff_
 
 Then [connect Foxglove](#foxglove) and drive.
 
-### 3. Real drivetrain, driven from the ground station
+### 3. The rover: real drivetrain, optional camera, driven from the ground station
 
-**Jetson, host** (once per boot):
+**Jetson host**, once per boot (from `~/billee-software-2027`):
 
 ```bash
 tooling/can-up            # can2 @ 500 kbit/s
 tooling/can-up status
 ```
 
-To bring it up on every boot:
+To bring it up on every boot instead:
 `sudo cp tooling/can2.service /etc/systemd/system/ && sudo systemctl enable --now can2.service`.
 
-**Jetson:**
+**Jetson container**, one of:
 
-```bash
-ros2 launch chassis_bringup rover.launch.py mode:=real
-ros2 control list_controllers     # in a second terminal: both controllers "active"
-```
+| Runs | Command |
+|---|---|
+| drivetrain | `ros2 launch chassis_bringup rover.launch.py mode:=real` |
+| drivetrain + ZED point cloud | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud` |
+| drivetrain + ZED point cloud + OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose` |
 
-With no motors connected, add `can_interface:=mock`. Commands then loop back as wheel feedback,
-and you can skip `can-up`.
+- No motors connected: add `can_interface:=mock` (commands loop back as wheel feedback) and skip
+  `can-up`.
+- Check the drivetrain in a second Jetson terminal: `ros2 control list_controllers` shows both
+  controllers `active`.
+- Measured on the Orin Nano: `camera:=cloud` publishes `/zed/points` at 8.5 Hz.
+  `camera:=openpose` publishes the point cloud and `/people/skeletons` at 5 Hz, starting about
+  10 s after launch, and needs about 3000 MB `available` in `free -m` on the Jetson host.
 
-**Ground station:**
+**Ground-station container**, the line matching the Jetson's `camera:=`:
 
-```bash
-ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false
-```
+| Jetson runs | Command |
+|---|---|
+| `camera:=none` (default) | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false` |
+| `camera:=cloud` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=cloud` |
+| `camera:=openpose` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=openpose` |
 
-There is no `odom` frame on the real drivetrain (no EKF yet). In RViz, set **Fixed Frame** to
-`base_link`. The Foxglove layout already uses `base_link`.
+`view:=` only picks the RViz layout. For Foxglove, import the matching layout
+([Foxglove](#foxglove)). The real drivetrain has no `odom` frame yet (no EKF), so with
+`view:=drivetrain` set RViz's **Fixed Frame** to `base_link`. The `cloud` and `openpose` layouts
+and all Foxglove layouts already use `base_link`.
 
 ### 4. Bench test, everything on the Jetson
 
@@ -135,11 +184,11 @@ networking, so the host can reach their port 8765.
 
 2. **Layouts → Import from file**, and pick the layout for what is running:
 
-   | Running | Layout |
+   | Jetson runs | Layout |
    |---|---|
-   | drivetrain (sim or real) | `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json` |
-   | ZED point cloud only | `ros2_ws/src/perception/people/foxglove/zed_points.json` |
-   | OpenPose + point cloud | `ros2_ws/src/perception/people/foxglove/people_rover.json` |
+   | sim, or `rover.launch.py mode:=real` | `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json` |
+   | `camera:=cloud` | `ros2_ws/src/perception/people/foxglove/zed_points.json` |
+   | `camera:=openpose` | `ros2_ws/src/perception/people/foxglove/people_rover.json` |
 
 **Mac:** run Foxglove on macOS and connect to `ws://localhost:8765`. The Mac container forwards
 the port. The Mac container has no GPU and no gamepad, so run the sim as
@@ -170,7 +219,9 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 | `rover.launch.py` | `mode` | `sim` | `sim` (Gazebo) or `real` (ODESC) |
 | | `can_interface` | `can2` | `mode:=real` only: `can2`, `vcan0` or `mock` |
 | | `joy_control` | `false` | teleop on the Jetson. Only when no ground station runs it. |
+| | `camera` | `none` | `cloud` (ZED point cloud) or `openpose` (point cloud + OpenPose). Jetson container only. |
 | `ground_station.launch.py` | `use_sim_time` | `true` | `false` when the Jetson runs `mode:=real` |
+| | `view` | `drivetrain` | RViz layout: `drivetrain`, `cloud` or `openpose` (match the Jetson's `camera:=`) |
 | | `joystick` / `rviz` / `foxglove` | `true` | |
 | | `fprime_gds` | `false` | open the F' GDS web UI (`fprime_gds_url`) |
 | `sim_gz.launch.py` | `navigation` | `true` | EKF + Nav2. `false` saves CPU but removes the `odom` frame. |
@@ -197,20 +248,6 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 
 `candump -L vcan0` should show six `0x07` frames on start, then `0x0D` frames while driving.
 
-## People / pose
-
-**Jetson**, with the ZED 2i plugged in. Full guide: [people-pose.md](people-pose.md).
-
-```bash
-src/perception/zed_openpose/scripts/get_openpose_models.sh   # once, ~300 MB
-pixi run build --packages-select people_msgs zed_openpose people robot_description
-ros2 launch people people_rover.launch.py                     # OpenPose + point cloud
-ros2 launch people people_rover.launch.py openpose:=false     # point cloud only
-```
-
-If the drivetrain is already running (setup 3), add `standalone:=false`. View it on the ground
-station with the matching [Foxglove layout](#foxglove).
-
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -227,4 +264,8 @@ station with the matching [Foxglove layout](#foxglove).
 | Sim: `Switch controller timed out`, or `Couldn't open X display` | No usable display. On the Jetson, prefix the launch with `xvfb-run -a vglrun -d egl`. |
 | Real: controllers `inactive`, wheels dead | CAN down or wrong bitrate. Run `tooling/can-up` on the host and check `dmesg`. |
 | `vcan0` but no frames | Create `vcan0` on the host first, then check with `candump -L vcan0`. |
+| `rover.launch.py: camera:=… ignored, zed_openpose_node isn't built here` | You're not in the Jetson container, or `zed_openpose` wasn't built there: `pixi run build --packages-select zed_openpose people`. The drivetrain still runs. |
+| `ZED open failed: CAMERA NOT DETECTED` | On the host, `lsusb \| grep 2b03` must list `ZED 2i`. Use a USB 3 port. |
+| `[ZED][MCU] Permissions denied`, then `NOT VALID SERIAL NUMBER FOR SENSORS MODULE MCU` | The host has no ZED udev rule. The container installs it at start: on the host, `ls /etc/udev/rules.d/99-slabs.rules`. If it's missing, the container was created before this was added: **Rebuild Container**. |
+| OpenPose stops with `out of memory`, `CUDNN_STATUS_INTERNAL_ERROR` or `NvMapMemAlloc… error 12` | Not enough RAM (the GPU shares it). On the Jetson host, `free -m` must show at least 3000 MB `available`. Find what uses it: `ps -eo rss,args --sort=-rss \| head` (VS Code attached to the container takes about 1.4 GB). The launch frees the kernel's file cache itself before starting OpenPose. An image built before 2026-11-13 needs **Rebuild Container**. |
 | `Could not enable FIFO RT scheduling policy` | Harmless. |
