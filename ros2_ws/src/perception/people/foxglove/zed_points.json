@@ -43,6 +43,12 @@
           "pointSize": 2,
           "colorMode": "rgb",
           "colorField": "rgb"
+        },
+        "/odometry/filtered": {
+          "visible": true,
+          "type": "axis",
+          "axisScale": 0.2,
+          "historySize": 100
         }
       },
       "layers": {

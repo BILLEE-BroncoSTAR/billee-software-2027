@@ -228,7 +228,18 @@ private:
       RCLCPP_INFO(get_logger(), "Opening %s", svo_path_.c_str());
       init.input.setFromSVOFile(svo_path_.c_str());
     }
-    const sl::ERROR_CODE err = zed_.open(init);
+    // A live ZED sometimes fails its first open (CAMERA STREAM FAILED TO START, seen on the Orin
+    // with USB -71 errors in dmesg) and opens fine on the next try, so retry before giving up.
+    const int attempts = svo_path_.empty() ? 5 : 1;
+    sl::ERROR_CODE err = zed_.open(init);
+    for (int attempt = 2; err != sl::ERROR_CODE::SUCCESS && attempt <= attempts; ++attempt) {
+      RCLCPP_WARN(
+        get_logger(), "ZED open failed: %s. Retrying in 3 s (attempt %d of %d)",
+        sl::toString(err).c_str(), attempt, attempts);
+      zed_.close();
+      std::this_thread::sleep_for(std::chrono::seconds(3));
+      err = zed_.open(init);
+    }
     if (err != sl::ERROR_CODE::SUCCESS) {
       throw std::runtime_error(
         std::string("ZED open failed: ") + sl::toString(err).c_str() +
