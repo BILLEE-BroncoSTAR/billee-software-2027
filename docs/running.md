@@ -80,8 +80,8 @@ pixi shell -e l4t        # Jetson. Ground station: pixi shell -e default
 | Setup | Jetson runs | Ground station runs |
 |---|---|---|
 | [1. Sim on one machine](#1-sim-on-one-machine) | nothing | Gazebo, rover, teleop, Foxglove bridge |
-| [2. Sim on the Jetson](#2-sim-on-the-jetson-driven-from-the-ground-station) | Gazebo, rover, Foxglove bridge | teleop, RViz, Foxglove bridge |
-| [3. The rover](#3-the-rover-real-drivetrain-optional-camera-driven-from-the-ground-station) | ODESC drivetrain, optional ZED point cloud and OpenPose, Foxglove bridge | teleop, RViz, Foxglove bridge |
+| [2. Sim on the Jetson](#2-sim-on-the-jetson-driven-from-the-ground-station) | Gazebo, rover, optional ZED point cloud and/or OpenPose, Foxglove bridge | teleop, RViz, Foxglove bridge |
+| [3. The rover](#3-the-rover-real-drivetrain-optional-camera-driven-from-the-ground-station) | ODESC (or mock) drivetrain, optional ZED point cloud and/or OpenPose, Foxglove bridge | teleop, RViz, Foxglove bridge |
 | [4. Bench test](#4-bench-test-everything-on-the-jetson) | drivetrain, teleop, viewers | nothing |
 
 Teleop (the gamepad nodes) must run on exactly **one** machine. If it runs on both, every drive
@@ -99,31 +99,39 @@ Then [connect Foxglove](#foxglove) to `ws://localhost:8765`.
 
 ### 2. Sim on the Jetson, driven from the ground station
 
-**Jetson:**
+The rover is simulated (Gazebo); the ZED 2i is real. With a camera mode, the real point cloud and
+skeletons are drawn on the simulated rover.
 
-```bash
-xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py
-```
+**Jetson container**, one of:
 
-The Jetson has no monitor, but Gazebo needs an X display to render the simulated camera.
-`xvfb-run` provides a virtual one, and `vglrun` puts the rendering on the GPU. Wait until the log
-shows `diff_drive_controller` active (about 30 s). The sim runs at about 0.33× real time on the
-Orin Nano.
+| Runs | Command |
+|---|---|
+| sim | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py` |
+| sim + ZED point cloud | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=cloud` |
+| sim + OpenPose | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=openpose` |
+| sim + ZED point cloud + OpenPose | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=both` |
 
-**Ground station:**
+`xvfb-run` gives Gazebo the X display it needs without a monitor; `vglrun` renders on the GPU. The
+drivetrain is ready when the log shows `diff_drive_controller` active (about 30 s). The sim runs
+at about 0.33× real time.
 
-```bash
-ros2 launch chassis_bringup ground_station.launch.py
-ros2 topic list | grep diff_drive     # in a second terminal: should list /diff_drive_controller/*
-```
+**Ground-station container**, the line matching the Jetson's `camera:=`:
+
+| Jetson `camera:=` | Command |
+|---|---|
+| none (default) | `ros2 launch chassis_bringup ground_station.launch.py` |
+| `cloud` | `ros2 launch chassis_bringup ground_station.launch.py view:=cloud` |
+| `openpose` | `ros2 launch chassis_bringup ground_station.launch.py view:=openpose` |
+| `both` | `ros2 launch chassis_bringup ground_station.launch.py view:=both` |
 
 Then [connect Foxglove](#foxglove) and drive.
 
 ### 3. The rover: real drivetrain, optional camera, driven from the ground station
 
-**Jetson host**, once per boot (from `~/billee-software-2027`):
+**Jetson host**, once per boot, only with the ODESCs connected:
 
 ```bash
+cd ~/billee-software-2027
 tooling/can-up            # can2 @ 500 kbit/s
 tooling/can-up status
 ```
@@ -133,32 +141,48 @@ To bring it up on every boot instead:
 
 **Jetson container**, one of:
 
-| Runs | Command |
+| Drivetrain | Camera | Command |
+|---|---|---|
+| ODESCs on `can2` | none | `ros2 launch chassis_bringup rover.launch.py mode:=real` |
+| ODESCs on `can2` | point cloud | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud` |
+| ODESCs on `can2` | OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose` |
+| ODESCs on `can2` | point cloud + OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both` |
+| no ODESCs (mock) | none | `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock` |
+| no ODESCs (mock) | point cloud | `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock camera:=cloud` |
+| no ODESCs (mock) | OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock camera:=openpose` |
+| no ODESCs (mock) | point cloud + OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock camera:=both` |
+
+With `can_interface:=mock` the driver opens no CAN socket and loops commands back as wheel
+feedback; skip `can-up`. Check the drivetrain in a second Jetson terminal:
+`ros2 control list_controllers` shows both controllers `active`.
+
+**Ground-station container**, the line matching the Jetson's `camera:=` (same with or without
+the ODESCs):
+
+| Jetson `camera:=` | Command |
 |---|---|
-| drivetrain | `ros2 launch chassis_bringup rover.launch.py mode:=real` |
-| drivetrain + ZED point cloud | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud` |
-| drivetrain + ZED point cloud + OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose` |
+| none (default) | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false` |
+| `cloud` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=cloud` |
+| `openpose` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=openpose` |
+| `both` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=both` |
 
-- No motors connected: add `can_interface:=mock` (commands loop back as wheel feedback) and skip
-  `can-up`.
-- Check the drivetrain in a second Jetson terminal: `ros2 control list_controllers` shows both
-  controllers `active`.
-- Measured on the Orin Nano: `camera:=cloud` publishes `/zed/points` at 8.5 Hz.
-  `camera:=openpose` publishes the point cloud and `/people/skeletons` at 5 Hz, starting about
-  10 s after launch, and needs about 3000 MB `available` in `free -m` on the Jetson host.
+`view:=` picks the RViz layout. For Foxglove, import the matching layout ([Foxglove](#foxglove)).
+The real drivetrain has no `odom` frame yet (no EKF), so with no camera set RViz's **Fixed Frame**
+to `base_link`. The camera layouts already use `base_link`.
 
-**Ground-station container**, the line matching the Jetson's `camera:=`:
+### Camera rates and RAM (Orin Nano, 2026-11-13)
 
-| Jetson runs | Command |
-|---|---|
-| `camera:=none` (default) | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false` |
-| `camera:=cloud` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=cloud` |
-| `camera:=openpose` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=openpose` |
+| Jetson `camera:=` | Real drivetrain (mock) | Sim |
+|---|---|---|
+| `cloud` | `/zed/points` 8.5 Hz | `/zed/points` 8.4 Hz |
+| `openpose` | `/people/skeletons` 5.0 Hz | `/people/skeletons` 3.9 Hz |
+| `both` | both topics 5.0 Hz | `/zed/points` 2.7 Hz, `/people/skeletons` 4.4 Hz |
 
-`view:=` only picks the RViz layout. For Foxglove, import the matching layout
-([Foxglove](#foxglove)). The real drivetrain has no `odom` frame yet (no EKF), so with
-`view:=drivetrain` set RViz's **Fixed Frame** to `base_link`. The `cloud` and `openpose` layouts
-and all Foxglove layouts already use `base_link`.
+- The first skeleton arrives about 10 s after launch.
+- `openpose` and `both` need about 3000 MB `available` in `free -m` on the Jetson host before
+  launch. See [Troubleshooting](#troubleshooting) if OpenPose stops with `out of memory`.
+- The rows with the ODESCs on `can2` have not been run yet (no CAN on the dev Jetson). The camera
+  part of those commands is the same as with `can_interface:=mock`.
 
 ### 4. Bench test, everything on the Jetson
 
@@ -186,9 +210,9 @@ networking, so the host can reach their port 8765.
 
    | Jetson runs | Layout |
    |---|---|
-   | sim, or `rover.launch.py mode:=real` | `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json` |
+   | no `camera:=` | `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json` |
    | `camera:=cloud` | `ros2_ws/src/perception/people/foxglove/zed_points.json` |
-   | `camera:=openpose` | `ros2_ws/src/perception/people/foxglove/people_rover.json` |
+   | `camera:=openpose` or `camera:=both` | `ros2_ws/src/perception/people/foxglove/people_rover.json` |
 
 **Mac:** run Foxglove on macOS and connect to `ws://localhost:8765`. The Mac container forwards
 the port. The Mac container has no GPU and no gamepad, so run the sim as
@@ -219,9 +243,9 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 | `rover.launch.py` | `mode` | `sim` | `sim` (Gazebo) or `real` (ODESC) |
 | | `can_interface` | `can2` | `mode:=real` only: `can2`, `vcan0` or `mock` |
 | | `joy_control` | `false` | teleop on the Jetson. Only when no ground station runs it. |
-| | `camera` | `none` | `cloud` (ZED point cloud) or `openpose` (point cloud + OpenPose). Jetson container only. |
+| | `camera` | `none` | `cloud` (ZED point cloud), `openpose` (OpenPose) or `both`. Jetson container only. |
 | `ground_station.launch.py` | `use_sim_time` | `true` | `false` when the Jetson runs `mode:=real` |
-| | `view` | `drivetrain` | RViz layout: `drivetrain`, `cloud` or `openpose` (match the Jetson's `camera:=`) |
+| | `view` | `drivetrain` | RViz layout: `drivetrain`, `cloud`, `openpose` or `both` (match the Jetson's `camera:=`) |
 | | `joystick` / `rviz` / `foxglove` | `true` | |
 | | `fprime_gds` | `false` | open the F' GDS web UI (`fprime_gds_url`) |
 | `sim_gz.launch.py` | `navigation` | `true` | EKF + Nav2. `false` saves CPU but removes the `odom` frame. |
@@ -267,5 +291,5 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | `rover.launch.py: camera:=… ignored, zed_openpose_node isn't built here` | You're not in the Jetson container, or `zed_openpose` wasn't built there: `pixi run build --packages-select zed_openpose people`. The drivetrain still runs. |
 | `ZED open failed: CAMERA NOT DETECTED` | On the host, `lsusb \| grep 2b03` must list `ZED 2i`. Use a USB 3 port. |
 | `[ZED][MCU] Permissions denied`, then `NOT VALID SERIAL NUMBER FOR SENSORS MODULE MCU` | The host has no ZED udev rule. The container installs it at start: on the host, `ls /etc/udev/rules.d/99-slabs.rules`. If it's missing, the container was created before this was added: **Rebuild Container**. |
-| OpenPose stops with `out of memory`, `CUDNN_STATUS_INTERNAL_ERROR` or `NvMapMemAlloc… error 12` | Not enough RAM (the GPU shares it). On the Jetson host, `free -m` must show at least 3000 MB `available`. Find what uses it: `ps -eo rss,args --sort=-rss \| head` (VS Code attached to the container takes about 1.4 GB). The launch frees the kernel's file cache itself before starting OpenPose. An image built before 2026-11-13 needs **Rebuild Container**. |
+| OpenPose stops with `out of memory`, `CUDNN_STATUS_INTERNAL_ERROR` or `NvMapMemAlloc… error 12` | Not enough RAM (the GPU shares it). On the Jetson host, `free -m` must show at least 3000 MB `available`. Find what uses it: `ps -eo rss,args --sort=-rss \| head`. On the dev Jetson, the F' GDS on port 5001 grows by about 2 GB an hour; `sudo systemctl restart billee-scm-lan-gds` frees it. VS Code attached to the container can take 1.4 GB. The launch frees the kernel's file cache itself before starting OpenPose. An image built before 2026-11-13 needs **Rebuild Container**. |
 | `Could not enable FIFO RT scheduling policy` | Harmless. |

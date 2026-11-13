@@ -81,17 +81,18 @@ setup of both machines (clone, container, build, OpenPose models) is in
 | Where | Command |
 |---|---|
 | Jetson host, once per boot | `cd ~/billee-software-2027 && tooling/can-up` |
-| Jetson container | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=<none\|cloud\|openpose>` |
-| Ground-station container | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=<drivetrain\|cloud\|openpose>` |
+| Jetson container | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=<none\|cloud\|openpose\|both>` |
+| Ground-station container | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=<drivetrain\|cloud\|openpose\|both>` |
 
-- `camera:=cloud` adds the ZED point cloud, `camera:=openpose` the point cloud and OpenPose. Use
-  the ground station's `view:=` that matches (`none` ↔ `drivetrain`).
+- `camera:=cloud` adds the ZED point cloud, `camera:=openpose` OpenPose, `camera:=both` both. Use
+  the ground station's `view:=` with the same name (`camera:=none` ↔ `view:=drivetrain`).
 - No motors connected: add `can_interface:=mock` on the Jetson and skip `can-up`.
 - On the ground-station **host**, open Foxglove Studio, connect to `ws://localhost:8765`, and
   import the layout for the camera mode ([docs/running.md → Foxglove](docs/running.md#foxglove)).
 - To drive, hold **RB / R1** on the gamepad and move the two sticks up and down.
 
-The simulator, a bench test, CAN testing and troubleshooting are in
+Every combination written out (sim or real, with or without ODESCs, each camera mode), the
+simulator, a bench test, CAN testing and troubleshooting are in
 **[docs/running.md](docs/running.md)**.
 
 ## Documentation

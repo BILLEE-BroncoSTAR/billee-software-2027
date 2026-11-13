@@ -54,7 +54,9 @@ def _start(context):
     if LaunchConfiguration("openpose").perform(context).lower() not in ("true", "1"):
         return [_node()]
     drop = ExecuteProcess(
-        cmd=["sudo", "-n", "sh", "-c", "sync && echo 3 > /proc/sys/vm/drop_caches"],
+        # env -u LD_PRELOAD: under vglrun (the Jetson sim), sudo can't load VirtualGL's preloads
+        cmd=["env", "-u", "LD_PRELOAD", "sudo", "-n", "sh", "-c",
+             "sync && echo 3 > /proc/sys/vm/drop_caches"],
         name="drop_page_cache", output="screen")
     return [drop, RegisterEventHandler(OnProcessExit(target_action=drop, on_exit=[_node()]))]
 

@@ -2,11 +2,11 @@
 
     ros2 launch chassis_bringup ground_station.launch.py
     ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false   # real hardware
-    ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=openpose
+    ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=both
     ros2 launch chassis_bringup ground_station.launch.py fprime_gds:=true
 
 Starts:
-  - viz.launch.py  -> rviz2 (view:= picks drivetrain/cloud/openpose) + foxglove_bridge :8765
+  - viz.launch.py  -> rviz2 (view:= drivetrain/cloud/openpose/both) + foxglove_bridge :8765
   - teleop.launch.py -> joy_node + joy_tank_drive  (publishes cmd_vel over DDS);
     skip with joystick:=false (e.g. headless / Mac container / Foxglove-only station)
   - optionally opens the F' GDS web UI in a browser (fprime_gds:=true) at fprime_gds_url:=
@@ -49,9 +49,9 @@ declare_args = [
     DeclareLaunchArgument(
         "view",
         default_value="drivetrain",
-        choices=["drivetrain", "cloud", "openpose"],
-        description="RViz layout: drivetrain (fixed frame odom), cloud (ZED point cloud) or "
-        "openpose (point cloud + skeletons). Match the rover's camera:= option.",
+        choices=["drivetrain", "cloud", "openpose", "both"],
+        description="RViz layout: drivetrain (fixed frame odom), cloud (ZED point cloud), "
+        "openpose or both (point cloud + skeletons). Match the rover's camera:= option.",
     ),
     DeclareLaunchArgument(
         "fprime_gds",
@@ -70,6 +70,7 @@ RVIZ_CONFIGS = {  # view:= -> (package, file under share/<package>/rviz/)
     "drivetrain": ("chassis_bringup", "drivetrain.rviz"),
     "cloud": ("people", "zed_points.rviz"),
     "openpose": ("people", "people_rover.rviz"),
+    "both": ("people", "people_rover.rviz"),
 }
 
 

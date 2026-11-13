@@ -28,18 +28,21 @@ Jetson container only. Setup (models, build, udev, calibration) is in
 
 ```bash
 ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud      # point cloud
-ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose   # point cloud + OpenPose
+ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose   # OpenPose
+ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both       # point cloud + OpenPose
 ```
 
 Add `can_interface:=mock` when no motors are connected. On the **ground station**:
 `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=cloud` (or
-`view:=openpose`), and the matching Foxglove layout below.
+`view:=openpose`, `view:=both`), and the matching Foxglove layout below. All combinations,
+including the simulator: [running.md](running.md#pick-a-setup).
 
 **Camera alone**, without any drivetrain launch, on the **Jetson**:
 
 ```bash
-ros2 launch people people_rover.launch.py openpose:=false    # point cloud
-ros2 launch people people_rover.launch.py                    # point cloud + OpenPose
+ros2 launch people people_rover.launch.py openpose:=false       # point cloud
+ros2 launch people people_rover.launch.py point_cloud:=false    # OpenPose
+ros2 launch people people_rover.launch.py                       # point cloud + OpenPose
 ```
 
 This also starts `robot_state_publisher` and the Foxglove bridge (`standalone:=true`).
@@ -60,11 +63,12 @@ model.
 | Mode | Foxglove (Layouts → Import) | RViz (`ground_station.launch.py use_sim_time:=false …`) |
 |---|---|---|
 | point cloud | `ros2_ws/src/perception/people/foxglove/zed_points.json` | `view:=cloud` |
-| point cloud + OpenPose | `ros2_ws/src/perception/people/foxglove/people_rover.json` | `view:=openpose` |
+| OpenPose, or point cloud + OpenPose | `ros2_ws/src/perception/people/foxglove/people_rover.json` | `view:=openpose` / `view:=both` |
 
 Measured on the dev Orin Nano (2026-11-13, HD720, depth `ULTRA`): the camera runs at 30 fps.
-Point cloud alone: `/zed/points` at 8.5 Hz. With OpenPose: `/people/skeletons` and `/zed/points` at
-5 Hz, the first skeleton about 10 s after launch, and the whole rover stack uses about 2.9 GB of RAM.
+Point cloud alone: `/zed/points` at 8.5 Hz. OpenPose alone, or with the point cloud: 5 Hz, the
+first skeleton about 10 s after launch, and the whole rover stack uses about 2.9 GB of RAM. Rates
+with the Jetson sim are lower: [running.md](running.md#camera-rates-and-ram-orin-nano-2026-11-13).
 With `openpose:=true` the launch first drops the kernel's file cache (`sudo -n`): on the Orin the GPU
 only gets RAM that is actually free, and OpenPose failed at startup when most RAM was cache.
 
@@ -183,10 +187,11 @@ Dev container problems, already fixed:
 
 ## Status
 
-Tested on the dev Orin Nano with the team's ZED 2i (2026-11-13), L4T 36.4 image: the camera
-opens, the point cloud runs alone and together with OpenPose, through both `people_rover.launch.py`
-and `rover.launch.py camera:=…`, and the ground station receives both. Not tested yet: 3D accuracy
-of the skeletons, gestures on real people, and anything with the drivetrain's motors. The unit
+Tested on the dev Orin Nano with the team's ZED 2i (2026-11-13), L4T 36.4 image: the point
+cloud, OpenPose, and both together, through `people_rover.launch.py` and through
+`rover.launch.py camera:=…` with the mock drivetrain and with the Jetson sim; the ground station
+receives them. Rates: [running.md → Camera rates and RAM](running.md#camera-rates-and-ram-orin-nano-2026-11-13).
+Not tested yet: 3D accuracy of the skeletons, gestures on real people, and the ODESC drivetrain. The unit
 tests (`test_skeleton_3d`, 24 gesture cases) pass.
 
 ```bash

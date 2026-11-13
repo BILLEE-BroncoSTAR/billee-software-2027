@@ -5,8 +5,9 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py                       # sim, no ODESC
     ros2 launch chassis_bringup rover.launch.py mode:=real            # ODESC over CAN
     ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock
-    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose  # + cloud, OpenPose
-    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud     # + ZED cloud
+    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud     # + ZED point cloud
+    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose  # + OpenPose
+    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + both
 
 `mode:=sim`  -> sim_gz.launch.py  (Gazebo + ign_ros2_control, no CAN)
 `mode:=real` -> real.launch.py    (standalone controller_manager + OdescSystemHardware)
@@ -67,11 +68,18 @@ declare_args = [
     DeclareLaunchArgument(
         "camera",
         default_value="none",
-        choices=["none", "cloud", "openpose"],
-        description="ZED 2i on the Jetson: none; cloud = point cloud only (/zed/points); "
-        "openpose = point cloud + OpenPose people/gestures. Jetson (l4t) only.",
+        choices=["none", "cloud", "openpose", "both"],
+        description="ZED 2i on the Jetson: none; cloud = point cloud (/zed/points); "
+        "openpose = OpenPose people/gestures (/people/*); both. Jetson (l4t) only.",
     ),
 ]
+
+# camera:= -> people_rover.launch.py (openpose, point_cloud)
+CAMERA_MODES = {
+    "cloud": ("false", "true"),
+    "openpose": ("true", "false"),
+    "both": ("true", "true"),
+}
 
 
 def _setup(context):
@@ -128,7 +136,8 @@ def _setup(context):
                 ),
                 launch_arguments={
                     "standalone": "false",
-                    "openpose": "true" if camera == "openpose" else "false",
+                    "openpose": CAMERA_MODES[camera][0],
+                    "point_cloud": CAMERA_MODES[camera][1],
                 }.items(),
             )
         )
