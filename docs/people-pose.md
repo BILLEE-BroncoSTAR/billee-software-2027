@@ -58,10 +58,11 @@ This also starts `robot_state_publisher` and the Foxglove bridge (`standalone:=t
 | `target_frame` | `base_link` | frame of all 3D output |
 | `use_sim_time` | `false` | Stamp with sim time. `rover.launch.py camera:=…` sets it in the sim (`mode:=sim`), where the camera's own clock would put every message "in the future" for the viewers. |
 
-**View it** on the ground station. Both layouts show the rover model. RViz's fixed frame is
-`odom` on sim time and `base_link` otherwise (`ground_station.launch.py`).
+**View it** on the ground station. The Foxglove layouts are `drivetrain.json` (rover model,
+odometry trail, `/joy`, drive command) plus the camera topics. RViz's fixed frame is `odom` on sim
+time and `base_link` otherwise (`ground_station.launch.py`).
 
-| Mode | Foxglove (Layouts → Import) | RViz (`ground_station.launch.py use_sim_time:=false …`) |
+| Mode | Foxglove (Layouts → Import) | RViz (`ground_station.launch.py … view:=`) |
 |---|---|---|
 | point cloud | `ros2_ws/src/perception/people/foxglove/zed_points.json` | `view:=cloud` |
 | OpenPose, or point cloud + OpenPose | `ros2_ws/src/perception/people/foxglove/people_rover.json` | `view:=openpose` / `view:=both` |

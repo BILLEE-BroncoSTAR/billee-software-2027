@@ -33,9 +33,10 @@ on the machine named above it. The only exceptions are marked **host** (outside 
    compiles OpenPose: 21 min on the Orin Nano, plus the download of the 12.6 GB base image the
    first time.
 
-   Every container start then runs `postStartCommand` (about 1 min the first time): GPU access
-   for `ros_user`, the ZED udev rule on the host (`docker/zed_udev.sh`), the ZED's calibration from
-   `configs/zed/`, and `pixi install`.
+   Every process in the container, VS Code's terminals included, gets the GPU device groups
+   (`--group-add` in `.devcontainer/l4t/devcontainer.json`). Every container start then runs
+   `postStartCommand` (about 1 min the first time): the ZED udev rule on the host
+   (`docker/zed_udev.sh`), the ZED's calibration from `configs/zed/`, and `pixi install`.
 4. **Jetson container:**
    ```bash
    cd ros2_ws
