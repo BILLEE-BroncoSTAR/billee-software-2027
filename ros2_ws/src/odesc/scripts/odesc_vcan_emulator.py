@@ -2,12 +2,10 @@
 """Minimal six-node ODrive CANSimple encoder emulator for SocketCAN vcan."""
 
 import argparse
-import math
 import signal
 import socket
 import struct
 import time
-
 
 SET_INPUT_VEL = 0x0D
 GET_ENCODER_ESTIMATES = 0x09

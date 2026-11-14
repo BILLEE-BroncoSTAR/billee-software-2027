@@ -457,9 +457,9 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 | `rviz` | `false` | also open RViz |
 | `foxglove` | `false` | also start the Foxglove bridge |
 | `odesc_shadow` | `false` | also run the ODESC driver + emulator on `vcan0` |
-| `joy_control` | `true` | joystick nodes (currently always started — known bug) |
+| `joy_control` | `true` | start the joystick nodes |
 | `description_pkg`, `xacro_file` | `robot_description`, `urdf/robot.urdf.xacro` | robot model source |
-| `world_file` | `empty.sdf` | accepted but ignored (always `empty.sdf`) |
+| `world_file` | `empty.sdf` | a world in `robot_description`'s share, or a Gazebo world name |
 
 **`real.launch.py`** — hardware backend with a standalone controller manager (wall clock).
 

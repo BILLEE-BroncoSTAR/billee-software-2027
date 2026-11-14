@@ -21,7 +21,7 @@ Launch files for the BILLEE drivetrain. How to use them is in [docs/running.md](
 
 Notes:
 
-- `sim_gz` ignores `world_file` and always loads `empty.sdf`.
+- `sim_gz` loads `world_file` from `robot_description`'s share, else passes the name to Gazebo (e.g. `shapes.sdf`; default `empty.sdf`).
 - `real.launch.py` writes a temporary copy of `controllers.yaml` with `use_sim_time: false`, because
   a standalone `ros2_control_node` with sim time and no `/clock` hangs.
 - The robot model, controllers and CAN node map come from `robot_description`. Joystick config

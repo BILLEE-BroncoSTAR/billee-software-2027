@@ -1,17 +1,21 @@
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
-from launch.conditions import IfCondition
-from launch_ros.parameter_descriptions import ParameterValue
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
-from launch.actions import OpaqueFunction
-from launch_ros.substitutions import FindPackageShare
-
 import glob
 import os
 import sys
+
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    OpaqueFunction,
+    SetEnvironmentVariable,
+)
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
+from launch_ros.substitutions import FindPackageShare
 
 desc_share = get_package_share_directory("robot_description")
 share_root = os.path.dirname(desc_share)
@@ -67,7 +71,7 @@ declare_args = [
         DeclareLaunchArgument(
             "world_file",
             default_value="empty.sdf",
-            description="Path to the robot world file (relative to the description package share).",
+            description="A world in the description package share, or a Gazebo world name.",
         ),
         DeclareLaunchArgument(
             "gui",
@@ -138,12 +142,8 @@ def _launch_description(ctx):
         xacro_file,
     ])
 
-    world_path = PathJoinSubstitution([
-        FindPackageShare(description_pkg),
-        world_file,
-    ])
     robot_description = ParameterValue(
-        Command(["xacro", " ",xacro_path]),
+        Command(["xacro", " ", xacro_path]),
         value_type=str,
     )
 
@@ -153,7 +153,7 @@ def _launch_description(ctx):
         "gz_params.yaml"
     ])
 
-    # launch gazebo sim
+    world = _world(ctx, description_pkg.perform(ctx), world_file.perform(ctx))
     gz_sim_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
@@ -162,11 +162,8 @@ def _launch_description(ctx):
                 "gz_sim.launch.py"
             ])
         ),
-        # gz launch always declares gz_args as a string and PathJoinSubstiution is lazily 
-        # evaluated at runtime so  we must eval here to pass as a gz_arg
         launch_arguments={
-            #"gz_args": f"-r -v 4 {world_path.perform(ctx)}",
-            "gz_args": "-r -v 4 empty.sdf" if gui else "-s -r -v 4 empty.sdf",
+            "gz_args": f"-r -v 4 {world}" if gui else f"-s -r -v 4 {world}",
             "extra_gz_args": f"--ros-args --params-file {gazebo_params_file}",
             "on_exit_shutdown": "true",
         }.items(),
@@ -215,7 +212,7 @@ def _launch_description(ctx):
         output="screen",
     )
 
-    #Spawn the robot from /robot_description into Gazebo ---
+    # Spawn the robot from /robot_description into Gazebo.
     spawn_entity = Node(
         package="ros_gz_sim",
         executable="create",
@@ -305,11 +302,15 @@ def _launch_description(ctx):
             viz,
         ]
 
+
+def _world(ctx, description_pkg, world_file):
+    """Return a world in the description package, else the name for Gazebo to resolve."""
+    candidate = os.path.join(get_package_share_directory(description_pkg), world_file)
+    return candidate if os.path.isfile(candidate) else world_file
+
+
 def generate_launch_description():
-    #Must use an Opaque function because there are some lazily eval expressions that must be executed
-    #beforehand because the args params for launch actions depend on them (world.sdf)
-    #IMPORTANT: we must declare args before passing the OpaqueFunction or else it will
-    #try to reference LaunchConfiguration objs that do not yet exist (havent been delcared)
+    # Args must be declared before the OpaqueFunction reads them.
     return LaunchDescription(declare_args + [
         OpaqueFunction(function=_launch_description)
     ])
