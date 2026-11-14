@@ -1,20 +1,26 @@
 #!/usr/bin/env bash
-
-# sim-up - bringup the gazebo sim of the rover with the viewer that suits this platform
-# Example Usage:
-#   ./sim-up             - sim + gamepad teleop + foxglove bridge (:8765), RViz when there's a display
-#   ./sim-up true false  - same, without the gamepad nodes
+# sim-up — start the Gazebo sim of the rover with the viewer that suits this platform
+# (run inside the dev container, or natively on linux-aarch64).
 #
-# Args: [foxglove=true] [joystick=true]. Environment overrides:
+#   tooling/sim-up [foxglove] [joystick] [can_sim]     each true|false
+#
+#   tooling/sim-up                    # sim + gamepad teleop + Foxglove bridge (:8765), RViz when there's a display
+#   tooling/sim-up true false         # same, without the gamepad nodes
+#   tooling/sim-up true true true     # also run the ODESC shadow on vcan0 (tooling/can-up vcan0 on the host first)
+#
+# Environment overrides:
 #   BILLEE_PLATFORM=<mac|linux-aarch64|l4t|x86>  Pixi env (default: from `make setup`, see tooling/billee-env.sh)
-#   RVIZ=true|false        default: true on Linux with a display, false on mac / headless
-#   SHADOW=true|false      ODESC shadow on vcan0; default: true when vcan0 exists
-#                          (create it on the host with `tooling/can-up vcan0`)
-#   HEADLESS=1             force `xvfb-run -a` (automatic when there is no display)
+#   RVIZ=true|false        default: true on Linux with a usable display, false on mac / headless
+#   SHADOW=true|false      ODESC shadow on vcan0 (same as the can_sim arg); default: true when vcan0 exists
+#   HEADLESS=1             force server-only Gazebo on a virtual X server (automatic without a usable display)
+#
+# Without a usable display, Gazebo runs headless: xvfb-run (+ vglrun on the Jetson for GPU
+# rendering), gui:=false. See docs/gazebo.md.
 set -euo pipefail
 
 start_foxglove="${1:-true}"
 use_controller="${2:-true}"
+can_sim="${3:-}"
 
 source "$(dirname "${BASH_SOURCE[0]}")/billee-env.sh"
 if [[ -z "$BILLEE_WS" ]]; then
@@ -22,35 +28,53 @@ if [[ -z "$BILLEE_WS" ]]; then
   exit 1
 fi
 
+# A usable display gets the Gazebo window (and RViz). A stale $DISPLAY (the rover with no
+# monitor) counts as none: xdpyinfo is the check when it's installed.
 has_display=false
-if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" && "${HEADLESS:-0}" != 1 && "$BILLEE_PLATFORM" != mac ]]; then
-  has_display=true
+if [[ "${HEADLESS:-0}" != 1 && "$BILLEE_PLATFORM" != mac ]]; then
+  if [[ -n "${DISPLAY:-}" ]]; then
+    if ! command -v xdpyinfo >/dev/null || timeout 3 xdpyinfo >/dev/null 2>&1; then
+      has_display=true
+    fi
+  elif [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+    has_display=true
+  fi
 fi
 
+# Without one, run the server only on a virtual X server: the camera sensor still renders
+# through GLX. vglrun puts that rendering on the GPU through EGL (docker/Dockerfile.l4t-humble).
 wrapper=()
+gui=true
 if [[ "$has_display" == false ]]; then
+  gui=false
   if command -v xvfb-run >/dev/null; then
     wrapper=(xvfb-run -a)
+    if command -v vglrun >/dev/null; then
+      wrapper+=(vglrun -d egl)
+    elif [[ "$BILLEE_PLATFORM" == l4t ]]; then
+      echo "sim-up: no vglrun; Gazebo will render on the CPU (slow). Rebuild the l4t container for VirtualGL." >&2
+    fi
   else
-    echo "sim-up: no display and no xvfb-run; Gazebo may fail to start" >&2
+    echo "sim-up: no usable display and no xvfb-run; Gazebo may fail to start (sudo apt install -y xvfb)" >&2
   fi
 fi
 
 # Mac: Foxglove on the host is the viewer. Linux with a display: RViz.
 rviz="${RVIZ:-$has_display}"
 
-shadow="${SHADOW:-}"
+shadow="${can_sim:-${SHADOW:-}}"
 if [[ -z "$shadow" ]]; then
   if ip link show vcan0 &>/dev/null; then shadow=true; else shadow=false; fi
 fi
 
 echo "sim-up: platform $BILLEE_PLATFORM, Pixi env $BILLEE_PIXI_ENV," \
-  "rviz=$rviz foxglove=$start_foxglove odesc_shadow=$shadow"
+  "gui=$gui rviz=$rviz foxglove=$start_foxglove odesc_shadow=$shadow"
 if [[ "$start_foxglove" == true ]]; then
   echo "sim-up: Foxglove Studio -> ws://localhost:8765 (or ws://<this-machine-ip>:8765)"
 fi
 cd "$BILLEE_WS"
 exec "${wrapper[@]}" pixi run --environment "$BILLEE_PIXI_ENV" \
   ros2 launch chassis_bringup sim_gz.launch.py \
+  gui:="$gui" \
   odesc_shadow:="$shadow" joy_control:="$use_controller" \
   foxglove:="$start_foxglove" rviz:="$rviz"

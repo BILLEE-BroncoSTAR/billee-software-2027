@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # can-up — bring a SocketCAN interface up (or down) for the BILLEE drivetrain.
 #
-#   tooling/can-up                 # bring up can0 @ 500 kbit/s (real ODESC bus)
-#   tooling/can-up can0            # same, explicit
-#   tooling/can-up can0 250000     # override bitrate
+#   tooling/can-up                 # bring up can2 @ 500 kbit/s (real ODESC bus)
+#   tooling/can-up can2            # same, explicit
+#   tooling/can-up can2 250000     # override bitrate
 #   tooling/can-up vcan0           # create + bring up a virtual CAN bus (testing)
 #   tooling/can-up down [iface]    # take the interface down (vcanN is also deleted)
 #   tooling/can-up status [iface]  # show state
@@ -21,7 +21,7 @@ set -euo pipefail
 BITRATE_DEFAULT=500000
 RESTART_MS=100
 
-arg1="${1:-can0}"
+arg1="${1:-can2}"
 arg2="${2:-}"
 
 _status() {
@@ -35,11 +35,11 @@ _status() {
 
 case "$arg1" in
   status)
-    _status "${arg2:-can0}"
+    _status "${arg2:-can2}"
     exit 0
     ;;
   down)
-    ifc="${arg2:-can0}"
+    ifc="${arg2:-can2}"
     echo ">> taking $ifc down"
     sudo ip link set "$ifc" down || true
     if [[ "$ifc" == vcan* ]] && ip link show "$ifc" &>/dev/null; then

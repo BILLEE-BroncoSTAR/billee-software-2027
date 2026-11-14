@@ -51,7 +51,7 @@ pixi run -e l4t colcon build --symlink-install --parallel-workers 2 --executor s
   --event-handlers console_direct+ --base-paths src --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-**Host-side commands.** `tooling/can-up` (creates `can0`/`vcan0`) and `candump`/`cansend`
+**Host-side commands.** `tooling/can-up` (creates `can2`/`vcan0`) and `candump`/`cansend`
 act on the host kernel's network interfaces: run them in a normal terminal on the host
 (Linux or Jetson), from the repo root, not inside a container. The Linux containers use
 host networking, so they see the interfaces the host created.
@@ -87,7 +87,7 @@ both go through `pixi` share one ROS graph.
 |---|---|---|---|---|---|
 | C1 | **Simulation** | `rover.launch.py` (or `sim_gz.launch.py`) | Gazebo physics (`ign_ros2_control`) | display or `xvfb-run` | sim (`/clock`) |
 | C2 | **Simulation + ODESC shadow** | `sim_gz.launch.py odesc_shadow:=true` | Gazebo; the real ODESC driver runs alongside on `vcan0` | C1 + `vcan0` on the host | sim |
-| C3 | **Real drivetrain** | `rover.launch.py mode:=real` | 6× ODESC V4.2 + NEO over `can0` | the rover, `can0` up | wall |
+| C3 | **Real drivetrain** | `rover.launch.py mode:=real` | 6× ODESC V4.2 + NEO over `can2` | the rover, `can2` up | wall |
 | C4 | **Mock drivetrain** | `rover.launch.py mode:=real can_interface:=mock` | software loopback in the ODESC driver (no CAN) | nothing | wall |
 | C5 | **Virtual CAN bench** | `rover.launch.py mode:=real can_interface:=vcan0` (+ emulator) | ODESC driver ↔ `vcan0` ↔ emulated ODESCs | `vcan0` on the host | wall |
 
@@ -144,13 +144,13 @@ Tear the bus down afterwards with `tooling/can-up down vcan0` (host).
 ### C3 — Real drivetrain
 
 The actual rover: `OdescSystemHardware` talks ODrive CANSimple to the six ODESCs on
-`can0` at 500 kbit/s, applying the 48:1 gear ratio. The CAN node ↔ wheel map is in the
+`can2` at 500 kbit/s, applying the 48:1 gear ratio. The CAN node ↔ wheel map is in the
 URDF (canonical copy: `odesc/config/node_map.yaml`); nothing to pass.
 
 ```bash
-# Jetson host terminal (repo root): bring can0 up at 500 kbit/s
+# Jetson host terminal (repo root): bring can2 up at 500 kbit/s
 tooling/can-up
-tooling/can-up status can0
+tooling/can-up status can2
 
 # ROS 2 terminal on the Jetson: drivetrain + Foxglove bridge
 ros2 launch chassis_bringup rover.launch.py mode:=real
@@ -171,8 +171,8 @@ The real launch does **not** start teleop: drive from a ground station
 > gamepad deadman is held; releasing it sends zero, and `diff_drive_controller`
 > stops the wheels 0.25 s after the last command (`cmd_vel_timeout`).
 
-Persist `can0` across reboots with `tooling/can0.service` (see
-[RUN_GUIDE](RUN_GUIDE.md#b-real-drivetrain-odesc-over-can)).
+Persist `can2` across reboots with `tooling/can2.service` (see
+[running.md](running.md#3-the-rover-real-drivetrain-optional-camera-driven-from-the-ground-station)).
 
 ### C4 — Mock drivetrain
 
@@ -225,8 +225,8 @@ tooling/can-up down vcan0
 
 ### Gamepad controls (T1, T2)
 
-Arcade drive (`teleop/src/joy_teleop.cpp`, tuned in `teleop/config/joystick.yaml`; the
-sim's copy is `chassis_bringup/config/tele_params.yaml`):
+Arcade drive (`teleop/src/joy_teleop.cpp`, tuned in `teleop/config/joystick.yaml`, which the
+sim uses too):
 
 | Input | Action |
 |---|---|
@@ -279,7 +279,7 @@ Check the link first, from the ground station:
 ros2 topic list                          # must show /diff_drive_controller/*, /tf, /robot_description
 ```
 
-Details: [RUN_GUIDE → Cross-machine ROS 2](RUN_GUIDE.md#cross-machine-ros-2). Needs a
+Details: [running.md → Network](running.md#network). Needs a
 real LAN path between the machines: not from the Mac container, and a Linux VM needs
 bridged networking.
 
@@ -351,8 +351,8 @@ ros2 launch chassis_bringup ground_station.launch.py fprime_gds:=true
 #   other address for one run: ... fprime_gds_url:=http://<host>:<port>
 ```
 
-Opens the F' GDS web UI in the default browser at `$FPRIME_GDS_URL` (set in
-`ros2_ws/pixi.toml`). Needs a browser and a graphical session on that machine.
+Opens the F' GDS web UI in the default browser at `fprime_gds_url` (default
+`http://192.168.4.73:5000`, in `ground_station.launch.py`). Needs a browser and a graphical session on that machine.
 
 ---
 
@@ -480,7 +480,7 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 | `foxglove` | `true` | local Foxglove bridge on :8765 |
 | `joystick` | `true` | gamepad teleop (`teleop.launch.py`) |
 | `fprime_gds` | `false` | open the F' GDS web UI |
-| `fprime_gds_url` | `$FPRIME_GDS_URL` | address to open |
+| `fprime_gds_url` | `http://192.168.4.73:5000` | address to open |
 
 **`viz.launch.py`** — viewers only.
 
@@ -507,4 +507,4 @@ ros2 topic echo --once /joint_states                   # six wheel joints
 ros2 topic echo /diff_drive_controller/cmd_vel_unstamped   # your teleop is arriving
 ```
 
-More symptoms and fixes: [RUN_GUIDE → Troubleshooting](RUN_GUIDE.md#troubleshooting).
+More symptoms and fixes: [running.md → Troubleshooting](running.md#troubleshooting).

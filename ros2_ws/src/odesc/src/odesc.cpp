@@ -1,242 +1,368 @@
-// odesc.cpp — implementation of OdescSystemHardware.
-//
-// See odesc.hpp for the high-level description. This package is Linux-only
-// because it communicates through the kernel's SocketCAN interface.
-
-#include "odesc/odesc.hpp"
-
-#include <algorithm>
-#include <cmath>
-#include <string>
-
-#include "odesc/can.hpp"
-#include "odesc/mock_drive_backend.hpp"
-#include "odesc/socketcan_drive_backend.hpp"
+#include "odesc/can_helpers.hpp"
+#include "odesc/can_simple_messages.hpp"
+#include "odesc/config_validator.hpp"
+#include "hardware_interface/system_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "odesc/odrive_enums.h"
 #include "pluginlib/class_list_macros.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "odesc/socket_can.hpp"
+
+#include <cmath>
+#include <string>
+#include <unordered_map>
 
 namespace
 {
-constexpr const char * kLogger = "OdescSystemHardware";
+constexpr const char * kLogger = "OdescHardwareInterface";
 }  // namespace
 
-namespace odesc
-{
+namespace odesc_ros2_control{
+  class Axis;
 
-std::unique_ptr<DriveBackend> CreateDriveBackend(const DriveBackendConfig & config)
-{
-  if (config.endpoint == "mock" || config.endpoint == "none") {
-    return std::make_unique<MockDriveBackend>(
-      config.joint_count, config.gear_ratio, config.endpoint);
-  }
-  return std::make_unique<SocketCanDriveBackend>(
-    config.endpoint, config.node_ids, config.gear_ratio);
-}
+  class OdescHardwareInterface final : public hardware_interface::SystemInterface{
+    public:
+      using return_type = hardware_interface::return_type;
+      using State = rclcpp_lifecycle::State;
 
-hardware_interface::CallbackReturn OdescSystemHardware::on_init(
-  const hardware_interface::HardwareInfo & info)
-{
-  if (hardware_interface::SystemInterface::on_init(info) !=
-    hardware_interface::CallbackReturn::SUCCESS)
-  {
-    return hardware_interface::CallbackReturn::ERROR;
-  }
 
-  // ---- hardware-level parameters ----
-  std::string connection{"can0"};
-  if (info_.hardware_parameters.count("can_interface")) {
-    connection = info_.hardware_parameters.at("can_interface");
-  } else {
-    RCLCPP_WARN(
-      rclcpp::get_logger(kLogger),
-      "no 'can_interface' hardware param set; defaulting to '%s' — confirm this "
-      "against the actual Jetson/USB-CAN enumeration before relying on it.",
-      connection.c_str());
-  }
+      CallbackReturn on_init(
+        const hardware_interface::HardwareInfo & info) override;
+      CallbackReturn on_configure(
+        const State& previous_state) override;
+      CallbackReturn on_activate(
+        const rclcpp_lifecycle::State & previous_state) override;
+      CallbackReturn on_deactivate(
+        const rclcpp_lifecycle::State & previous_state) override;
+      CallbackReturn on_cleanup(
+        const rclcpp_lifecycle::State & previous_state) override;
+      CallbackReturn on_shutdown(
+        const rclcpp_lifecycle::State & previous_state) override;
 
-  if (info_.hardware_parameters.count("gear_ratio")) {
-    gear_ratio_ = std::stod(info_.hardware_parameters.at("gear_ratio"));
-  } else {
-    RCLCPP_WARN(
-      rclcpp::get_logger(kLogger),
-      "no 'gear_ratio' hardware param set; defaulting to %.3f (ODESC V4.2 + NEO "
-      "REV v1.1, per odesc/config/node_map.yaml). Confirm with the §5.4 bench test.",
-      gear_ratio_);
-  }
+      std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
+      std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
 
-  if (gear_ratio_ == 0.0 || !std::isfinite(gear_ratio_)) {
-    RCLCPP_FATAL(
-      rclcpp::get_logger(kLogger), "gear_ratio must be a non-zero finite number, got %f",
-      gear_ratio_);
-    return hardware_interface::CallbackReturn::ERROR;
-  }
+      return_type read(const rclcpp::Time&, const rclcpp::Duration&) override;
+      return_type write(const rclcpp::Time&, const rclcpp::Duration&) override;
 
-  // ---- per-joint parameters + interface sanity ----
-  const size_t n = info_.joints.size();
-  joint_names_.reserve(n);
-  node_ids_.reserve(n);
+    private:
+        void on_can_msg(const can_frame& frame);
+        bool set_axis_command_mode(const Axis& axis);
 
-  for (const auto & joint : info_.joints) {
-    if (joint.command_interfaces.size() != 1 ||
-      joint.command_interfaces[0].name != hardware_interface::HW_IF_VELOCITY)
-    {
-      RCLCPP_FATAL(
-        rclcpp::get_logger(kLogger),
-        "joint '%s' must have exactly one '%s' command interface.",
-        joint.name.c_str(), hardware_interface::HW_IF_VELOCITY);
-      return hardware_interface::CallbackReturn::ERROR;
+        bool active_ = false;
+        EpollEventLoop event_loop_;
+        std::vector<Axis> axes_;
+        std::string can_interface_name_;
+        double gearing_ = 48.0;
+        SocketCanIntf can_interface_;
+        rclcpp::Time timestamp_;
+  };
+
+  struct Axis{
+    Axis(SocketCanIntf* can_interface_, uint32_t node_id_, bool invert_, float gearing_ ): can_interface_(can_interface_), node_id_(node_id_), invert_(invert_), gearing_(gearing_){}
+
+    void on_can_msg(const::rclcpp::Time& timestamp, const can_frame& frame);
+    void on_can_msg();
+
+    SocketCanIntf* can_interface_;
+    uint32_t node_id_;
+    bool invert_ = false;
+    float gearing_ = 1.0;
+
+    double vel_setpoint_ = 0.0f;
+    double last_vel_setpoint_ = NAN;
+    double pos_estimate_ = 0.0;
+    double vel_estimate_ = 0.0;
+
+    template <typename T>
+    bool send(const T& msg) const{
+      struct can_frame frame{};
+      frame.can_id = (node_id_ << 5) | msg.cmd_id;
+      frame.can_dlc = msg.msg_length;
+      msg.encode_buf(frame.data);
+
+      return can_interface_->send_can_frame(frame);
     }
 
-    bool has_pos = false, has_vel = false;
-    for (const auto & si : joint.state_interfaces) {
-      has_pos |= (si.name == hardware_interface::HW_IF_POSITION);
-      has_vel |= (si.name == hardware_interface::HW_IF_VELOCITY);
-    }
-    if (!has_pos || !has_vel) {
-      RCLCPP_FATAL(
-        rclcpp::get_logger(kLogger),
-        "joint '%s' must expose both 'position' and 'velocity' state interfaces.",
-        joint.name.c_str());
-      return hardware_interface::CallbackReturn::ERROR;
-    }
+  };
+}
 
-    auto nid_it = joint.parameters.find("node_id");
-    if (nid_it == joint.parameters.end()) {
-      RCLCPP_FATAL(
-        rclcpp::get_logger(kLogger),
-        "joint '%s' is missing the required <param name=\"node_id\"> "
-        "(canonical map: odesc/config/node_map.yaml).",
-        joint.name.c_str());
-      return hardware_interface::CallbackReturn::ERROR;
+  using namespace odesc_ros2_control;
+
+  using hardware_interface::CallbackReturn;
+  using hardware_interface::return_type;
+
+  CallbackReturn OdescHardwareInterface::on_init(const hardware_interface::HardwareInfo& info){
+    if(hardware_interface::SystemInterface::on_init(info) != CallbackReturn::SUCCESS){
+      return CallbackReturn::ERROR;
     }
 
-    const int nid = std::stoi(nid_it->second);
-    if (nid < 0 || nid > static_cast<int>(odrive_can::kMaxNodeId)) {
-      RCLCPP_FATAL(
-        rclcpp::get_logger(kLogger), "joint '%s' node_id %d out of range [0, %d].",
-        joint.name.c_str(), nid, static_cast<int>(odrive_can::kMaxNodeId));
-      return hardware_interface::CallbackReturn::ERROR;
+    const auto can_interface = info_.hardware_parameters.find("can_interface");
+    const auto gear_ratio = info_.hardware_parameters.find("gear_ratio");
+    if (can_interface == info_.hardware_parameters.end() || can_interface->second.empty()) {
+      RCLCPP_ERROR(rclcpp::get_logger(kLogger), "missing required 'can_interface' hardware parameter");
+      return CallbackReturn::ERROR;
+    }
+    if (gear_ratio == info_.hardware_parameters.end()) {
+      RCLCPP_ERROR(rclcpp::get_logger(kLogger), "missing required 'gear_ratio' hardware parameter");
+      return CallbackReturn::ERROR;
     }
 
-    joint_names_.push_back(joint.name);
-    node_ids_.push_back(static_cast<uint8_t>(nid));
+    double parsed_gearing = 0.0;
+    if (!odesc::validation::parse_positive_finite_double(gear_ratio->second, parsed_gearing)) {
+      RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+        "gear_ratio must be a positive finite number, got '%s'", gear_ratio->second.c_str());
+      return CallbackReturn::ERROR;
+    }
+    gearing_ = parsed_gearing;
+
+    // CANSimple reserves six bits of a standard CAN ID for the node ID.
+    // Validate the entire map before replacing the driver's active axis map.
+    std::vector<Axis> configured_axes;
+    configured_axes.reserve(info_.joints.size());
+    std::unordered_map<uint32_t, std::string> node_owners;
+    for (const auto & joint : info_.joints) {
+      const auto node_id_parameter = joint.parameters.find("node_id");
+      if (node_id_parameter == joint.parameters.end()) {
+        RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+          "joint '%s' is missing required node_id parameter", joint.name.c_str());
+        return CallbackReturn::ERROR;
+      }
+
+      uint32_t node_id = 0;
+      if (!odesc::validation::parse_can_simple_node_id(node_id_parameter->second, node_id)) {
+        RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+          "joint '%s' has invalid node_id '%s'; expected a decimal value in [0, 63]",
+          joint.name.c_str(), node_id_parameter->second.c_str());
+        return CallbackReturn::ERROR;
+      }
+
+      const auto existing_node = node_owners.find(node_id);
+      if (existing_node != node_owners.end()) {
+        RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+          "joint '%s' duplicates CAN node_id %u already assigned to joint '%s'",
+          joint.name.c_str(), node_id, existing_node->second.c_str());
+        return CallbackReturn::ERROR;
+      }
+      node_owners.emplace(node_id, joint.name);
+
+      bool invert = false;
+      const auto invert_parameter = joint.parameters.find("invert");
+      if (invert_parameter != joint.parameters.end()) {
+        if (!odesc::validation::parse_boolean(invert_parameter->second, invert)) {
+          RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+            "joint '%s' has invalid invert value '%s' (use true or false)",
+            joint.name.c_str(), invert_parameter->second.c_str());
+          return CallbackReturn::ERROR;
+        }
+      }
+
+      configured_axes.emplace_back(
+        &can_interface_, node_id, invert, static_cast<float>(gearing_));
+    }
+
+    can_interface_name_ = can_interface->second;
+    axes_ = std::move(configured_axes);
+
+    return CallbackReturn::SUCCESS;
+
   }
 
-  hw_positions_.assign(n, 0.0);
-  hw_velocities_.assign(n, 0.0);
-  hw_commands_.assign(n, 0.0);
-  backend_states_.assign(n, WheelState{});
+  CallbackReturn OdescHardwareInterface::on_configure(const State&){
+    active_ = false;
+    if (!can_interface_.init(
+        can_interface_name_, &event_loop_, std::bind(&OdescHardwareInterface::on_can_msg, this, _1))) {
+      RCLCPP_ERROR(rclcpp::get_logger(kLogger), "failed to initialize SocketCAN on %s",
+        can_interface_name_.c_str());
+      return CallbackReturn::ERROR;
+    }
 
-  backend_ = CreateDriveBackend({connection, n, node_ids_, gear_ratio_});
-  const auto & backend_info = backend_->info();
-
-  RCLCPP_INFO(
-    rclcpp::get_logger(kLogger),
-    "initialised %zu joints with %s backend (endpoint='%s', gear_ratio=%.3f).",
-    n, backend_info.name.c_str(), backend_info.endpoint.c_str(), gear_ratio_);
-
-  return hardware_interface::CallbackReturn::SUCCESS;
-}
-
-std::vector<hardware_interface::StateInterface> OdescSystemHardware::export_state_interfaces()
-{
-  std::vector<hardware_interface::StateInterface> ifaces;
-  for (size_t i = 0; i < joint_names_.size(); ++i) {
-    ifaces.emplace_back(
-      joint_names_[i], hardware_interface::HW_IF_POSITION, &hw_positions_[i]);
-    ifaces.emplace_back(
-      joint_names_[i], hardware_interface::HW_IF_VELOCITY, &hw_velocities_[i]);
-  }
-  return ifaces;
-}
-
-std::vector<hardware_interface::CommandInterface> OdescSystemHardware::export_command_interfaces()
-{
-  std::vector<hardware_interface::CommandInterface> ifaces;
-  for (size_t i = 0; i < joint_names_.size(); ++i) {
-    ifaces.emplace_back(
-      joint_names_[i], hardware_interface::HW_IF_VELOCITY, &hw_commands_[i]);
-  }
-  return ifaces;
-}
-
-hardware_interface::CallbackReturn OdescSystemHardware::on_activate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
-  std::string backend_error;
-  if (!backend_->activate(&backend_error)) {
-    RCLCPP_FATAL(rclcpp::get_logger(kLogger), "backend activation failed: %s", backend_error.c_str());
-    return hardware_interface::CallbackReturn::ERROR;
+    return CallbackReturn::SUCCESS;
   }
 
-  std::fill(hw_commands_.begin(), hw_commands_.end(), 0.0);
-  std::fill(hw_positions_.begin(), hw_positions_.end(), 0.0);
-  std::fill(hw_velocities_.begin(), hw_velocities_.end(), 0.0);
+  std::vector<hardware_interface::StateInterface> OdescHardwareInterface::export_state_interfaces(){
+    std::vector<hardware_interface::StateInterface> state_interfaces;
 
-  const auto & backend_info = backend_->info();
-  RCLCPP_INFO(
-    rclcpp::get_logger(kLogger),
-    "activated %s backend (%zu joints, endpoint='%s', gear_ratio=%.3f).",
-    backend_info.name.c_str(), joint_names_.size(), backend_info.endpoint.c_str(), gear_ratio_);
-  return hardware_interface::CallbackReturn::SUCCESS;
-}
+    for(size_t i = 0; i < info_.joints.size(); i++){
 
-hardware_interface::CallbackReturn OdescSystemHardware::on_deactivate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
-  std::string backend_error;
-  if (!backend_->deactivate(&backend_error)) {
-    RCLCPP_WARN(rclcpp::get_logger(kLogger), "backend deactivation issue: %s", backend_error.c_str());
-  }
-  std::fill(hw_commands_.begin(), hw_commands_.end(), 0.0);
-  std::fill(hw_velocities_.begin(), hw_velocities_.end(), 0.0);
-  const auto & backend_info = backend_->info();
-  RCLCPP_INFO(
-    rclcpp::get_logger(kLogger), "deactivated %s backend (endpoint='%s').",
-    backend_info.name.c_str(), backend_info.endpoint.c_str());
-  return hardware_interface::CallbackReturn::SUCCESS;
-}
+      state_interfaces.emplace_back(
+        info_.joints[i].name,
+        hardware_interface::HW_IF_POSITION,
+        &axes_[i].pos_estimate_
+      );
 
-hardware_interface::CallbackReturn OdescSystemHardware::on_cleanup(
-  const rclcpp_lifecycle::State & previous_state)
-{
-  return on_deactivate(previous_state);
-}
+      state_interfaces.emplace_back(hardware_interface::StateInterface(
+        info_.joints[i].name,
+        hardware_interface::HW_IF_VELOCITY,
+        &axes_[i].vel_estimate_
+      ));
+    }
 
-hardware_interface::CallbackReturn OdescSystemHardware::on_shutdown(
-  const rclcpp_lifecycle::State & previous_state)
-{
-  return on_deactivate(previous_state);
-}
-
-hardware_interface::return_type OdescSystemHardware::read(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
-{
-  std::string backend_error;
-  if (!backend_->read(backend_states_, period.seconds(), &backend_error)) {
-    RCLCPP_ERROR(rclcpp::get_logger(kLogger), "backend read failed: %s", backend_error.c_str());
-    return hardware_interface::return_type::ERROR;
+    return state_interfaces;
   }
 
-  for (size_t i = 0; i < joint_names_.size(); ++i) {
-    hw_positions_[i] = backend_states_[i].position_rad;
-    hw_velocities_[i] = backend_states_[i].velocity_rad_s;
+  std::vector<hardware_interface::CommandInterface> OdescHardwareInterface::export_command_interfaces(){
+    std::vector<hardware_interface::CommandInterface> command_interfaces;
+
+    for(size_t i = 0; i < info_.joints.size(); i++){
+      command_interfaces.emplace_back(hardware_interface::CommandInterface(
+        info_.joints[i].name,
+        hardware_interface::HW_IF_VELOCITY,
+        &axes_[i].vel_setpoint_
+      ));
+    }
+
+    return command_interfaces;
+
   }
-  return hardware_interface::return_type::OK;
+
+  return_type OdescHardwareInterface::read(const rclcpp::Time& timestamp, const rclcpp::Duration&){
+    timestamp_ = timestamp;
+
+    while(can_interface_.read_nonblocking()){
+      // repeat until interface has no mroe messages
+    }
+
+    return return_type::OK;
+  }
+
+  return_type OdescHardwareInterface::write(const rclcpp::Time&, const rclcpp::Duration&){
+    if (!active_) {
+      RCLCPP_ERROR(rclcpp::get_logger(kLogger), "refusing velocity command while inactive");
+      return return_type::ERROR;
+    }
+
+    for(auto& axis : axes_){
+      if (!std::isfinite(axis.vel_setpoint_)) {
+        RCLCPP_ERROR(rclcpp::get_logger(kLogger), "refusing non-finite velocity command");
+        return return_type::ERROR;
+      }
+      if(axis.last_vel_setpoint_ != axis.vel_setpoint_){
+        Set_Input_Vel_msg_t msg;
+        msg.Input_Vel = axis.invert_ ? -(axis.vel_setpoint_) : axis.vel_setpoint_;
+        // ros2_control commands wheel rad/s; CANSimple expects motor turns/s.
+        msg.Input_Vel *= axis.gearing_ / (2 * M_PI);
+        if (!axis.send(msg)) {
+          RCLCPP_ERROR(rclcpp::get_logger(kLogger),
+            "failed to send velocity command to CAN node %u", axis.node_id_);
+          return return_type::ERROR;
+        }
+        // Only acknowledge the setpoint locally after the frame was queued.
+        axis.last_vel_setpoint_ = axis.vel_setpoint_;
+      }
+    }
+
+    return return_type::OK;
+  }
+
+
+void Axis::on_can_msg(const rclcpp::Time&, const can_frame& frame) {
+    uint8_t cmd = frame.can_id & 0x1f;
+
+    auto try_decode = [&](auto& msg) {
+        if (frame.can_dlc < Get_Encoder_Estimates_msg_t::msg_length) {
+            RCLCPP_WARN(rclcpp::get_logger("ODriveHardwareInterface"), "message %d too short", cmd);
+            return false;
+        }
+        msg.decode_buf(frame.data);
+        return true;
+    };
+
+    switch (cmd) {
+        case Get_Encoder_Estimates_msg_t::cmd_id: {
+            if (Get_Encoder_Estimates_msg_t msg; try_decode(msg)) {
+                pos_estimate_ = msg.Pos_Estimate * (2 * M_PI) / this->gearing_;
+                vel_estimate_ = msg.Vel_Estimate * (2 * M_PI) / this->gearing_;
+
+                if(this->invert_){
+                  vel_estimate_ *= -1;
+                  pos_estimate_ *= -1;
+                }
+            }
+        } break;
+            // silently ignore unimplemented command IDs
+    }
 }
 
-hardware_interface::return_type OdescSystemHardware::write(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
-{
-  std::string backend_error;
-  if (!backend_->write(hw_commands_, &backend_error)) {
-    RCLCPP_ERROR(rclcpp::get_logger(kLogger), "backend write failed: %s", backend_error.c_str());
-    return hardware_interface::return_type::ERROR;
-  }
-  return hardware_interface::return_type::OK;
+void OdescHardwareInterface::on_can_msg(const can_frame& frame) {
+    const auto can_id = frame.can_id & CAN_SFF_MASK;
+    const auto node_id = can_id >> 5;
+    for (auto& axis : axes_) {
+        if (axis.node_id_ == node_id) {
+            axis.on_can_msg(timestamp_, frame);
+            return;
+        }
+    }
 }
 
-}  // namespace odesc
+bool OdescHardwareInterface::set_axis_command_mode(const Axis& axis) {
+    if (!active_) {
+        Set_Axis_State_msg_t idle_msg;
+        idle_msg.Axis_Requested_State = AXIS_STATE_IDLE;
+        return axis.send(idle_msg);
+    }
 
-PLUGINLIB_EXPORT_CLASS(odesc::OdescSystemHardware, hardware_interface::SystemInterface)
+    Clear_Errors_msg_t clear_errors_msg;
+    clear_errors_msg.Identify = 0;
+    Set_Controller_Mode_msg_t controller_mode_msg;
+    controller_mode_msg.Control_Mode = CONTROL_MODE_VELOCITY_CONTROL;
+    controller_mode_msg.Input_Mode = INPUT_MODE_VEL_RAMP;
+    Set_Input_Vel_msg_t zero_velocity_msg;
+    Set_Axis_State_msg_t closed_loop_msg;
+    closed_loop_msg.Axis_Requested_State = AXIS_STATE_CLOSED_LOOP_CONTROL;
+
+    return axis.send(clear_errors_msg) && axis.send(controller_mode_msg) &&
+           axis.send(zero_velocity_msg) && axis.send(closed_loop_msg);
+}
+
+CallbackReturn OdescHardwareInterface::on_activate(const State&) {
+    RCLCPP_INFO(rclcpp::get_logger(kLogger), "activating ODescs...");
+    active_ = true;
+    for (auto& axis : axes_) {
+      axis.vel_setpoint_ = 0.0;
+      axis.last_vel_setpoint_ = NAN;
+      if (!set_axis_command_mode(axis)) {
+        RCLCPP_ERROR(rclcpp::get_logger(kLogger), "failed to activate CAN node %u", axis.node_id_);
+        active_ = false;
+        for (const auto& idle_axis : axes_) {
+          (void)set_axis_command_mode(idle_axis);
+        }
+        return CallbackReturn::ERROR;
+      }
+    }
+    return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn OdescHardwareInterface::on_cleanup(const State& previous_state){
+  if (active_) {
+    (void)on_deactivate(previous_state);
+  }
+  can_interface_.deinit();
+  return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn OdescHardwareInterface::on_deactivate(const State&) {
+    RCLCPP_INFO(rclcpp::get_logger(kLogger), "deactivating ODescs...");
+    bool success = true;
+    for (auto& axis : axes_) {
+      Set_Input_Vel_msg_t zero_velocity_msg;
+      success = axis.send(zero_velocity_msg) && success;
+      axis.vel_setpoint_ = 0.0;
+      axis.last_vel_setpoint_ = NAN;
+    }
+    active_ = false;
+    for (auto& axis : axes_) {
+      success = set_axis_command_mode(axis) && success;
+    }
+    if (!success) {
+      RCLCPP_ERROR(rclcpp::get_logger(kLogger), "failed to stop one or more ODESC axes");
+      return CallbackReturn::ERROR;
+    }
+    return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn OdescHardwareInterface::on_shutdown(const State& state) {
+  return on_cleanup(state);
+}
+
+PLUGINLIB_EXPORT_CLASS(odesc_ros2_control::OdescHardwareInterface, hardware_interface::SystemInterface);

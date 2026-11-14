@@ -12,10 +12,14 @@ real-hardware counterpart to the Gazebo `ign_ros2_control/IgnitionSystem` backen
 ever sees the six wheel-joint `position`/`velocity` state interfaces and one
 `velocity` command interface per joint.
 
+`diff_drive_controller` publishes wheel odometry on `/diff_drive_controller/odom`
+but not the `odom → base_footprint` TF. That TF belongs to the EKF (see
+[docs/architecture.md](../../../docs/architecture.md#odometry-and-tf)).
+
 ```
                        ┌────────────────────────────┐
- /diff_drive_controller │  diff_drive_controller     │  /odom, odom->base_link TF
- /cmd_vel_unstamped ───►│  (same config either way)  ├───►
+ /diff_drive_controller │  diff_drive_controller     │  /diff_drive_controller/odom
+ /cmd_vel_unstamped ───►│  (same config either way)  ├───► (no TF: enable_odom_tf: false)
                        └──────────┬─────────────────┘
                                   │ wheel-joint rad, rad/s
               ┌───────────────────┴───────────────────┐
@@ -23,7 +27,7 @@ ever sees the six wheel-joint `position`/`velocity` state interfaces and one
    ign_ros2_control (Gazebo)              OdescSystemHardware (this pkg)
                                             │ SocketCAN, motor turns / turns·s⁻¹
                                             ▼
-                                   6× ODESC V4.2 + NEO on can0
+                                   6× ODESC V4.2 + NEO on can2
 ```
 
 ## Gear-ratio conversion (the only place it lives)
@@ -41,9 +45,10 @@ write()  motor_turns_per_sec = wheel_rad_s       * gear_ratio / 2π
 team 2026-09-06). It is one overridable parameter — see the parameter table below.
 
 Left/right mirroring is handled by `diff_drive_controller`'s wheel lists, **not**
-here — `read()`/`write()` apply no per-side sign flip. If a bench test shows the
-ODESC reports the physically-mirrored sign on one side, that correction is added
-deliberately then, not guessed now.
+here. If a bench test shows that one ODESC's encoder/command sign is physically
+reversed, add an `invert` joint parameter for that motor. The driver applies the
+same sign correction to command and feedback, preserving ROS wheel-joint
+semantics. Do not add it speculatively.
 
 ## CAN command subset used
 
@@ -73,9 +78,25 @@ inside `<xacro:unless value="${use_sim}">`:
 
 | scope | param | default | notes |
 |---|---|---|---|
-| `<hardware>` | `can_interface` | `can0` | SocketCAN interface. Confirm against the actual Jetson / USB-CAN enumeration. Special values `mock` / `none` → **mock mode** (below). Overridable from the launch file: `real.launch.py can_interface:=…`. |
-| `<hardware>` | `gear_ratio` | `48.0` | Motor-shaft turns per wheel turn. `48.0` for the ODESC V4.2 + NEO REV v1.1 drivetrain (team, 2026-09-06). One-line override (`real.launch.py gear_ratio:=…`), not a code change. Still validated by the §5.4 drive-a-known-distance bench test. |
+| `<hardware>` | `can_interface` | `can2` | SocketCAN interface. Special values `mock` / `none` → **mock mode** (below). Overridable from the launch file: `real.launch.py can_interface:=…`. |
+| `<hardware>` | `gear_ratio` | `48.0` | Motor-shaft turns per wheel turn. `48.0` for the ODESC V4.2 + NEO REV v1.1 drivetrain (team, 2026-09-06). One-line override (`real.launch.py gear_ratio:=…`), not a code change. Not yet confirmed on hardware: drive a measured straight distance and compare it with `/diff_drive_controller/odom`. |
 | per `<joint>` | `node_id` | *(required)* | CAN node ID 0–5. Canonical map: [`config/node_map.yaml`](config/node_map.yaml). |
+| per `<joint>` | `invert` | `false` | Optional. Set `true` only after a wheels-up direction test proves that this axis's physical sign is opposite the URDF wheel-joint convention. |
+
+For example, to invert one confirmed-reversed motor, add this alongside that
+joint's `node_id` parameter in `ros2_control.urdf.xacro`:
+
+```xml
+<param name="invert">true</param>
+```
+
+### Command refresh and ODrive watchdog
+
+The velocity-only driver currently sends `Set_Input_Vel` when a wheel setpoint
+changes (and once after activation). The checked-in ODESC profiles have their
+CAN watchdog disabled, so this is intentional for now. If the watchdog is later
+enabled, the driver must gain a bounded periodic command refresh before it is
+used on hardware; otherwise a steady command will eventually trip the watchdog.
 
 ### Mock mode (no CAN, no motor hardware)
 
@@ -83,7 +104,7 @@ Set `can_interface` to `mock` (or `none`) — e.g.
 `ros2 launch chassis_bringup real.launch.py can_interface:=mock` — and the plugin
 opens **no** CAN socket. `read()` feeds the commanded wheel velocity back through
 the same gear-ratio round-trip the real path uses and integrates position, so the
-full **encoder-feedback → `diff_drive_controller` → `/odom` → TF → RViz/Foxglove**
+full **encoder-feedback → `diff_drive_controller` → `/diff_drive_controller/odom` + `/joint_states` → RViz/Foxglove**
 pipeline runs with no ODESC/NEO present. Use it to bring up and view the real
 (non-Gazebo) control stack on a bench Jetson, or to regression-test the launch
 graph. It is a perfect-tracking loopback, not a physics model — for dynamics use
@@ -117,9 +138,11 @@ ros2 run odesc odesc_vcan_emulator.py --interface vcan0
 ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 ```
 
-For the Nav2 integration test, `sim_gz.launch.py odesc_shadow:=true` starts the
-emulator itself and mirrors Gazebo's controller command through an isolated
-ODESC controller manager. Monitor the traffic with `candump -L vcan0` (from the
+To check the CAN path while the simulated rover drives (by gamepad or by Nav2,
+which `sim_gz.launch.py` starts with `navigation:=true`),
+`sim_gz.launch.py odesc_shadow:=true` starts the emulator itself and mirrors
+Gazebo's `cmd_vel` through an isolated, namespaced ODESC controller manager on
+`vcan0`. Monitor the traffic with `candump -L vcan0` (from the
 `can-utils` package), and remove the interface when finished:
 
 ```bash

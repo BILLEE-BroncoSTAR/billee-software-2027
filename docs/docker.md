@@ -1,1 +1,0 @@
-tpfs creates dirs in host machine ram (volatile)    

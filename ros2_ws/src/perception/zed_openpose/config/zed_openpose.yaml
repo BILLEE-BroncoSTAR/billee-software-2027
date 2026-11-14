@@ -1,0 +1,31 @@
+# zed_openpose_node. The first block is the sample's (stereolabs/zed-openpose) options, same
+# names and defaults; model_folder is set by the launch file (ros2_ws/models/openpose/).
+zed_openpose:
+  ros__parameters:
+    model_pose: BODY_25          # BODY_25 (25 keypoints), COCO (18) or MPI (15)
+    net_resolution: 320x240      # multiples of 16; bigger = more accurate, slower
+    output_resolution: -1x-1     # debug image size; -1x-1 = the OpenPose input size below
+    num_gpu_start: 0
+    scale_number: 1
+    scale_gap: 0.3
+    render_threshold: 0.12       # keypoints below this score are not drawn nor lifted to 3D
+    alpha_pose: 0.6
+    disable_blending: false
+    svo_path: ""                 # replay a ZED recording (.svo/.svo2) instead of the live camera
+    publish_cloud: false         # ogl_ptcloud  -> /zed/points (launch arg point_cloud:= overrides)
+    publish_depth: false         # depth_display -> /zed/depth_image
+
+    # Modes. enable_pose: false = camera only (no OpenPose), launch arg openpose:= overrides.
+    enable_pose: true
+    cloud_max_hz: 10.0           # cap on /zed/points rate; 0 = every frame (~290 kB each)
+
+    # ROS port additions.
+    camera_resolution: HD720     # HD2K, HD1080, HD720, VGA, AUTO (the sample grabbed HD2K)
+    depth_mode: ULTRA            # the sample's mode; NEURAL_LIGHT is lighter on an Orin Nano
+    image_width: 720             # OpenPose input / 3D lift resolution (the sample's 720x405)
+    image_height: 405
+    camera_frame: camera_link    # URDF frame of the ZED's centre
+    zed_frame: zed_left_camera_frame
+    target_frame: base_link      # frame of /people/skeletons and /people/markers
+    cloud_step: 4                # keep every Nth pixel in /zed/points
+    jpeg_quality: 80             # /people/debug_image/compressed

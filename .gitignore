@@ -65,3 +65,5 @@ ros2_ws/build
 cpp_pubsub
 # Platform recorded by `make setup <platform>` (machine-specific)
 ros2_ws/.billee-platform
+# OpenPose weights etc. (src/perception/zed_openpose/scripts/get_openpose_models.sh)
+ros2_ws/models/

@@ -7,10 +7,11 @@ OdescSystemHardware SocketCAN plugin is loaded instead of ign_ros2_control, and
 it starts a standalone controller_manager (ros2_control_node) rather than letting
 Gazebo host it.
 
-    # real ODESC/NEO drivetrain on can0:
+    # real ODESC/NEO drivetrain on can2:
     ros2 launch chassis_bringup real.launch.py
 
-    # no motor hardware — exercise the full feedback -> odom -> TF -> viewer path:
+    # no motor hardware — exercise the encoder feedback -> /diff_drive_controller/odom
+    # + /joint_states -> viewer path (no odom TF on this path; use fixed frame base_link):
     ros2 launch chassis_bringup real.launch.py can_interface:=mock rviz:=true
 
     # protocol-level test against a virtual CAN bus (see tooling/can-up):
@@ -32,6 +33,7 @@ import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -57,7 +59,7 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "can_interface",
-        default_value="can0",
+        default_value="can2",
         description="SocketCAN interface for the ODESC bus. 'mock' or 'none' runs "
         "OdescSystemHardware in mock mode (no CAN, gear-ratio loopback feedback) so the "
         "stack can be brought up with no motor hardware. 'vcan0' etc. for a virtual bus.",

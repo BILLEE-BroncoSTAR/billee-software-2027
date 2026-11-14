@@ -1,16 +1,14 @@
 # NVIDIA Jetson (L4T) rover image.
 #
 # Structural mirror of docker/Dockerfile.desktop.humble: a CUDA-capable base ->
-# apt basics -> non-root `ros_user` -> (optional ZED SDK) -> pixi in /opt/pixi ->
+# apt basics -> non-root `ros_user` -> ZED SDK -> CMU OpenPose (CUDA) -> pixi in /opt/pixi ->
 # `CMD ["pixi", "shell"]`. ROS 2 Humble itself comes from pixi / RoboStack (see
 # ros2_ws/pixi.toml, environment `l4t`)
 #
-# Running on jetpack v6.x
+# Running on jetpack v6.x: the Isaac ROS base is built on L4T 36.4 (JetPack 6.1/6.2) with CUDA 12.6,
+# cuDNN 9 and TensorRT 10.3.
 
-ARG L4T_VERSION=r36.3.0
-ARG IMAGE_NAME=nvcr.io/nvidia/l4t-jetpack:${L4T_VERSION}
-
-FROM ${IMAGE_NAME}
+FROM nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_4c0c55dddd2bbcc3e8d5f9753bee634c
 
 ARG PIXI_VERSION=0.76.1
 
@@ -21,14 +19,20 @@ ARG USER_GID=1000
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+# ZED SDK 5.4 for L4T 36.4, the base's L4T (5.4's L4T 39.2 build is for JetPack 7)
 ARG ZED_SDK_MAJOR=5
 ARG ZED_SDK_MINOR=4
-ARG L4T_MAJOR=39
-ARG L4T_MINOR=2
+ARG L4T_MAJOR=36
+ARG L4T_MINOR=4
 
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 
-RUN apt-get update || true && apt-get install -y --no-install-recommends \
+# The Isaac ROS base ships an apt source for dl.yarnpkg.com whose signing key no longer verifies,
+# which makes every `apt-get update` exit non-zero. yarn is already installed in the base and
+# nothing here needs updates from it, so drop the source; every apt-get update below can then
+# fail the build on a real error instead of being masked with `|| true`.
+RUN rm -f /etc/apt/sources.list.d/yarn.list && \
+  apt-get update && apt-get install -y --no-install-recommends \
   apt-utils \
   bash-completion \
   build-essential \
@@ -49,8 +53,6 @@ RUN apt-get update || true && apt-get install -y --no-install-recommends \
   udev \
   usbutils \
   wget \
-  xauth \
-  xvfb \
   zstd && \
   rm -rf /var/lib/apt/lists/*
 
@@ -65,34 +67,77 @@ RUN userdel -r ubuntu 2>/dev/null || true; \
   echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
   chmod 0440 /etc/sudoers.d/${USERNAME}
 
-RUN apt-get update || true && apt-get install -y --no-install-recommends \
-      libusb-1.0-0-dev zlib1g-dev libgeographic-dev && \
-    rm -rf /var/lib/apt/lists/* && \
+# The ZED installer checks /etc/nv_tegra_release, which only exists on the host: write the L4T
+# version there as stereolabs/zed-docker does. It detects the CPU with `file` and apt-installs its
+# own deps, so the apt lists are dropped only after it; no `|| true`, so a failed install fails the
+# build instead of leaving an image without the SDK. zed_openpose needs the SDK readable by the
+# devcontainer's remapped ros_user uid, and settings/ + resources/ (calibration, AI models fetched
+# at run time) writable.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      file libusb-1.0-0-dev zlib1g-dev libgeographic-dev && \
+    echo "# R${L4T_MAJOR} (release), REVISION: ${L4T_MINOR}.0" > /etc/nv_tegra_release && \
     wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run \
       "https://download.stereolabs.com/zedsdk/${ZED_SDK_MAJOR}.${ZED_SDK_MINOR}/l4t${L4T_MAJOR}.${L4T_MINOR}/jetsons" && \
     chmod +x ZED_SDK_Linux_JP.run && \
-    ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda && \
-    rm -rf ZED_SDK_Linux_JP.run /usr/local/zed/resources/* && \
-    chown -R ${USERNAME}:${USERNAME} /usr/local/zed ; \
+    ./ZED_SDK_Linux_JP.run silent skip_tools skip_cuda skip_drivers skip_python && \
+    rm -rf ZED_SDK_Linux_JP.run /usr/local/zed/resources/* /var/lib/apt/lists/* && \
+    chmod -R a+rX /usr/local/zed && chmod -R a+rwX /usr/local/zed/settings /usr/local/zed/resources
+
+# CMU OpenPose with CUDA + cuDNN, for zed_openpose (port of stereolabs/zed-openpose), into
+# /opt/openpose: its build deps, then docker/build_openpose.sh, which clones, patches it for
+# current CUDA / protobuf and builds it for sm_87 (Orin, AGX and Nano). Models are not downloaded
+# here (CMU's server is offline): see ros2_ws/src/perception/zed_openpose/scripts/
+# get_openpose_models.sh. Lower OPENPOSE_JOBS on an Orin Nano if nvcc runs out of RAM.
+# Two quirks of the Isaac ROS base:
+#  - It ships only the cuDNN runtime (libcudnn9-cuda-12): the matching dev + headers packages are
+#    pinned to that exact version, or apt would pull the CUDA repo's newest cuDNN alongside it.
+#  - OpenCV is NOT listed: the base already has Ubuntu's libopencv-dev 4.5.4, and asking for it
+#    again makes apt "upgrade" it to the Jetson repo's 4.8 dev package, whose CMake config points
+#    at /usr/lib/libopencv_*.so.4.8.0 libraries that are never installed.
+RUN apt-get update && \
+    cudnn=$(dpkg-query -W -f='${Version}' libcudnn9-cuda-12) && \
+    apt-get install -y --no-install-recommends \
+      libcudnn9-dev-cuda-12=${cudnn} libcudnn9-headers-cuda-12=${cudnn} \
+      libprotobuf-dev protobuf-compiler libgoogle-glog-dev libgflags-dev \
+      libboost-filesystem-dev libboost-system-dev libboost-thread-dev \
+      libhdf5-dev libatlas-base-dev && \
+    rm -rf /var/lib/apt/lists/*
+ARG OPENPOSE_JOBS=
+COPY docker/build_openpose.sh /tmp/build_openpose.sh
+RUN OPENPOSE_JOBS=${OPENPOSE_JOBS} sh /tmp/build_openpose.sh /tmp/openpose && \
+    echo /opt/openpose/lib > /etc/ld.so.conf.d/openpose.conf && ldconfig && \
+    rm -rf /tmp/openpose /tmp/build_openpose.sh
+
+# GPU access as ros_user: joins the host gids of the GPU device nodes at container start (see the
+# script; the devcontainer's postStartCommand runs it)
+COPY docker/gpu_groups.sh /usr/local/bin/gpu_groups.sh
+RUN chmod 755 /usr/local/bin/gpu_groups.sh
+
+# Installs the ZED SDK's udev rule (above) on the host at container start (postStartCommand)
+COPY docker/zed_udev.sh /usr/local/bin/zed_udev.sh
+RUN chmod 755 /usr/local/bin/zed_udev.sh
+
+# GPU rendering for the Gazebo sim with no monitor (the rover). Gazebo's renderer from pixi
+# (OGRE-Next 2.2.6, conda-forge) only reaches OpenGL through GLX, i.e. through an X server;
+# its camera sensor renders even with no Gazebo window, and without a usable X display the
+# render thread crashes and the sim stops stepping. xvfb provides a virtual X server, and
+# VirtualGL runs the GL calls on the GPU through EGL instead of in software on the CPU:
+#   xvfb-run -a vglrun -d egl ros2 launch chassis_bringup sim_gz.launch.py gui:=false
+# (tooling/sim-up does this automatically). Not packaged by Ubuntu, so the release .deb is
+# pinned by version and checksum. After the OpenPose layers so changing it doesn't rebuild them.
+ARG VIRTUALGL_VERSION=3.1.5
+ARG VIRTUALGL_SHA256=9ac238e8a18c06d84ef65444a591a7a5bb4c4ce9e8cfdd92f8a2aea35edbb5d7
+RUN wget -q -O /tmp/virtualgl.deb \
+      "https://github.com/VirtualGL/virtualgl/releases/download/${VIRTUALGL_VERSION}/virtualgl_${VIRTUALGL_VERSION}_arm64.deb" && \
+    echo "${VIRTUALGL_SHA256}  /tmp/virtualgl.deb" | sha256sum -c - && \
+    apt-get update && apt-get install -y --no-install-recommends xvfb xauth /tmp/virtualgl.deb && \
+    rm -rf /tmp/virtualgl.deb /var/lib/apt/lists/*
+ENV PATH=/opt/VirtualGL/bin:${PATH}
 
 # pixi -> provides ROS 2 Humble + colcon via the `l4t` environment in ros2_ws/pixi.toml
 ENV PIXI_HOME=/opt/pixi
 ENV PATH=${PIXI_HOME}/bin:${PATH}
 RUN curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION=v${PIXI_VERSION} PIXI_HOME=${PIXI_HOME} bash
 
-# Install autocomplete dependencies as root
 USER root
-RUN apt-get update && apt-get install -y \
-    bash-completion \
-    && rm -rf /var/lib/apt/lists/*
 
-USER ${USERNAME}
-
-# Copy the terminal config (autocomplete) script into the container
-COPY tooling/billee-env.sh /usr/local/lib/billee/billee-env.sh
-COPY docker/terminal_config.sh /tmp/terminal_config.sh
-
-# Append the terminal config (autocomplete) script to .bashrc
-RUN cat /tmp/terminal_config.sh >> ~/.bashrc
-
-CMD ["pixi", "shell"]

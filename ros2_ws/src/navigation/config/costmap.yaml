@@ -1,0 +1,115 @@
+planner_server:
+  ros__parameters:
+    plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_straightline_planner::StraightLine"
+      interpolation_resolution: 0.1
+controller_server:
+  ros__parameters:
+    # Keep Nav2 compatible with this project's unstamped diff-drive command
+    # interface. The server remains idle until it receives a FollowPath goal.
+    enable_stamped_cmd_vel: false
+    controller_frequency: 20.0
+    odom_topic: /diff_drive_controller/odom
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["goal_checker"]
+    controller_plugins: ["FollowPath"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.25
+      movement_time_allowance: 10.0
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.20
+      yaw_goal_tolerance: 0.25
+      stateful: true
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      goal_checker_id: "goal_checker"
+      critics: ["BaseObstacleCritic", "GoalDistCritic", "ObstacleFootprintCritic", "PreferForwardCritic", "PathDistCritic"]
+      # Explicitly define DWB's feasible motion envelope. Without these limits
+      # and sample counts, the controller can generate zero trajectories.
+      min_vel_x: 0.0
+      max_vel_x: 0.5
+      min_vel_y: 0.0
+      max_vel_y: 0.0
+      max_vel_theta: 1.0
+      min_speed_xy: 0.0
+      max_speed_xy: 0.5
+      min_speed_theta: 0.0
+      acc_lim_x: 0.5
+      acc_lim_y: 0.0
+      acc_lim_theta: 1.0
+      decel_lim_x: -0.5
+      decel_lim_y: 0.0
+      decel_lim_theta: -1.0
+      vx_samples: 20
+      vy_samples: 1
+      vtheta_samples: 20
+      sim_time: 1.7
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: odom          # Set to odom or map
+      robot_base_frame: base_link
+      use_sim_time: True
+      footprint: "[[0.65, 0.50], [0.65, -0.50], [-0.65, -0.50], [-0.65, 0.50]]"
+      
+      # make this mapless (don't use global costmap)
+      rolling_window: true        # Keeps the costmap centered on the robot
+      width: 3
+      height: 3
+      resolution: 0.1             # Larger resolution saves memory
+      
+      #No layers = entirely empty/free spaceatic map layers
+      plugins: ["inflation_layer"]
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
+
+local_costmap:
+  # ControllerServer creates the child as /local_costmap/local_costmap.
+  local_costmap:
+    ros__parameters:
+      update_frequency: 10.0
+      publish_frequency: 5.0
+      global_frame: odom
+      robot_base_frame: base_link
+      rolling_window: true
+      width: 3
+      height: 3
+      resolution: 0.05
+      footprint: "[[0.65, 0.50], [0.65, -0.50], [-0.65, -0.50], [-0.65, 0.50]]"
+      plugins: ["voxel_layer", "inflation_layer"]
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True
+        publish_voxel_map: True
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: pointcloud
+        pointcloud:
+          topic: /depth_cam/points
+          data_type: "PointCloud2"
+          marking: True
+          clearing: True
+          min_obstacle_height: .05
+          max_obstacle_height: 1.5
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
+      always_send_full_costmap: True

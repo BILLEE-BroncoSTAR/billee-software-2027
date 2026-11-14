@@ -11,12 +11,13 @@ launch instead:
     ros2 launch chassis_bringup real.launch.py  can_interface:=mock rviz:=true
 
 Both readers show the same thing: the robot model + TF tree + wheel odometry,
-fixed frame `odom`. RViz needs a display (use `xvfb-run -a` for headless checks);
+fixed frame `odom`. Only the sim EKF (sim_gz navigation:=true, the default) publishes
+`odom`; on the real path switch the fixed frame to `base_link`. RViz needs a display (use `xvfb-run -a` for headless checks);
 Foxglove Studio connects from a laptop to `ws://<jetson-ip>:8765` and needs none.
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -53,17 +54,26 @@ def generate_launch_description():
             ),
             description="RViz2 .rviz config file.",
         ),
+        DeclareLaunchArgument(
+            "fixed_frame",
+            default_value="",
+            description="Override the config's fixed frame (rviz2 -f). Empty = the config's.",
+        ),
     ]
 
-    rviz_node = Node(
+    def rviz_arguments(context):
+        frame = LaunchConfiguration("fixed_frame").perform(context)
+        return ["-d", rviz_config] + (["-f", frame] if frame else [])
+
+    rviz_node = OpaqueFunction(function=lambda context: [Node(
         package="rviz2",
         executable="rviz2",
         name="rviz2",
-        arguments=["-d", rviz_config],
+        arguments=rviz_arguments(context),
         parameters=[{"use_sim_time": use_sim_time}],
         output="screen",
         condition=IfCondition(rviz),
-    )
+    )])
 
     # foxglove_bridge node launched directly (its shipped launch file only sets
     # defaults, and going through it would pull in the launch_xml frontend).
