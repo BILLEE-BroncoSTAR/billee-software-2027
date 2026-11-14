@@ -18,13 +18,15 @@ public:
     bool send_can_frame(const can_frame& frame);
 
     bool read_nonblocking();
+    bool is_open() const { return socket_id_ >= 0; }
 private:
     std::string interface_;
     int socket_id_ = -1;
     EpollEventLoop* event_loop_ = nullptr;
-    EpollEventLoop::EvtId socket_evt_id_;
+    EpollEventLoop::EvtId socket_evt_id_ = nullptr;
     FrameProcessor frame_processor_;
     bool broken_ = false;
+    int last_read_errno_ = 0;  // print each distinct read error once, not every cycle
 
     void on_socket_event(uint32_t mask);
     void process_can_frame(const can_frame& frame) {

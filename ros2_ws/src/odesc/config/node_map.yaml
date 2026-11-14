@@ -22,18 +22,18 @@
 # (`ros2 launch chassis_bringup real.launch.py gear_ratio:=<n>`). The full 6-node
 # drive-a-known-distance bench test (test plan §5.4) is still what confirms it
 # against the physical gearbox.
-gear_ratio: 48.0
+gear_ratio: 48.0  
 
-nodes:
-  - joint: joint_wheel_l3   # Front Left
-    node_id: 0
-  - joint: joint_wheel_l2   # Mid Left
-    node_id: 1
-  - joint: joint_wheel_l1   # Rear Left
-    node_id: 2
-  - joint: joint_wheel_r1   # Front Right
-    node_id: 3
-  - joint: joint_wheel_r2   # Mid Right
-    node_id: 4
-  - joint: joint_wheel_r3   # Rear Right
-    node_id: 5
+nodes:   
+  - joint: joint_wheel_l3   # Front Left     
+    node_id: 4   
+  - joint: joint_wheel_l2   # Mid Left     
+    node_id: 7   
+  - joint: joint_wheel_l1   # Rear Left     
+    node_id: 2  
+  - joint: joint_wheel_r1   # Front Right     
+    node_id: 3   
+  - joint: joint_wheel_r2   # Mid Right     
+    node_id: 6   
+  - joint: joint_wheel_r3   # Rear Right     
+    node_id: 5 

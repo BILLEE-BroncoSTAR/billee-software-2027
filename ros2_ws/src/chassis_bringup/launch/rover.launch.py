@@ -56,7 +56,7 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "can_interface",
-        default_value="can2",
+        default_value="can3",
         description="mode:=real only. 'mock'/'none' = no CAN (loopback feedback); "
         "'vcan0' = virtual bus.",
     ),
@@ -64,6 +64,13 @@ declare_args = [
         "gear_ratio",
         default_value="48.0",
         description="mode:=real only. Motor-shaft turns per wheel turn.",
+    ),
+    DeclareLaunchArgument(
+        "fault_policy",
+        default_value="warn",
+        choices=["warn", "fault"],
+        description="mode:=real only. Unhealthy wheel: warn = log and keep driving; "
+        "fault = stop the drivetrain.",
     ),
     DeclareLaunchArgument(
         "camera",
@@ -99,7 +106,8 @@ def _setup(context):
         args = {
             **common,
             "can_interface": LaunchConfiguration("can_interface"),
-            "gear_ratio": LaunchConfiguration("gear_ratio")
+            "gear_ratio": LaunchConfiguration("gear_ratio"),
+            "fault_policy": LaunchConfiguration("fault_policy"),
         }
         # real.launch.py has no teleop of its own (sim_gz does, via joy_control).
         actions.append(

@@ -37,8 +37,13 @@ After building a new package in an open shell: `source install/local_setup.bash`
 
 ## CAN
 
+Run `can-up` on the Jetson host, not in the container (the container has no `ip`). Execute it;
+don't `source` it.
+
 | | |
 |---|---|
-| `tooling/can-up` / `tooling/can-up status` | bring up the drivetrain bus (`can2`, 500 kbit/s) |
+| `tooling/can-up` / `tooling/can-up status` | bring up the drivetrain bus (`can3`, 500 kbit/s) |
 | `tooling/can-up vcan0` / `tooling/can-up down vcan0` | virtual bus (run on the host) |
+| `tooling/can-clear-faults` / `--nodes 5` / `--status` | clear latched ODESC errors on every wheel / one node / only report (host or container) |
+| `tooling/can-clear-faults --nodes 5 --reboot` | also reboot a board stuck on `BrakeResistorDisarmed` over CAN (the motor turns during its startup calibration; wheels off the ground) |
 | `candump -L <iface>` | watch frames |

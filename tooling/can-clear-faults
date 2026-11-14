@@ -1,0 +1,231 @@
+#!/usr/bin/env python3
+"""can-clear-faults — clear latched ODESC (ODrive CANSimple) errors over CAN.
+
+    tooling/can-clear-faults                  # every wheel node in node_map.yaml, on can3
+    tooling/can-clear-faults --nodes 5        # just node 5 (comma-separated list)
+    tooling/can-clear-faults --reboot         # also reboot boards whose error a clear can't fix
+    tooling/can-clear-faults --iface vcan0    # another interface
+    tooling/can-clear-faults --status         # only report, send nothing
+
+Reads each node's heartbeat (0x01), sends Clear_Errors (0x18), then reads the
+heartbeats again so you can see whether an error latches straight back.
+Clear_Errors only clears error bits: it does not arm or move a motor.
+
+Some errors can't be cleared. On the rover's ODrive fw 0.5.1 the brake resistor is
+armed only at boot: once a fault (e.g. motor DcBusOverCurrent) disarms it, the
+board reports BrakeResistorDisarmed (0x10) again straight after every clear, until
+it restarts. With --reboot, such boards get CANSimple Reset (0x16), the same reboot
+odrivetool does; the script waits for the board to come back and clears again.
+A rebooted board runs its own startup sequence: with the checked-in configs that is
+an encoder offset calibration (the motor turns briefly) and then closed loop, so the
+wheel is live afterwards. Keep the wheels off the ground.
+
+Runs on the Jetson host or in the container (Python stdlib only); the CAN
+interface must already be up (tooling/can-up on the host). Error names are from
+the fw-v0.5.1 odrive-interface.yaml.
+
+Exit status: 0 all listed nodes answered with no error; 1 an error remains or a
+node didn't answer; 2 usage / interface problem.
+"""
+
+import argparse
+import os
+import re
+import socket
+import struct
+import sys
+import time
+
+HEARTBEAT = 0x01
+RESET_ODRIVE = 0x16
+CLEAR_ERRORS = 0x18
+CAN_EFF_FLAG, CAN_RTR_FLAG, CAN_ERR_FLAG = 0x80000000, 0x40000000, 0x20000000
+FRAME = "=IB3x8s"
+LISTEN_S = 0.35  # >3 heartbeats at the boards' 10 Hz
+REBOOT_TIMEOUT_S = 20.0  # boot + startup offset calibration
+
+# ODrive fw 0.5.1 (odrive-interface.yaml @ fw-v0.5.1): Axis.AxisState, Axis.Error.
+STATES = {0: "UNDEFINED", 1: "IDLE", 2: "STARTUP_SEQUENCE", 3: "FULL_CALIBRATION",
+          4: "MOTOR_CALIBRATION", 5: "SENSORLESS", 6: "ENCODER_INDEX_SEARCH",
+          7: "ENCODER_OFFSET_CALIBRATION", 8: "CLOSED_LOOP", 9: "LOCKIN_SPIN",
+          10: "ENCODER_DIR_FIND", 11: "HOMING"}
+BUSY_STATES = {2, 3, 4, 6, 7, 9, 10, 11}  # startup / calibration still running
+AXIS_ERRORS = {
+    0x00000001: "InvalidState", 0x00000002: "DcBusUnderVoltage", 0x00000004: "DcBusOverVoltage",
+    0x00000008: "CurrentMeasurementTimeout", 0x00000010: "BrakeResistorDisarmed",
+    0x00000020: "MotorDisarmed", 0x00000040: "MotorFailed",
+    0x00000080: "SensorlessEstimatorFailed", 0x00000100: "EncoderFailed",
+    0x00000200: "ControllerFailed", 0x00000400: "PosCtrlDuringSensorless",
+    0x00000800: "WatchdogTimerExpired", 0x00001000: "MinEndstopPressed",
+    0x00002000: "MaxEndstopPressed", 0x00004000: "EstopRequested",
+    0x00020000: "HomingWithoutEndstop", 0x00040000: "OverTemp",
+}
+NEEDS_REBOOT = 0x00000010  # BrakeResistorDisarmed: re-armed only at boot on 0.5.1
+
+REPO = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+NODE_MAP = os.path.join(REPO, "ros2_ws", "src", "odesc", "config", "node_map.yaml")
+
+
+def node_map_ids():
+    """Wheel node IDs from node_map.yaml (regex, so no PyYAML needed on the host)."""
+    try:
+        with open(NODE_MAP) as f:
+            ids = [int(m) for m in re.findall(r"^\s*node_id:\s*(\d+)", f.read(), re.M)]
+    except OSError:
+        ids = []
+    return sorted(set(ids)) or [2, 3, 4, 5, 6, 7]
+
+
+def parse_nodes(text):
+    try:
+        nodes = sorted({int(n) for n in text.split(",") if n.strip()})
+    except ValueError:
+        raise argparse.ArgumentTypeError("expected comma-separated node IDs, e.g. 2,5")
+    if not nodes or any(n < 0 or n > 63 for n in nodes):
+        raise argparse.ArgumentTypeError("node IDs must be in 0..63")
+    return nodes
+
+
+def error_names(err):
+    names = [n for bit, n in AXIS_ERRORS.items() if err & bit]
+    unknown = err & ~sum(AXIS_ERRORS)
+    if unknown:
+        names.append(f"0x{unknown:X}?")
+    return "|".join(names)
+
+
+def listen(sock, nodes, seconds):
+    """node -> set of (axis_error, axis_state) seen (a node ID can be shared by several
+    devices, e.g. the boards' unused axis1 heartbeats on node 1)."""
+    seen = {n: set() for n in nodes}
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        try:
+            frame = sock.recv(16)
+        except socket.timeout:
+            continue
+        can_id, dlc, data = struct.unpack(FRAME, frame)
+        if can_id & (CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_ERR_FLAG):
+            continue
+        node, cmd = (can_id & 0x7FF) >> 5, can_id & 0x1F
+        if cmd == HEARTBEAT and node in seen and dlc >= 5:
+            seen[node].add((struct.unpack_from("<I", data)[0], data[4]))
+    return seen
+
+
+def describe(entries):
+    if not entries:
+        return "no heartbeat"
+    parts = []
+    for err, st in sorted(entries):
+        text = f"error 0x{err:08X}"
+        if err:
+            text += f" ({error_names(err)})"
+        parts.append(f"{text} {STATES.get(st, f'state {st}')}")
+    return ", ".join(parts)
+
+
+def report(title, seen):
+    print(title)
+    for node, entries in seen.items():
+        flag = "missing" if not entries else ("FAULT" if any(e for e, _ in entries) else "ok")
+        print(f"  node {node:2d}  {flag:7s}  {describe(entries)}")
+
+
+def send(sock, node, cmd, dlc):
+    try:
+        sock.send(struct.pack(FRAME, (node << 5) | cmd, dlc, bytes(8)))
+        return True
+    except OSError as exc:
+        print(f"ERROR: command 0x{cmd:02X} to node {node} not sent: {exc}", file=sys.stderr)
+        return False
+    finally:
+        time.sleep(0.002)  # don't burst past a short TX queue
+
+
+def clear(sock, nodes):
+    for node in nodes:
+        send(sock, node, CLEAR_ERRORS, 1)
+    print(f"sent Clear_Errors to node{'s' if len(nodes) > 1 else ''} {', '.join(map(str, nodes))}")
+    time.sleep(0.15)  # let the boards process it before the next heartbeats
+
+
+def reboot_and_wait(sock, nodes):
+    for node in nodes:
+        send(sock, node, RESET_ODRIVE, 0)
+    print(f"sent Reset to node{'s' if len(nodes) > 1 else ''} {', '.join(map(str, nodes))}; "
+          f"waiting up to {REBOOT_TIMEOUT_S:.0f} s for startup to finish")
+    time.sleep(0.5)  # the board stops heartbeating while it boots
+    pending, end = set(nodes), time.monotonic() + REBOOT_TIMEOUT_S
+    while pending and time.monotonic() < end:
+        seen = listen(sock, sorted(pending), LISTEN_S)
+        for node, entries in seen.items():
+            if entries and not any(st in BUSY_STATES for _, st in entries):
+                pending.discard(node)
+    if pending:
+        print(f"node {', '.join(map(str, sorted(pending)))} not back (or still calibrating) "
+              f"after {REBOOT_TIMEOUT_S:.0f} s")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--iface", default="can3", help="CAN interface (default can3)")
+    parser.add_argument("--nodes", type=parse_nodes, default=None,
+                        help="comma-separated node IDs (default: the wheels in node_map.yaml)")
+    parser.add_argument("--status", action="store_true", help="only report; send nothing")
+    parser.add_argument("--reboot", action="store_true",
+                        help="reboot boards still reporting BrakeResistorDisarmed after the "
+                             "clear (the motor turns during their startup calibration)")
+    args = parser.parse_args()
+    nodes = args.nodes or node_map_ids()
+
+    try:
+        with open(f"/sys/class/net/{args.iface}/operstate") as f:
+            state = f.read().strip()
+    except OSError:
+        print(f"ERROR: {args.iface} does not exist. Bring it up on the Jetson host: "
+              f"tooling/can-up {args.iface}", file=sys.stderr)
+        return 2
+    if state not in ("up", "unknown"):  # vcan reports "unknown" when up
+        print(f"ERROR: {args.iface} is {state}. Bring it up on the Jetson host: "
+              f"tooling/can-up {args.iface}", file=sys.stderr)
+        return 2
+
+    sock = socket.socket(socket.AF_CAN, socket.SOCK_RAW, socket.CAN_RAW)
+    sock.bind((args.iface,))
+    sock.settimeout(0.05)
+
+    before = listen(sock, nodes, LISTEN_S)
+    report(f"{args.iface}, before:" if not args.status else f"{args.iface}:", before)
+    if args.status:
+        return 0 if all(e and not any(err for err, _ in e) for e in before.values()) else 1
+
+    clear(sock, nodes)
+    after = listen(sock, nodes, LISTEN_S)
+    report("after:", after)
+
+    stuck = [n for n, e in after.items() if any(err & NEEDS_REBOOT for err, _ in e)]
+    if stuck and args.reboot:
+        reboot_and_wait(sock, stuck)
+        clear(sock, stuck)  # e.g. DcBusUnderVoltage latched while the board restarted
+        after.update(listen(sock, stuck, LISTEN_S))
+        report("after reboot:", {n: after[n] for n in stuck})
+
+    still = [n for n, e in after.items() if any(err for err, _ in e)]
+    missing = [n for n, e in after.items() if not e]
+    if still:
+        print(f"error still present on node {', '.join(map(str, still))}")
+        if any(n in stuck for n in still) and not args.reboot:
+            print("  BrakeResistorDisarmed is only re-armed at boot on fw 0.5.1. With the wheels "
+                  "off the ground, rerun with --reboot.")
+        elif args.reboot and any(n in stuck for n in still):
+            print("  It came back after a reboot: the fault that disarms the board (see the "
+                  "motor error, e.g. DcBusOverCurrent) happens during startup. Fix that cause.")
+    if missing:
+        print(f"no heartbeat from node {', '.join(map(str, missing))}: board off the bus")
+    return 1 if still or missing else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

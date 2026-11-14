@@ -1,8 +1,10 @@
 <?xml version="1.0" ?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
 
-    <xacro:arg name="can_interface" default="can2"/>
+    <xacro:arg name="can_interface" default="can3"/>
     <xacro:arg name="gear_ratio" default="48.0"/>
+    <!-- warn: log an unhealthy wheel and keep driving. fault: stop the drivetrain. -->
+    <xacro:arg name="fault_policy" default="warn"/>
 
     <ros2_control name="Robot" type="system">
         <hardware>
@@ -15,6 +17,7 @@
                 <plugin>odesc/OdescSystemHardware</plugin>
                 <param name="can_interface">$(arg can_interface)</param>
                 <param name="gear_ratio">$(arg gear_ratio)</param>
+                <param name="fault_policy">$(arg fault_policy)</param>
             </xacro:unless>
         </hardware>
 
@@ -22,13 +25,13 @@
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
-            <xacro:unless value="${use_sim}"><param name="node_id">3</param></xacro:unless>   <!-- Front Right -->
+            <xacro:unless value="${use_sim}"><param name="node_id">3</param><param name="invert">true</param></xacro:unless>   <!-- Front Right -->
         </joint>
         <joint name="joint_wheel_r2">
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
-            <xacro:unless value="${use_sim}"><param name="node_id">4</param></xacro:unless>   <!-- Mid Right -->
+            <xacro:unless value="${use_sim}"><param name="node_id">6</param></xacro:unless>   <!-- Mid Right -->
         </joint>
         <joint name="joint_wheel_r3">
             <command_interface name="velocity"/>
@@ -40,20 +43,20 @@
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
-            <xacro:unless value="${use_sim}"><param name="node_id">2</param></xacro:unless>   <!-- Rear Left -->
+            <xacro:unless value="${use_sim}"><param name="node_id">2</param><param name="invert">true</param></xacro:unless>   <!-- Rear Left (motor_2) -->
         </joint>
         <joint name="joint_wheel_l2">
             <command_interface name="velocity"/>
             <!--TODO: add min/max vel-->
             <state_interface name="position"/>
             <state_interface name="velocity"/>
-            <xacro:unless value="${use_sim}"><param name="node_id">1</param></xacro:unless>   <!-- Mid Left -->
+            <xacro:unless value="${use_sim}"><param name="node_id">7</param><param name="invert">true</param></xacro:unless>   <!-- Mid Left (motor_1) -->
         </joint>
         <joint name="joint_wheel_l3">
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
-            <xacro:unless value="${use_sim}"><param name="node_id">0</param></xacro:unless>   <!-- Front Left -->
+            <xacro:unless value="${use_sim}"><param name="node_id">4</param><param name="invert">false</param></xacro:unless>   <!-- Front Left (motor_4) -->
         </joint>
     </ros2_control>
 

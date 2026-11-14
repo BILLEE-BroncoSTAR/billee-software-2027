@@ -39,7 +39,7 @@ in the bag is its use of `can3`, while `main` defaults to `can0`.
 - Put the rover on stands or otherwise prevent wheel motion.
 - Keep the physical E-stop accessible.
 - Use the actual physical interface below. `main` defaults to `can0`; substitute
-  `can2` if that is the interface connected to the rover.
+  `can3` if that is the interface connected to the rover.
 - Do not run a second motor-commanding program while the ROS driver is active.
 - Record the exact timestamp and full ROS log line for the first `ENOBUFS`.
 

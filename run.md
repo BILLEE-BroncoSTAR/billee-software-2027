@@ -1,9 +1,16 @@
-On the Jetson, run:
+On the **Jetson host** (SSH into the Jetson, not the container; the container has no `ip`
+command), bring up the CAN bus. Execute `can-up`; don't `source` it.
+
+```
+cd ~/billee-software-2027
+tooling/can-up
+tooling/can-up status
+```
+
+Then in the **Jetson container**:
 
 ```
 cd ~/billee-software-2027/ros2_ws
-../tooling/can-up
-../tooling/can-up status can0
 pixi run --environment l4t ros2 launch chassis_bringup rover.launch.py mode:=real
 ```
 
@@ -27,20 +34,18 @@ pixi run --environment default ros2 launch teleop teleop.launch.py
 ```
 
 Keep the rover supported / E-stop available for the first command.
-```
-  12:19 PM
-```
-does this do default can2  
 
-No. The default is `can0`.
-
-For your real bus on `can2`, run:
+The drivetrain bus is `can3`: it is the default for both `tooling/can-up` and the
+launch files, so the commands above need no interface argument. To use a different
+interface, pass it to both:
 
 ```
+# Jetson host, not the container:
+cd ~/billee-software-2027
+tooling/can-up <iface>
+
+# Jetson container:
 cd ~/billee-software-2027/ros2_ws
-../tooling/can-up can2
 pixi run --environment l4t ros2 launch chassis_bringup rover.launch.py \
-  mode:=real can_interface:=can2
+  mode:=real can_interface:=<iface>
 ```
-
-`can_interface:=can2` is required for the driver to use that network.

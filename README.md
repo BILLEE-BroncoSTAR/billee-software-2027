@@ -80,7 +80,7 @@ setup of both machines (clone, container, build, OpenPose models) is in
 
 | Where | Command |
 |---|---|
-| Jetson host, once per boot | `cd ~/billee-software-2027 && tooling/can-up` |
+| Jetson host (not the container), once per boot | `cd ~/billee-software-2027 && tooling/can-up` |
 | Jetson container | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=<none\|cloud\|openpose\|both>` |
 | Ground-station container | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=<drivetrain\|cloud\|openpose\|both>` |
 
@@ -115,7 +115,8 @@ Package docs: [chassis_bringup](ros2_ws/src/chassis_bringup/README.md) ·
 ```
 .devcontainer/     dev container configs (x86 default, l4t/, mac/)
 docker/            Dockerfiles and container entrypoint/setup scripts
-tooling/           can-up (CAN bring-up, host), sim-up (one-command sim),
+tooling/           can-up (CAN bring-up, host), can-clear-faults (clear ODESC errors),
+                   sim-up (one-command sim),
                    desktop-ros2 / rover-ros2 (run the images without VS Code)
 ros2_ws/pixi.toml  dependencies, environments, `build` task, ROS_DOMAIN_ID
 ros2_ws/src/

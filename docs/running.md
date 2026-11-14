@@ -129,25 +129,28 @@ Then [connect Foxglove](#foxglove) and drive.
 
 ### 3. The rover: real drivetrain, optional camera, driven from the ground station
 
-**Jetson host**, once per boot, only with the ODESCs connected:
+**Jetson host**, once per boot, only with the ODESCs connected. Run `can-up` on the host (SSH into
+the Jetson), not in the container: the container has no `ip` command. Execute it; don't `source`
+it, or its `exit` closes your shell.
 
 ```bash
 cd ~/billee-software-2027
-tooling/can-up            # can2 @ 500 kbit/s
+tooling/can-up            # can3 @ 500 kbit/s
 tooling/can-up status
+tooling/can-clear-faults  # clear latched ODESC errors (e.g. after power-up); --status only reports
 ```
 
 To bring it up on every boot instead:
-`sudo cp tooling/can2.service /etc/systemd/system/ && sudo systemctl enable --now can2.service`.
+`sudo cp tooling/can3.service /etc/systemd/system/ && sudo systemctl enable --now can3.service`.
 
 **Jetson container**, one of:
 
 | Drivetrain | Camera | Command |
 |---|---|---|
-| ODESCs on `can2` | none | `ros2 launch chassis_bringup rover.launch.py mode:=real` |
-| ODESCs on `can2` | point cloud | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud` |
-| ODESCs on `can2` | OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose` |
-| ODESCs on `can2` | point cloud + OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both` |
+| ODESCs on `can3` | none | `ros2 launch chassis_bringup rover.launch.py mode:=real` |
+| ODESCs on `can3` | point cloud | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud` |
+| ODESCs on `can3` | OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose` |
+| ODESCs on `can3` | point cloud + OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both` |
 | no ODESCs (mock) | none | `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock` |
 | no ODESCs (mock) | point cloud | `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock camera:=cloud` |
 | no ODESCs (mock) | OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock camera:=openpose` |
@@ -156,6 +159,18 @@ To bring it up on every boot instead:
 With `can_interface:=mock` the driver opens no CAN socket and loops commands back as wheel
 feedback; skip `can-up`. Check the drivetrain in a second Jetson terminal:
 `ros2 control list_controllers` shows both controllers `active`.
+
+**Wheel fault policy.** Every `mode:=real` launch takes `fault_policy:=warn` (the default) or
+`fault_policy:=fault`. It decides what happens when a wheel is unhealthy, meaning any of:
+no encoder reply for 0.25 s, no heartbeat for 0.5 s, an axis error, or the axis not in
+closed loop.
+
+- `warn`: an error naming the joint and CAN node is logged once a second, and the rover keeps
+  driving on the other wheels.
+- `fault`: the drivetrain stops (zero velocity, then IDLE) and the controllers deactivate.
+  Restart the launch to recover.
+
+For example: `ros2 launch chassis_bringup rover.launch.py mode:=real fault_policy:=fault`.
 
 **Ground-station container**, the line matching the Jetson's `camera:=` (same with or without
 the ODESCs):
@@ -182,7 +197,7 @@ RViz's fixed frame follows `use_sim_time`: `odom` in the sim (the rover moves ac
 - The first skeleton arrives about 10 s after launch.
 - `openpose` and `both` need about 3000 MB `available` in `free -m` on the Jetson host before
   launch. See [Troubleshooting](#troubleshooting) if OpenPose stops with `out of memory`.
-- The rows with the ODESCs on `can2` have not been run yet (no CAN on the dev Jetson). The camera
+- The rows with the ODESCs on `can3` have not been run yet (no CAN on the dev Jetson). The camera
   part of those commands is the same as with `can_interface:=mock`.
 
 ### 4. Bench test, everything on the Jetson
@@ -242,7 +257,8 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 | Launch | Option | Default | |
 |---|---|---|---|
 | `rover.launch.py` | `mode` | `sim` | `sim` (Gazebo) or `real` (ODESC) |
-| | `can_interface` | `can2` | `mode:=real` only: `can2`, `vcan0` or `mock` |
+| | `can_interface` | `can3` | `mode:=real` only: `can3`, `vcan0` or `mock` |
+| | `fault_policy` | `warn` | `mode:=real` only: `warn` (log and keep driving) or `fault` (stop the drivetrain) when a wheel is unhealthy |
 | | `joy_control` | `false` | teleop on the Jetson. Only when no ground station runs it. |
 | | `camera` | `none` | `cloud` (ZED point cloud), `openpose` (OpenPose) or `both`. Jetson container only. |
 | `ground_station.launch.py` | `use_sim_time` | `true` | `false` when the Jetson runs `mode:=real` |
@@ -288,6 +304,12 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | RViz/Foxglove: no `odom` frame | Real drivetrain: expected (no EKF yet); `ground_station.launch.py use_sim_time:=false` uses fixed frame `base_link`. Sim: don't pass `navigation:=false`. |
 | Sim: `Switch controller timed out`, or `Couldn't open X display` | No usable display. On the Jetson, prefix the launch with `xvfb-run -a vglrun -d egl`. |
 | Real: controllers `inactive`, wheels dead | CAN down or wrong bitrate. Run `tooling/can-up` on the host and check `dmesg`. |
+| Real: `/joint_states` positions stay 0, or `wheel … unhealthy: no encoder reply` errors | The bus or that node isn't answering. On the host, run `tooling/can-up status` (the interface must be UP), then check that node's power and CAN wiring. |
+| Real: the drivetrain stopped by itself (`fault_policy:=fault`) | Read the driver's last `wheel … (node N) unhealthy: …` error for the joint, node and reason. Fix that, then relaunch. |
+| Real: `wheel … (node N) unhealthy: axis_error 0x…` | A latched ODESC error. Run `tooling/can-clear-faults --nodes N` (host or container); it prints the error names. If it reports `error still present`, the fault is still there: check that board's power and wiring. The driver also clears errors each time it activates. |
+| `can-clear-faults`: `BrakeResistorDisarmed` (`0x10`) comes back after every clear | On ODrive fw 0.5.1 the brake resistor is re-armed only at boot, after a fault such as `DcBusOverCurrent` disarms it. With the wheels off the ground, run `tooling/can-clear-faults --nodes N --reboot`: it reboots that board over CAN (no USB needed), waits for its startup calibration and clears again. |
+| Real: `velocity command … not sent: No buffer space available` | The CAN transmit queue is too short. Run `tooling/can-up` again on the host (it sets `txqueuelen 100`). `cat /sys/class/net/<iface>/tx_queue_len` should print 100. |
+| `can-up` closes the terminal or stops the container | It was run with `source` and/or inside the container. Run `tooling/can-up` (no `source`) on the Jetson host. |
 | `vcan0` but no frames | Create `vcan0` on the host first, then check with `candump -L vcan0`. |
 | `rover.launch.py: camera:=… ignored, zed_openpose_node isn't built here` | You're not in the Jetson container, or `zed_openpose` wasn't built there: `pixi run build --packages-select zed_openpose people`. The drivetrain still runs. |
 | ZED: `NvRmMemInitNvmap failed with Permission denied`, then `CAMERA STREAM FAILED TO START` or `NO GPU DETECTED` | The terminal lacks the GPU device groups. In a Jetson container terminal, `id` must list `44` (video), `104` and `995`. If not, the container was created before 2026-11-13: **Rebuild Container**. Meanwhile, `exec sudo -iu ros_user` in that terminal gives it the groups. |

@@ -19,13 +19,19 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     can_interface = DeclareLaunchArgument(
         "can_interface",
-        default_value="can2",
+        default_value="can3",
         description="SocketCAN interface passed to the ODESC hardware backend.",
     )
     gear_ratio = DeclareLaunchArgument(
         "gear_ratio",
         default_value="48.0",
         description="Motor-shaft turns per wheel turn.",
+    )
+    fault_policy = DeclareLaunchArgument(
+        "fault_policy",
+        default_value="warn",
+        choices=["warn", "fault"],
+        description="Unhealthy wheel: warn = log and keep driving; fault = stop the drivetrain.",
     )
     rviz = DeclareLaunchArgument(
         "rviz", default_value="true", description="Start RViz locally."
@@ -46,9 +52,10 @@ def generate_launch_description():
             "mode": "real",
             "can_interface": LaunchConfiguration("can_interface"),
             "gear_ratio": LaunchConfiguration("gear_ratio"),
+            "fault_policy": LaunchConfiguration("fault_policy"),
             "rviz": LaunchConfiguration("rviz"),
             "joy_control": LaunchConfiguration("joy_control"),
         }.items(),
     )
 
-    return LaunchDescription([can_interface, gear_ratio, rviz, joy_control, rover])
+    return LaunchDescription([can_interface, gear_ratio, fault_policy, rviz, joy_control, rover])

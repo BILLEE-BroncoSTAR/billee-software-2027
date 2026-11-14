@@ -7,7 +7,7 @@ OdescSystemHardware SocketCAN plugin is loaded instead of ign_ros2_control, and
 it starts a standalone controller_manager (ros2_control_node) rather than letting
 Gazebo host it.
 
-    # real ODESC/NEO drivetrain on can2:
+    # real ODESC/NEO drivetrain on can3:
     ros2 launch chassis_bringup real.launch.py
 
     # no motor hardware — exercise the encoder feedback -> /diff_drive_controller/odom
@@ -59,7 +59,7 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "can_interface",
-        default_value="can2",
+        default_value="can3",
         description="SocketCAN interface for the ODESC bus. 'mock' or 'none' runs "
         "OdescSystemHardware in mock mode (no CAN, gear-ratio loopback feedback) so the "
         "stack can be brought up with no motor hardware. 'vcan0' etc. for a virtual bus.",
@@ -69,6 +69,14 @@ declare_args = [
         default_value="48.0",
         description="Motor-shaft turns per wheel turn. Default 48.0 (ODESC V4.2 + NEO "
         "REV v1.1). Canonical copy in odesc/config/node_map.yaml.",
+    ),
+    DeclareLaunchArgument(
+        "fault_policy",
+        default_value="warn",
+        choices=["warn", "fault"],
+        description="What the ODESC driver does when a wheel stops answering, reports an "
+        "axis error or leaves closed loop: warn = log it and keep driving; fault = stop "
+        "the drivetrain (zero velocity, IDLE, controllers deactivate).",
     ),
     DeclareLaunchArgument(
         "rviz",
@@ -106,11 +114,12 @@ def _launch_setup(context):
     xacro_file = LaunchConfiguration("xacro_file")
     can_interface = LaunchConfiguration("can_interface")
     gear_ratio = LaunchConfiguration("gear_ratio")
+    fault_policy = LaunchConfiguration("fault_policy")
 
     xacro_path = PathJoinSubstitution([FindPackageShare(description_pkg), xacro_file])
 
     # use_sim:=false -> ros2_control.urdf.xacro loads odesc/OdescSystemHardware.
-    # can_interface / gear_ratio are forwarded into the <hardware> block.
+    # can_interface / gear_ratio / fault_policy are forwarded into the <hardware> block.
     robot_description = ParameterValue(
         Command(
             [
@@ -118,6 +127,7 @@ def _launch_setup(context):
                 " ", "use_sim:=false",
                 " ", "can_interface:=", can_interface,
                 " ", "gear_ratio:=", gear_ratio,
+                " ", "fault_policy:=", fault_policy,
             ]
         ),
         value_type=str,

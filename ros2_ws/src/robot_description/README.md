@@ -5,7 +5,7 @@ nodes. `chassis_bringup` expands the model and feeds it to `robot_state_publishe
 
 | File | |
 |---|---|
-| `urdf/robot.urdf.xacro` | Entry point. Args: `use_sim` (`true` = Gazebo `ign_ros2_control`, `false` = `odesc/OdescSystemHardware`), `can_interface` (default `can2`) |
+| `urdf/robot.urdf.xacro` | Entry point. Args: `use_sim` (`true` = Gazebo `ign_ros2_control`, `false` = `odesc/OdescSystemHardware`), `can_interface` (default `can3`) |
 | `urdf/robot_core.urdf.xacro` | links, joints, inertia, meshes: `base_footprint` → `base_link`, fixed suspension, six continuous wheel joints `joint_wheel_{l,r}{1,2,3}` |
 | `urdf/ros2_control.urdf.xacro` | hardware plugin selection, per-wheel CAN `node_id` (must match `odesc/config/node_map.yaml`), `gear_ratio` |
 | `urdf/camera.urdf.xacro` | `camera_link` + `camera_link_optical` (ZED 2i mount; `camera_joint` sets its pose) |
