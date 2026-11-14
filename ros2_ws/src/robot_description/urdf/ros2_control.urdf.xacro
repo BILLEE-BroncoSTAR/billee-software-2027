@@ -25,13 +25,13 @@
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
-            <xacro:unless value="${use_sim}"><param name="node_id">3</param><param name="invert">true</param></xacro:unless>   <!-- Front Right -->
+            <xacro:unless value="${use_sim}"><param name="node_id">4</param><param name="invert">true</param></xacro:unless>   <!-- Front Right -->
         </joint>
         <joint name="joint_wheel_r2">
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
-            <xacro:unless value="${use_sim}"><param name="node_id">6</param></xacro:unless>   <!-- Mid Right -->
+            <xacro:unless value="${use_sim}"><param name="node_id">6</param><param name="invert">false</param></xacro:unless>   <!-- Mid Right -->
         </joint>
         <joint name="joint_wheel_r3">
             <command_interface name="velocity"/>
@@ -56,7 +56,7 @@
             <command_interface name="velocity"/>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
-            <xacro:unless value="${use_sim}"><param name="node_id">4</param><param name="invert">false</param></xacro:unless>   <!-- Front Left (motor_4) -->
+            <xacro:unless value="${use_sim}"><param name="node_id">3</param><param name="invert">false</param></xacro:unless>   <!-- Front Left (motor_4) -->
         </joint>
     </ros2_control>
 
