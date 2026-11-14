@@ -7,7 +7,7 @@ the wheel data comes from Gazebo, the real ODESC controllers over CAN, or a loop
 ```mermaid
 flowchart TB
     subgraph OP["Ground station"]
-        PAD["Gamepad /dev/input/js0"]
+        PAD["Gamepad (USB)"]
         FGS["Foxglove Studio (ws://rover:8765)"]
     end
 

@@ -60,11 +60,33 @@ fi
 
 mkdir -p "$SRC/build"
 cd "$SRC/build"
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/openpose \
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${OPENPOSE_PREFIX:-/opt/openpose}" \
   -DGPU_MODE=CUDA -DUSE_CUDNN=ON \
   -DCUDA_ARCH=Manual -DCUDA_ARCH_BIN=87 -DCUDA_ARCH_PTX=87 \
   -DBUILD_EXAMPLES=OFF -DBUILD_PYTHON=OFF -DBUILD_DOCS=OFF -DBUILD_UNITY_SUPPORT=OFF \
   -DDOWNLOAD_BODY_25_MODEL=OFF -DDOWNLOAD_BODY_COCO_MODEL=OFF -DDOWNLOAD_BODY_MPI_MODEL=OFF \
   -DDOWNLOAD_FACE_MODEL=OFF -DDOWNLOAD_HAND_MODEL=OFF
+
+# Zero cuDNN workspace (patched after cmake: that is when Caffe is at 1807aad, whose cuDNN 8+
+# branch this edits). That branch accepts any algorithm whose workspace fits in *all* free GPU
+# memory, and every one of BODY_25's 114 conv layers then allocates its own
+# max(fwd, bwd_data, 2*fwd) x 3 streams. On the 8 GB Orin Nano that took ~1.9 GB and OpenPose died
+# on its first frame (syncedmem.cpp "out of memory"). Inference needs no backward workspace, and
+# zero-workspace forward algorithms measured the same speed there (~5 fps), so: request every
+# algorithm (not just the top 4) and accept only those that need no workspace.
+conv="$SRC/3rdparty/caffe/src/caffe/layers/cudnn_conv_layer.cpp"
+if ! grep -q 'fwd_algo_pref_\[n\].memory == 0' "$conv"; then
+  sed -i \
+    -e 's/fwd_algo_pref_\[4\]/fwd_algo_pref_[CUDNN_CONVOLUTION_FWD_ALGO_COUNT]/' \
+    -e 's/bwd_data_algo_pref_\[4\]/bwd_data_algo_pref_[CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT]/' \
+    -e 's/top_descs_\[i\], 4, &RetCnt, fwd_algo_pref_/top_descs_[i], CUDNN_CONVOLUTION_FWD_ALGO_COUNT, \&RetCnt, fwd_algo_pref_/' \
+    -e 's/bottom_descs_\[i\], 4, &RetCnt, bwd_data_algo_pref_/bottom_descs_[i], CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT, \&RetCnt, bwd_data_algo_pref_/' \
+    -e 's/fwd_algo_pref_\[n\].memory < free_memory/fwd_algo_pref_[n].memory == 0/' \
+    -e 's/bwd_data_algo_pref_\[n\].memory < free_memory/bwd_data_algo_pref_[n].memory == 0/' \
+    "$conv"
+  [ "$(grep -c -E 'ALGO_COUNT|algo_pref_\[n\]\.memory == 0' "$conv")" -eq 6 ] ||
+    { echo "build_openpose.sh: cuDNN workspace patch did not apply to $conv" >&2; exit 1; }
+fi
+
 make -j"${OPENPOSE_JOBS:-$(nproc)}"
 make install

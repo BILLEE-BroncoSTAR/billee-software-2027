@@ -1,7 +1,7 @@
 <library path="odesc">
   <class
     name="odesc/OdescSystemHardware"
-    type="odesc::OdescSystemHardware"
+    type="odesc_ros2_control::OdescHardwareInterface"
     base_class_type="hardware_interface::SystemInterface">
     <description>
       ros2_control SystemInterface for the BILLEE drivetrain: six ODrive/ODESC

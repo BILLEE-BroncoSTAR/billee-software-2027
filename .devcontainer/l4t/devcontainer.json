@@ -3,9 +3,9 @@
   "build": {
     "dockerfile": "../../docker/Dockerfile.l4t-humble",
     "context": "../../",
-    // Parallel OpenPose compile jobs; empty = all cores. `export OPENPOSE_JOBS=2` on the host
-    // before "Rebuild Container" if nvcc runs out of RAM.
-    "args": { "OPENPOSE_JOBS": "${localEnv:OPENPOSE_JOBS}" }
+    // Parallel OpenPose compile jobs. 3 builds in ~21 min on the 8 GB Orin Nano without running
+    // out of RAM (2026-11-13); empty = all cores.
+    "args": { "OPENPOSE_JOBS": "3" }
   },
 
   "containerUser": "ros_user",
@@ -21,15 +21,31 @@
     "--pid=host",
     "--ipc=host",
     "--hostname=rover",
+    "--add-host=rover:127.0.1.1",  // else every sudo prints "unable to resolve host rover"
+    // GPU device groups for every process, including VS Code's server and so its terminals
+    // (gpu_groups.sh below runs after the server has started, too late for them). Without these
+    // the ZED fails: NvRmMemInitNvmap Permission denied, CAMERA STREAM FAILED TO START.
+    // video (44) owns /dev/nvmap and /dev/nvgpu; 104 (render) and 995 (debug) are this Jetson's
+    // gids for /dev/dri/renderD128 and /dev/nvhost-*-gpu. After a reflash, check them on the host:
+    //   stat -c '%G %g %n' /dev/nvmap /dev/dri/renderD128 /dev/nvhost-dbg-gpu
+    "--group-add=video",
+    "--group-add=104",
+    "--group-add=995",
     "--volume", "/dev:/dev",
     "--volume", "/dev/shm:/dev/shm",
+    // zed_udev.sh installs the ZED udev rule on the host through these (see postStartCommand)
+    "--volume", "/etc/udev/rules.d:/host/udev/rules.d",
+    "--volume", "/run/udev:/run/udev",
     // kept only for optional local debugging on a Jetson with a display attached
     "--volume", "/tmp/.X11-unix:/tmp/.X11-unix"
   ],
 
-  // gpu_groups.sh: CUDA as ros_user (zed_openpose) needs the host groups that own the GPU device
-  // nodes; VS Code's `docker exec` terminals only get groups listed in the container's /etc/group.
-  "postStartCommand": "sudo /usr/local/bin/gpu_groups.sh && cd ros2_ws && pixi install --environment l4t",
+  // gpu_groups.sh: adds ros_user to the GPU device groups in /etc/group, for shells started later
+  // with `docker exec` (VS Code's own terminals get them from --group-add above).
+  // zed_udev.sh: the ZED's sensor device is root-only on the host without Stereolabs' udev rule.
+  // configs/zed/SN*.conf: the ZED's factory calibration; without it the SDK downloads it on the
+  // first open, which needs internet.
+  "postStartCommand": "sudo /usr/local/bin/gpu_groups.sh && sudo /usr/local/bin/zed_udev.sh && cp -n configs/zed/SN*.conf /usr/local/zed/settings/ && cd ros2_ws && pixi install --environment l4t",
 
   "containerEnv": {
     "ROS_DISTRO": "humble",

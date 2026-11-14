@@ -21,51 +21,58 @@ flowchart LR
 
 ## Run
 
-In the `l4t` container:
+Jetson container only. Setup (models, build, udev, calibration) is in
+[running.md → First-time setup](running.md#first-time-setup).
+
+**With the drivetrain** (the normal way), on the **Jetson**:
 
 ```bash
-cd ros2_ws
-src/perception/zed_openpose/scripts/get_openpose_models.sh      # once: ~300 MB into ros2_ws/models/openpose
-pixi run build --packages-select people_msgs zed_openpose people robot_description
-ros2 launch people people_rover.launch.py                     # OpenPose + point cloud
-ros2 launch people people_rover.launch.py openpose:=false     # point cloud only
+ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud      # point cloud
+ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose   # OpenPose
+ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both       # point cloud + OpenPose
 ```
 
-Next to the real drivetrain, add `standalone:=false`, since `real.launch.py foxglove:=true`
-already runs `robot_state_publisher` and the bridge.
+Add `can_interface:=mock` when no motors are connected. On the **ground station**:
+`ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=cloud` (or
+`view:=openpose`, `view:=both`), and the matching Foxglove layout below. All combinations,
+including the simulator: [running.md](running.md#pick-a-setup).
 
-| Arg | Default | |
+**Camera alone**, without any drivetrain launch, on the **Jetson**:
+
+```bash
+ros2 launch people people_rover.launch.py openpose:=false       # point cloud
+ros2 launch people people_rover.launch.py point_cloud:=false    # OpenPose
+ros2 launch people people_rover.launch.py                       # point cloud + OpenPose
+```
+
+This also starts `robot_state_publisher` and the Foxglove bridge (`standalone:=true`).
+`rover.launch.py camera:=…` passes `standalone:=false`, because the drivetrain launch runs both.
+
+| `people_rover.launch.py` arg | Default | |
 |---|---|---|
 | `openpose` | `true` | Run OpenPose and `gesture_node`. `false` = camera only: no model load, no `/people/*`, starts in seconds. |
 | `point_cloud` | `true` | Publish `/zed/points` |
-| `standalone` | `true` | Also start `robot_state_publisher` + `foxglove_bridge`. Set `false` when `real.launch.py foxglove:=true` is already running them. |
+| `standalone` | `true` | Also start `robot_state_publisher` + `foxglove_bridge`. |
 | `svo_path` | `""` | Replay a ZED `.svo2` recording instead of the live camera |
 | `model_pose` | `BODY_25` | `COCO` needs its own model files |
 | `target_frame` | `base_link` | frame of all 3D output |
+| `use_sim_time` | `false` | Stamp with sim time. `rover.launch.py camera:=…` sets it in the sim (`mode:=sim`), where the camera's own clock would put every message "in the future" for the viewers. |
 
-**View it:** pick the layout that matches the mode. Both use fixed frame `base_link` and show the
-rover model.
+**View it** on the ground station. The Foxglove layouts are `drivetrain.json` (rover model,
+odometry trail, `/joy`, drive command) plus the camera topics. RViz's fixed frame is `odom` on sim
+time and `base_link` otherwise (`ground_station.launch.py`).
 
-| Mode | Foxglove (`ws://<rover-ip>:8765`, Layouts → Import) | RViz |
+| Mode | Foxglove (Layouts → Import) | RViz (`ground_station.launch.py … view:=`) |
 |---|---|---|
-| point cloud only | `src/perception/people/foxglove/zed_points.json` | `zed_points.rviz` |
-| OpenPose + point cloud | `src/perception/people/foxglove/people_rover.json` | `people_rover.rviz` |
+| point cloud | `ros2_ws/src/perception/people/foxglove/zed_points.json` | `view:=cloud` |
+| OpenPose, or point cloud + OpenPose | `ros2_ws/src/perception/people/foxglove/people_rover.json` | `view:=openpose` / `view:=both` |
 
-```bash
-# RViz on the ground station (configs are installed with the people package)
-ros2 launch chassis_bringup viz.launch.py foxglove:=false \
-  rviz_config:=$(ros2 pkg prefix --share people)/rviz/zed_points.rviz    # or people_rover.rviz
-```
-
-**ZED udev rule:** install this once on the Jetson **host**:
-
-```bash
-docker run --rm <image> cat /etc/udev/rules.d/99-slabs.rules | sudo tee /etc/udev/rules.d/99-slabs.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger
-```
-
-The first skeleton takes 30–90 s after launch, while CUDA libraries load lazily. Later frames
-are fast.
+Measured on the dev Orin Nano (2026-11-13, HD720, depth `ULTRA`): the camera runs at 30 fps.
+Point cloud alone: `/zed/points` at 8.5 Hz. OpenPose alone, or with the point cloud: 5 Hz, the
+first skeleton about 10 s after launch, and the whole rover stack uses about 2.9 GB of RAM. Rates
+with the Jetson sim are lower: [running.md](running.md#camera-rates-and-ram-orin-nano-2026-11-13).
+The launch first drops the kernel's file cache (`sudo -n`): on the Orin the GPU only gets RAM that
+is actually free, and the camera and OpenPose failed at startup when most RAM was cache.
 
 ## Code
 
@@ -87,7 +94,7 @@ are fast.
 | `/people/debug_image` (+ `/compressed`) | `Image` | OpenPose rendering. Use `/compressed` over Wi-Fi. |
 | `/people/gesture` | `people_msgs/Gesture` | `gesture`, `command`, `confidence`, `position` |
 | `/people/gesture_marker` | `Marker` | text label above the person |
-| `/zed/points` | `PointCloud2` | XYZ + colour in `zed_left_camera_frame`. Every 4th pixel of the 720×405 depth map (~18k points, ~290 kB), at most `cloud_max_hz` (10). With OpenPose it runs at the OpenPose rate (~6 fps on the Nano). |
+| `/zed/points` | `PointCloud2` | XYZ + colour in `zed_left_camera_frame`. Every 4th pixel of the 720×405 depth map (~18k points, ~290 kB), at most `cloud_max_hz` (10). With OpenPose it runs at the OpenPose rate (5 Hz on the Orin Nano). |
 | `/zed/depth_image` | `Image` | off by default (`publish_depth`) |
 
 ## How it works
@@ -101,7 +108,8 @@ are fast.
   catches joints that picked up background depth.
 - **Frames.** The ZED reports in ROS axes (`RIGHT_HANDED_Z_UP_X_FWD`) relative to the left lens.
   The node publishes a static `camera_link → zed_left_camera_frame` transform (+0.06 m y) and
-  transforms joints to `base_link` with TF at the image timestamp. If there's no TF, 2D is still
+  transforms joints to `base_link` with TF at the image timestamp (the camera's capture time; sim
+  time when `use_sim_time` is set, next to the Jetson sim). If there's no TF, 2D is still
   published and 3D is NaN.
 - **Gestures** (`gesture_node`). Only the person closest to the rover counts. Classification uses
   2D keypoints only, measured relative to the neck and scaled by body size. If any arm joint has
@@ -134,8 +142,8 @@ are fast.
 
 `docker/Dockerfile.l4t-humble` starts from NVIDIA's Isaac ROS Humble image (L4T 36.4: CUDA 12.6,
 cuDNN 9, TensorRT 10.3, OpenCV 4.5.4). It adds the ZED SDK 5.4 and OpenPose, which
-`docker/build_openpose.sh` builds from source into `/opt/openpose`. Set `OPENPOSE_JOBS=2` on the
-host before rebuilding the container if `nvcc` runs out of RAM.
+`docker/build_openpose.sh` builds from source into `/opt/openpose` with 3 parallel jobs
+(`OPENPOSE_JOBS` in `.devcontainer/l4t/devcontainer.json`; 21 min on the Orin Nano).
 
 OpenPose (pinned at `5c5d965`) needs these patches for current CUDA and protobuf:
 
@@ -146,6 +154,7 @@ OpenPose (pinned at `5c5d965`) needs these patches for current CUDA and protobuf
 | `SetTotalBytesLimit(a, b)` → `(a)` | Newer protobuf removed the 2-arg form |
 | `CPATH=/usr/local/cuda/include/cccl` | CUDA 13 only |
 | `CUDA_ARCH_BIN=87` | Orin only. Cuts build time. |
+| cuDNN algorithms: zero workspace only (`cudnn_conv_layer.cpp`, applied after `cmake`) | Caffe's cuDNN 8+ code accepted any workspace that fit in *all* free GPU memory, and each of BODY_25's 114 conv layers allocated its own (×3 streams, plus backward-pass space inference never uses). That took ~1.9 GB and OpenPose died on its first frame (`out of memory`). Zero-workspace algorithms ran at the same speed. |
 
 OpenPose's CMake model download is disabled because CMU's model server is offline. Models come
 from `get_openpose_models.sh` instead.
@@ -164,23 +173,33 @@ Dev container problems, already fixed:
 - **UID remap.** VS Code remaps `ros_user`'s uid to your host uid, so `/usr/local/zed` (owned by
   uid 1000) became unreadable and the build silently skipped `zed_openpose`. The Dockerfile now
   makes it world-readable, and makes `settings/` and `resources/` writable.
-- **GPU groups.** `docker exec` terminals only get groups listed in the container's `/etc/group`,
-  and the host GPU device groups (video, render, ...) aren't there, so CUDA failed with error 100
-  or 801. `docker/gpu_groups.sh` runs on container start and adds `ros_user` to each GPU device's
-  group.
+- **GPU groups.** The GPU device nodes belong to host groups: video (44), and on the dev Jetson
+  render (104) and debug (995). Without them CUDA fails (error 100 or 801) and the ZED fails
+  (`NvRmMemInitNvmap failed with Permission denied`, then `CAMERA STREAM FAILED TO START` or
+  `NO GPU DETECTED`). `.devcontainer/l4t/devcontainer.json` adds them with `--group-add`, so every
+  process has them, VS Code's terminals included. (`docker/gpu_groups.sh` at container start adds
+  them to `/etc/group`, but VS Code's terminals are children of its server, which started before
+  that, so they never got them.) After a reflash, check the gids on the host with
+  `stat -c '%G %g %n' /dev/nvmap /dev/dri/renderD128 /dev/nvhost-dbg-gpu`.
+- **ZED udev rule.** Without Stereolabs' rule on the host, the ZED's sensor (HID) device is
+  root-only and the camera fails to open (`[ZED][MCU] Permissions denied`). `docker/zed_udev.sh`
+  runs on container start and installs the image's `99-slabs.rules` on the host, through the
+  host's `/etc/udev/rules.d` and `/run/udev` mounted by `.devcontainer/l4t/devcontainer.json`.
+- **ZED calibration.** The SDK downloads `SN<serial>.conf` on a camera's first open (needs
+  internet), into the container, so a rebuild loses it. The container start copies
+  `configs/zed/SN*.conf` into `/usr/local/zed/settings/`.
 - **Two GLibs.** OpenPose pulls in the system GLib 2.72 and pixi brings 2.88. Mixing them gave
   `libgio-2.0.so.0: undefined symbol g_variant_builder_...`. `zed_openpose/CMakeLists.txt` links
   pixi's GLib first with `-Wl,--no-as-needed`.
 
 ## Status
 
-On the current L4T 36.4 (Isaac ROS) image, on the dev Orin Nano (2026-11-05), the workspace
-builds, `zed_openpose` compiles against the image's OpenPose and ZED SDK, the unit tests
-(`test_skeleton_3d`, plus 24 gesture cases) pass, and both launch modes start up to opening the
-camera. OpenPose inference has not been rerun on this image yet. It last ran on 2026-11-02 on an
-earlier JetPack 7.2 image (CUDA 13.2), at about 160 ms per frame (~6 fps) on the Nano. **Nothing has been tested with a
-ZED connected** (live depth, 3D accuracy, gestures on real people, end-to-end rate, and the
-point cloud in either mode).
+Tested on the dev Orin Nano with the team's ZED 2i (2026-11-13), L4T 36.4 image: the point
+cloud, OpenPose, and both together, through `people_rover.launch.py` and through
+`rover.launch.py camera:=…` with the mock drivetrain and with the Jetson sim; the ground station
+receives them. Rates: [running.md → Camera rates and RAM](running.md#camera-rates-and-ram-orin-nano-2026-11-13).
+Not tested yet: 3D accuracy of the skeletons, gestures on real people, and the ODESC drivetrain. The unit
+tests (`test_skeleton_3d`, 24 gesture cases) pass.
 
 ```bash
 pixi run -e l4t colcon test --packages-select zed_openpose
@@ -195,14 +214,17 @@ NaN. The gesture rules assume an upright person and a level camera. There's no p
 across frames.
 
 Next steps: record an `.svo2` with the camera so you can develop with `svo_path` away from the
-rover; measure fps on the AGX Orin; write the node that acts on `/people/gesture`.
+rover; check the skeletons' 3D positions against measured distances; write the node that acts
+on `/people/gesture`.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `ZED open failed: CAMERA NOT DETECTED` | No camera (this is expected without one), a USB 2 port, or no udev rule. Check `lsusb \| grep 2b03` on the host. |
-| `CUDA error 100` / `801`, `NvRmMemInitNvmap failed` | GPU groups missing: `docker exec -u root <container> gpu_groups.sh`, or rebuild the container |
+| `ZED open failed: CAMERA NOT DETECTED` | No camera (this is expected without one), or a USB 2 port. Check `lsusb \| grep 2b03` on the host. |
+| `[ZED][MCU] Permissions denied`, then `NOT VALID SERIAL NUMBER FOR SENSORS MODULE MCU` | No ZED udev rule on the host. On the host, `ls /etc/udev/rules.d/99-slabs.rules`; if it's missing, **Rebuild Container** (the container start installs it). |
+| `out of memory` (`syncedmem.cpp`), `CUDNN_STATUS_INTERNAL_ERROR`, `NvMapMemAlloc… error 12` | Not enough RAM, which the GPU shares. On the host, `free -m` must show at least 3000 MB `available` before launching. An image built before 2026-11-13 also needs **Rebuild Container** (zero-workspace patch above). |
+| `CUDA error 100` / `801`, `NvRmMemInitNvmap failed with Permission denied`, `NO GPU DETECTED` | GPU groups missing (above). In a Jetson container terminal, `id` must list `44` (video), `104` and `995`. If not, **Rebuild Container**. |
 | `OpenPose: ... prototxt ... not found` | Run `get_openpose_models.sh` |
 | `No TF base_link <- zed_left_camera_frame` | `robot_state_publisher` isn't running. Use `standalone:=true` or start the drivetrain. |
 | `libgio-2.0.so.0: undefined symbol` | The GLib link lines in `zed_openpose/CMakeLists.txt` were changed. Restore them. |

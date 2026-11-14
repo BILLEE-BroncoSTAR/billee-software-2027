@@ -113,6 +113,10 @@ RUN OPENPOSE_JOBS=${OPENPOSE_JOBS} sh /tmp/build_openpose.sh /tmp/openpose && \
 COPY docker/gpu_groups.sh /usr/local/bin/gpu_groups.sh
 RUN chmod 755 /usr/local/bin/gpu_groups.sh
 
+# Installs the ZED SDK's udev rule (above) on the host at container start (postStartCommand)
+COPY docker/zed_udev.sh /usr/local/bin/zed_udev.sh
+RUN chmod 755 /usr/local/bin/zed_udev.sh
+
 # GPU rendering for the Gazebo sim with no monitor (the rover). Gazebo's renderer from pixi
 # (OGRE-Next 2.2.6, conda-forge) only reaches OpenGL through GLX, i.e. through an X server;
 # its camera sensor renders even with no Gazebo window, and without a usable X display the

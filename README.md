@@ -74,27 +74,32 @@ On an 8 GB Jetson, a full build can run out of RAM. Use
 
 ## 3. Run
 
-The usual setup is the sim (or the real drivetrain) on the **Jetson**, driven from the
-**ground station**:
+The rover's real drivetrain on the **Jetson**, driven from the **ground station**. First-time
+setup of both machines (clone, container, build, OpenPose models) is in
+[docs/running.md → First-time setup](docs/running.md#first-time-setup).
 
-| Machine | Command |
+| Where | Command |
 |---|---|
-| Jetson | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py` (real motors: `ros2 launch chassis_bringup rover.launch.py mode:=real`) |
-| Ground station | `ros2 launch chassis_bringup ground_station.launch.py` (real motors: add `use_sim_time:=false`) |
+| Jetson host, once per boot | `cd ~/billee-software-2027 && tooling/can-up` |
+| Jetson container | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=<none\|cloud\|openpose\|both>` |
+| Ground-station container | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=<drivetrain\|cloud\|openpose\|both>` |
 
-Then, on the ground station, open Foxglove Studio (desktop app, installed on the host, not in
-the container), connect to `ws://localhost:8765`, and import
-`ros2_ws/src/chassis_bringup/foxglove/drivetrain.json`. To drive, hold **RB** on the gamepad and
-move the two sticks up and down.
+- `camera:=cloud` adds the ZED point cloud, `camera:=openpose` OpenPose, `camera:=both` both. Use
+  the ground station's `view:=` with the same name (`camera:=none` ↔ `view:=drivetrain`).
+- No motors connected: add `can_interface:=mock` on the Jetson and skip `can-up`.
+- On the ground-station **host**, open Foxglove Studio, connect to `ws://localhost:8765`, and
+  import the layout for the camera mode ([docs/running.md → Foxglove](docs/running.md#foxglove)).
+- To drive, hold **RB / R1** on the gamepad and move the two sticks up and down.
 
-Everything else, including the sim on one machine, a bench test, CAN, people/pose, Foxglove
-details and troubleshooting, is in **[docs/running.md](docs/running.md)**.
+Every combination written out (sim or real, with or without ODESCs, each camera mode), the
+simulator, a bench test, CAN testing and troubleshooting are in
+**[docs/running.md](docs/running.md)**.
 
 ## Documentation
 
 | Doc | Covers |
 |---|---|
-| [docs/running.md](docs/running.md) | Sim, real drivetrain, rover + ground station, CAN, people/pose, troubleshooting |
+| [docs/running.md](docs/running.md) | First-time setup, and every command per machine: sim, real drivetrain, camera modes, Foxglove, CAN, troubleshooting |
 | [docs/architecture.md](docs/architecture.md) | How the drivetrain control stack fits together |
 | [docs/people-pose.md](docs/people-pose.md) | ZED 2i point cloud, and OpenPose person and gesture detection (Jetson) |
 | [docs/gazebo.md](docs/gazebo.md) | Gazebo rendering, GPU, and model notes |

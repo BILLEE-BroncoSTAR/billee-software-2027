@@ -2,10 +2,11 @@
 
     ros2 launch chassis_bringup ground_station.launch.py
     ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false   # real hardware
+    ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=both
     ros2 launch chassis_bringup ground_station.launch.py fprime_gds:=true
 
 Starts:
-  - viz.launch.py  -> rviz2 (drivetrain.rviz) + foxglove_bridge on :8765
+  - viz.launch.py  -> rviz2 (view:= drivetrain/cloud/openpose/both) + foxglove_bridge :8765
   - teleop.launch.py -> joy_node + joy_tank_drive  (publishes cmd_vel over DDS);
     skip with joystick:=false (e.g. headless / Mac container / Foxglove-only station)
   - optionally opens the F' GDS web UI in a browser (fprime_gds:=true) at fprime_gds_url:=
@@ -15,7 +16,12 @@ bridge exposes the rover's topics; point Foxglove Studio at ws://localhost:8765.
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    OpaqueFunction,
+)
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -41,6 +47,13 @@ declare_args = [
         "view-only station or where no /dev/input gamepad exists (Mac container, CI).",
     ),
     DeclareLaunchArgument(
+        "view",
+        default_value="drivetrain",
+        choices=["drivetrain", "cloud", "openpose", "both"],
+        description="RViz layout: drivetrain (fixed frame odom), cloud (ZED point cloud), "
+        "openpose or both (point cloud + skeletons). Match the rover's camera:= option.",
+    ),
+    DeclareLaunchArgument(
         "fprime_gds",
         default_value="false",
         description="Open the F' GDS web UI in a browser.",
@@ -53,19 +66,35 @@ declare_args = [
 ]
 
 
-def generate_launch_description():
-    share = FindPackageShare("chassis_bringup")
+RVIZ_CONFIGS = {  # view:= -> (package, file under share/<package>/rviz/)
+    "drivetrain": ("chassis_bringup", "drivetrain.rviz"),
+    "cloud": ("people", "zed_points.rviz"),
+    "openpose": ("people", "people_rover.rviz"),
+    "both": ("people", "people_rover.rviz"),
+}
 
-    viz = IncludeLaunchDescription(
+
+def _viz(context):
+    package, config = RVIZ_CONFIGS[LaunchConfiguration("view").perform(context)]
+    sim = LaunchConfiguration("use_sim_time").perform(context).lower() in ("true", "1")
+    return [IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            PathJoinSubstitution([share, "launch", "viz.launch.py"])
+            PathJoinSubstitution([FindPackageShare("chassis_bringup"), "launch", "viz.launch.py"])
         ),
         launch_arguments={
             "rviz": LaunchConfiguration("rviz"),
             "foxglove": LaunchConfiguration("foxglove"),
             "use_sim_time": LaunchConfiguration("use_sim_time"),
+            "rviz_config": PathJoinSubstitution([FindPackageShare(package), "rviz", config]),
+            # The sim has odom (its EKF), so the rover moves in the view; the real drivetrain
+            # has no odom frame yet, so the view follows base_link.
+            "fixed_frame": "odom" if sim else "base_link",
         }.items(),
-    )
+    )]
+
+
+def generate_launch_description():
+    viz = OpaqueFunction(function=_viz)
 
     teleop = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(

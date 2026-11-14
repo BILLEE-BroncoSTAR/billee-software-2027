@@ -1,5 +1,123 @@
 {
   "configById": {
+    "3D!drivetrain": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 4,
+        "phi": 58,
+        "thetaOffset": 46,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.01,
+        "far": 5000
+      },
+      "followMode": "follow-position",
+      "followTf": "base_link",
+      "scene": {
+        "transforms": {
+          "showLabel": true,
+          "labelSize": 0.06,
+          "axisScale": 0.3
+        },
+        "backgroundColor": "#303030",
+        "meshUpAxis": "z_up"
+      },
+      "transforms": {},
+      "topics": {
+        "/odometry/filtered": {
+          "visible": true,
+          "type": "axis",
+          "axisScale": 0.2,
+          "historySize": 100
+        },
+        "/zed/points": {
+          "visible": true,
+          "pointSize": 2,
+          "colorMode": "rgb",
+          "colorField": "rgb"
+        },
+        "/people/markers": {
+          "visible": true
+        },
+        "/people/gesture_marker": {
+          "visible": true
+        }
+      },
+      "layers": {
+        "grid": {
+          "layerId": "foxglove.Grid",
+          "instanceId": "grid",
+          "label": "Grid",
+          "visible": true,
+          "frameLocked": true,
+          "order": 1,
+          "size": 20,
+          "divisions": 20,
+          "lineWidth": 1,
+          "color": "#a0a0a4ff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "urdf": {
+          "layerId": "foxglove.Urdf",
+          "instanceId": "urdf",
+          "label": "Robot Model",
+          "visible": true,
+          "frameLocked": false,
+          "order": 2,
+          "sourceType": "topic",
+          "topic": "/robot_description"
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26
+      }
+    },
+    "RawMessages!joy": {
+      "topicPath": "/joy",
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "fontSize": 14
+    },
+    "RawMessages!cmd_vel": {
+      "topicPath": "/diff_drive_controller/cmd_vel_unstamped",
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "fontSize": 14
+    },
     "Image!people": {
       "imageMode": {
         "imageTopic": "/people/debug_image/compressed"
@@ -44,102 +162,6 @@
         "poseEstimateThetaDeviation": 0.26
       }
     },
-    "3D!people": {
-      "cameraState": {
-        "perspective": true,
-        "distance": 7,
-        "phi": 60,
-        "thetaOffset": 60,
-        "target": [
-          0,
-          0,
-          0
-        ],
-        "targetOffset": [
-          0,
-          0,
-          0
-        ],
-        "targetOrientation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "fovy": 45,
-        "near": 0.01,
-        "far": 5000
-      },
-      "followMode": "follow-pose",
-      "followTf": "base_link",
-      "scene": {
-        "transforms": {
-          "showLabel": false,
-          "axisScale": 0.3
-        },
-        "backgroundColor": "#202020",
-        "meshUpAxis": "z_up"
-      },
-      "transforms": {},
-      "topics": {
-        "/people/markers": {
-          "visible": true
-        },
-        "/people/gesture_marker": {
-          "visible": true
-        },
-        "/zed/points": {
-          "visible": true,
-          "pointSize": 2,
-          "colorMode": "rgb",
-          "colorField": "rgb"
-        }
-      },
-      "layers": {
-        "grid": {
-          "layerId": "foxglove.Grid",
-          "instanceId": "grid",
-          "label": "Grid",
-          "visible": true,
-          "frameLocked": true,
-          "frameId": "base_link",
-          "order": 1,
-          "size": 20,
-          "divisions": 20,
-          "lineWidth": 1,
-          "color": "#a0a0a4ff",
-          "position": [
-            0,
-            0,
-            0
-          ],
-          "rotation": [
-            0,
-            0,
-            0
-          ]
-        },
-        "urdf": {
-          "layerId": "foxglove.Urdf",
-          "instanceId": "urdf",
-          "label": "Robot Model",
-          "visible": true,
-          "frameLocked": false,
-          "order": 2,
-          "sourceType": "topic",
-          "topic": "/robot_description"
-        }
-      },
-      "publish": {
-        "type": "point",
-        "poseTopic": "/move_base_simple/goal",
-        "pointTopic": "/clicked_point",
-        "poseEstimateTopic": "/initialpose",
-        "poseEstimateXDeviation": 0.5,
-        "poseEstimateYDeviation": 0.5,
-        "poseEstimateThetaDeviation": 0.26
-      }
-    },
     "RawMessages!gesture": {
       "topicPath": "/people/gesture",
       "diffEnabled": false,
@@ -157,12 +179,22 @@
   "layout": {
     "first": {
       "first": "Image!people",
-      "second": "3D!people",
+      "second": "3D!drivetrain",
       "direction": "row",
+      "splitPercentage": 40
+    },
+    "second": {
+      "first": "RawMessages!joy",
+      "second": {
+        "first": "RawMessages!cmd_vel",
+        "second": "RawMessages!gesture",
+        "direction": "column",
+        "splitPercentage": 50
+      },
+      "direction": "column",
       "splitPercentage": 45
     },
-    "second": "RawMessages!gesture",
-    "direction": "column",
-    "splitPercentage": 78
+    "direction": "row",
+    "splitPercentage": 75
   }
 }
