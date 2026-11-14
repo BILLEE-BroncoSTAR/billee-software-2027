@@ -11,19 +11,36 @@ Gazebo host it.
     ros2 launch chassis_bringup real.launch.py
 
     # no motor hardware — exercise the encoder feedback -> /diff_drive_controller/odom
-    # + /joint_states -> viewer path (no odom TF on this path; use fixed frame base_link):
+    # + odom TF + /joint_states -> viewer path (fixed frame odom):
     ros2 launch chassis_bringup real.launch.py can_interface:=mock rviz:=true
 
     # protocol-level test against a virtual CAN bus (see tooling/can-up):
     ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 
-WHY THIS FILE PATCHES use_sim_time
-----------------------------------
-`controllers.yaml` carries `use_sim_time: true` for the Gazebo path. A *standalone*
-`ros2_control_node` (this launch) started with `use_sim_time:=true` but no `/clock`
-publisher has a frozen RT update loop, and `load_controller` then blocks forever.
-So this launch writes a temp copy of `controllers.yaml` with `use_sim_time: false`
+WHY THIS FILE PATCHES controllers.yaml
+--------------------------------------
+This launch writes a temp copy of `controllers.yaml` with three real-hardware overrides
 and hands the controller_manager that. `controllers.yaml` itself is untouched.
+
+1. `use_sim_time: false`. `controllers.yaml` carries `use_sim_time: true` for the Gazebo
+   path. A *standalone* `ros2_control_node` (this launch) started with
+   `use_sim_time:=true` but no `/clock` publisher has a frozen RT update loop, and
+   `load_controller` then blocks forever.
+
+2. The wheel-odometry TF (`odom_tf:=true`, the default). In the sim the EKF
+   (navigation/pose_estim.launch.py) owns `odom -> base_footprint`, so `controllers.yaml`
+   keeps `enable_odom_tf: false`. Without the real EKF (`rover.launch.py vio:=true`) nothing
+   else publishes the `odom` frame, and the viewers' fixed frame `odom` doesn't exist. This turns
+   on `enable_odom_tf` and sets `base_frame_id: base_footprint`, the URDF root. It can't stay
+   `base_link`: robot_state_publisher already publishes `base_footprint -> base_link`, and
+   `odom -> base_link` would give base_link two parents and split the TF tree.
+   base_footprint is directly below base_link (same x/y/yaw), so the odometry is unchanged.
+   `odom_tf:=false` when an EKF publishes `odom -> base_footprint`; `rover.launch.py vio:=true`
+   passes it.
+
+3. The wheel-odometry covariance (`WHEEL_ODOM_COVARIANCE`). diff_drive_controller defaults
+   both covariance diagonals to zeros, which the EKF would read as an exact measurement,
+   even for the yaw rate, which the skidding wheels get most wrong.
 """
 
 import os
@@ -79,6 +96,13 @@ declare_args = [
         "the drivetrain (zero velocity, IDLE, controllers deactivate).",
     ),
     DeclareLaunchArgument(
+        "odom_tf",
+        default_value="true",
+        description="Publish odom -> base_footprint TF from the wheel odometry "
+        "(diff_drive_controller), so the viewers' fixed frame odom exists and the rover "
+        "moves in it. Set false once an EKF on the rover publishes that transform.",
+    ),
+    DeclareLaunchArgument(
         "rviz",
         default_value="false",
         description="Also start RViz2 with the drivetrain view (needs a display; use "
@@ -91,9 +115,18 @@ declare_args = [
     ),
 ]
 
+# Override 3 (module docstring). Order: x, y, z, roll, pitch, yaw. Starting values, to tune.
+WHEEL_ODOM_COVARIANCE = {
+    # vx: 0.05 m/s std. vyaw: 0.3 rad/s std, since skid steer misreads turns the most.
+    # vy, vz, roll and pitch rates can't be measured by a diff drive.
+    "twist_covariance_diagonal": [0.0025, 1e3, 1e3, 1e3, 1e3, 0.09],
+    # The integrated pose isn't fused (ekf_real.yaml takes velocity only).
+    "pose_covariance_diagonal": [0.01, 0.01, 1e3, 1e3, 1e3, 0.1],
+}
 
-def _write_wallclock_controllers(context):
-    """Copy the controllers YAML with controller_manager.use_sim_time forced false."""
+
+def _write_real_controllers(context):
+    """Copy the controllers YAML with the real-hardware overrides (see module docstring)."""
     desc_pkg = LaunchConfiguration("description_pkg").perform(context)
     rel = LaunchConfiguration("controllers_file").perform(context)
     src = os.path.join(get_package_share_directory(desc_pkg), *rel.split("/"))
@@ -102,6 +135,13 @@ def _write_wallclock_controllers(context):
 
     cm = cfg.setdefault("controller_manager", {}).setdefault("ros__parameters", {})
     cm["use_sim_time"] = False
+
+    ddc = cfg.setdefault("diff_drive_controller", {}).setdefault("ros__parameters", {})
+    ddc.update(WHEEL_ODOM_COVARIANCE)
+
+    if LaunchConfiguration("odom_tf").perform(context).lower() in ("true", "1"):
+        ddc["enable_odom_tf"] = True
+        ddc["base_frame_id"] = "base_footprint"
 
     fd, path = tempfile.mkstemp(prefix="controllers_real_", suffix=".yaml")
     with os.fdopen(fd, "w") as fh:
@@ -133,7 +173,7 @@ def _launch_setup(context):
         value_type=str,
     )
 
-    controllers_path = _write_wallclock_controllers(context)
+    controllers_path = _write_real_controllers(context)
 
     robot_state_publisher = Node(
         package="robot_state_publisher",

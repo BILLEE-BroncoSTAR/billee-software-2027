@@ -2,6 +2,7 @@
 
     ros2 launch zed_openpose zed_openpose.launch.py [svo_path:=/path/rec.svo2] [model_pose:=COCO]
     ros2 launch zed_openpose zed_openpose.launch.py openpose:=false     # camera + /zed/points only
+    ros2 launch zed_openpose zed_openpose.launch.py vio:=true           # + /zed/vio/odom (VIO)
 
 Usually started through `ros2 launch people people_rover.launch.py`, which adds the gesture node,
 robot_state_publisher and foxglove_bridge.
@@ -37,6 +38,12 @@ def _node():
         executable="zed_openpose_node",
         name="zed_openpose",
         output="screen",
+        # Headless node: hide any X display. While its libraries load (before main), the Jetson
+        # EGL stack the ZED SDK pulls in connects to $DISPLAY. In a VS Code dev-container terminal
+        # that is VS Code's X11 forwarding (:1), which never answered one request, so the node
+        # hung there for good: no log, no topics. Without DISPLAY it skips X and starts normally.
+        prefix="env -u DISPLAY",
+        exec_name="zed_openpose_node",  # launch output label, else "env" from the prefix
         parameters=[
             PathJoinSubstitution(
                 [FindPackageShare("zed_openpose"), "config", "zed_openpose.yaml"]),
@@ -47,6 +54,7 @@ def _node():
                 "target_frame": LaunchConfiguration("target_frame"),
                 "enable_pose": LaunchConfiguration("openpose"),
                 "publish_cloud": LaunchConfiguration("point_cloud"),
+                "publish_odom": LaunchConfiguration("vio"),
                 "use_sim_time": ParameterValue(LaunchConfiguration("use_sim_time"),
                                                value_type=bool),
             },
@@ -81,6 +89,10 @@ def generate_launch_description():
                               description="Run OpenPose (/people/*). false = camera only."),
         DeclareLaunchArgument("point_cloud", default_value="true",
                               description="Publish /zed/points (base_link via TF)."),
+        DeclareLaunchArgument("vio", default_value="false",
+                              description="Publish the ZED's visual-inertial odometry on "
+                              "/zed/vio/odom (base_footprint in odom) for the EKF. Needs the "
+                              "URDF's TF (robot_state_publisher)."),
         DeclareLaunchArgument("use_sim_time", default_value="false",
                               description="true next to the Jetson sim: stamp with sim time."),
         OpaqueFunction(function=_start),

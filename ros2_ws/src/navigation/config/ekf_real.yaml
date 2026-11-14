@@ -1,0 +1,40 @@
+### ekf config file: the real rover (rover.launch.py mode:=real vio:=true) ###
+# The same filter as ekf_sim.yaml; only the VIO source differs. Here it is the ZED 2i's own
+# visual-inertial odometry (zed_openpose_node publish_odom:=true), which publishes in the
+# synthetic VIO's format: odom <- base_footprint, pose covariance floored, z/roll/pitch unfused.
+ekf_filter_node:
+    ros__parameters:
+        frequency: 30.0
+
+        # Planar rover.
+        two_d_mode: true
+        publish_acceleration: true
+        publish_tf: true            # owns odom -> base_footprint (real.launch.py odom_tf:=false)
+
+        map_frame: map
+        odom_frame: odom
+        base_link_frame: base_footprint  # URDF root
+        world_frame: odom
+
+        # Wheel odometry: velocity only (vx, vyaw). Its pose would double-count
+        # position with the VIO pose below and make the filter overconfident.
+        # The EKF uses the covariance in each message; it can't be set here. The wheels' comes
+        # from real.launch.py (WHEEL_ODOM_COVARIANCE); see docs/architecture.md.
+        odom0: /diff_drive_controller/odom
+        odom0_config: [false, false, false,  # X, Y, Z
+                       false, false, false,  # Roll, Pitch, Yaw
+                       true,  false, false,  # Vx, Vy, Vz
+                       false, false, true,   # Vroll, Vpitch, Vyaw
+                       false, false, false]  # Ax, Ay, Az
+        # ZED VIO: pose only (x, y, yaw). Missing while the ZED's tracking isn't OK; the
+        # filter then runs on the wheels alone.
+        odom1: /zed/vio/odom
+        odom1_config: [true,  true,  false,  # X, Y, Z
+                       false, false, true,   # Roll, Pitch, Yaw
+                       false, false, false,  # Vx, Vy, Vz
+                       false, false, false,  # Vroll, Vpitch, Vyaw
+                       false, false, false]  # Ax, Ay, Az
+
+        odom1_differential: false
+        odom1_relative: true
+        odom1_queue_size: 2

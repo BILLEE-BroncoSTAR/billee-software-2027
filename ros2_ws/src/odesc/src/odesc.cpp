@@ -74,8 +74,15 @@ namespace odesc_ros2_control{
 
     // ros2_control interfaces (wheel rad/s, rad).
     double vel_setpoint_ = 0.0;
-    double pos_estimate_ = 0.0;
+    double pos_estimate_ = 0.0;  // relative to pos_zero_, so it starts at 0
     double vel_estimate_ = 0.0;
+    // Wheel angle (rad) of the first encoder reply. The firmware's Pos_Estimate counts
+    // from ODESC power-on, so it can be hundreds of radians when this driver starts.
+    // diff_drive_controller starts its odometry from wheel position 0 and would count
+    // that whole offset as one first-cycle wheel movement, putting the rover metres
+    // from the odom origin at a random heading. Kept for the driver's lifetime (not reset
+    // on activate) so positions stay continuous across deactivate/activate.
+    std::optional<double> pos_zero_;
 
     // Health, from the CAN traffic.
     SteadyClock::time_point last_encoder_rx_{};
@@ -375,13 +382,18 @@ void Axis::on_can_msg(const can_frame& frame) {
     switch (cmd) {
         case Get_Encoder_Estimates_msg_t::cmd_id: {
             if (Get_Encoder_Estimates_msg_t msg; try_decode(msg)) {
-                pos_estimate_ = msg.Pos_Estimate * (2 * M_PI) / this->gearing_;
-                vel_estimate_ = msg.Vel_Estimate * (2 * M_PI) / this->gearing_;
+                double pos = msg.Pos_Estimate * (2 * M_PI) / this->gearing_;
+                double vel = msg.Vel_Estimate * (2 * M_PI) / this->gearing_;
 
                 if(this->invert_){
-                  vel_estimate_ *= -1;
-                  pos_estimate_ *= -1;
+                  vel *= -1;
+                  pos *= -1;
                 }
+                if (!pos_zero_ && std::isfinite(pos)) {
+                  pos_zero_ = pos;
+                }
+                pos_estimate_ = pos_zero_ ? pos - *pos_zero_ : 0.0;
+                vel_estimate_ = vel;
                 last_encoder_rx_ = SteadyClock::now();
             }
         } break;

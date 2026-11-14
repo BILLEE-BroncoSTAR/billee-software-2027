@@ -73,13 +73,48 @@ The CAN node ID ↔ wheel map has two copies, kept in sync by hand: `odesc/confi
 
 The TF tree is `odom → base_footprint → base_link → …`. `base_footprint` is the URDF root, on
 the ground directly below `base_link` (the turning centre), and `robot_state_publisher` publishes everything below it. `diff_drive_controller`
-publishes `/diff_drive_controller/odom` but no TF (`enable_odom_tf: false`). The
-`odom → base_footprint` TF comes from the EKF in `navigation/launch/pose_estim.launch.py`,
-which only runs in sim (`sim_gz.launch.py navigation:=true`, the default). The EKF
+publishes `/diff_drive_controller/odom` but, in `controllers.yaml`, no TF (`enable_odom_tf: false`). In sim the
+`odom → base_footprint` TF comes from the EKF in `navigation/launch/pose_estim.launch.py`
+(`sim_gz.launch.py navigation:=true`, the default). The EKF
 (`navigation/config/ekf_sim.yaml`, `two_d_mode: true`) fuses wheel odometry
 (`/diff_drive_controller/odom`) as velocity only (`vx`, `vyaw`) and the synthetic VIO
 (`/depth_cam/vio/odom`) as pose only (`x`, `y`, `yaw`), so position isn't counted twice.
-The real path has no EKF yet, and so no `odom` frame.
+
+On the real path, `odom → base_footprint` has one of two publishers, chosen by
+`rover.launch.py vio:=`:
+
+- `vio:=false` (default): wheel odometry alone. `real.launch.py` (`odom_tf:=true`) turns on
+  `enable_odom_tf` with `base_frame_id: base_footprint`, so `diff_drive_controller` publishes the
+  TF. The base frame must be `base_footprint`, not `base_link`: `base_link` already has
+  `base_footprint` as its parent, and a TF frame can have only one.
+- `vio:=true`: the real EKF, the counterpart of the sim's. `zed_openpose_node`
+  (`publish_odom:=true`) turns on the ZED SDK's positional tracking (visual-inertial: stereo
+  plus the 2i's IMU) and publishes `/zed/vio/odom`. That message is the base's pose, not the
+  camera's: the node removes the camera mount's lever arm (`zed_openpose/vio_pose.hpp`). It uses
+  the synthetic VIO's format (`odom ← base_footprint`, z/roll/pitch unfused) and is published only
+  while tracking is `OK`. `robot_localization` (`navigation/config/ekf_real.yaml`) fuses it exactly
+  as the sim fuses its VIO, and `rover.launch.py` passes `odom_tf:=false` so the two don't fight.
+  The SDK's area memory is off, so the pose never jumps on a loop closure. Jumps belong in a
+  `map` frame, which the rover doesn't have yet.
+
+The real wheel odometry reports a covariance (`real.launch.py`, `WHEEL_ODOM_COVARIANCE`):
+vx std 0.05 m/s and vyaw std 0.3 rad/s. `diff_drive_controller`'s default is all zeros, which the
+EKF would take as an exact yaw rate.
+
+**Why the real-only settings live in `real.launch.py`.** Sim and real share one
+`controllers.yaml`, so the wheel geometry exists only once. There is no `controllers_real.yaml`.
+`real.launch.py` writes a temporary copy of `controllers.yaml` with the real-hardware differences
+applied: `use_sim_time: false`, the wheel-odometry TF when `odom_tf:=true`, and this covariance.
+The covariance can't go in `ekf_real.yaml` instead. `robot_localization` takes each sensor's
+covariance from the message it receives and has no setting to override it, so the value has to be
+a `diff_drive_controller` parameter.
+
+Possible cleanup: move the fixed overrides (`use_sim_time`, the covariance) into a small
+`controllers_real.yaml` that `real.launch.py` merges over `controllers.yaml`. Only `odom_tf` would
+then stay in Python, because it follows a launch argument. Putting the covariance in
+`controllers.yaml` for both would also give the sim EKF realistic wheel uncertainty. Its wheel
+odometry reports turns about 1.6× too fast, so that would likely help, but the sim tuning would
+need rechecking.
 
 Wheel odometry alone drifts quickly when the rover turns. The six wheels skid sideways, and
 `diff_drive_controller` assumes they don't. In Gazebo it reports about 1.6× the real turn rate

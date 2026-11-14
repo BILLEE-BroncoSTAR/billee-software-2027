@@ -54,6 +54,14 @@ declare_args = [
         "openpose or both (point cloud + skeletons). Match the rover's camera:= option.",
     ),
     DeclareLaunchArgument(
+        "fixed_frame",
+        default_value="odom",
+        description="RViz fixed frame, for every view:=. odom: the rover drives across the "
+        "grid (odom comes from the sim's EKF, or on real hardware from rover.launch.py's "
+        "wheel odometry, odom_tf:=true). base_link: the view rides along with the rover; "
+        "use it when the rover runs without an odom frame (odom_tf:=false and no EKF).",
+    ),
+    DeclareLaunchArgument(
         "fprime_gds",
         default_value="false",
         description="Open the F' GDS web UI in a browser.",
@@ -76,7 +84,6 @@ RVIZ_CONFIGS = {  # view:= -> (package, file under share/<package>/rviz/)
 
 def _viz(context):
     package, config = RVIZ_CONFIGS[LaunchConfiguration("view").perform(context)]
-    sim = LaunchConfiguration("use_sim_time").perform(context).lower() in ("true", "1")
     return [IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([FindPackageShare("chassis_bringup"), "launch", "viz.launch.py"])
@@ -86,9 +93,9 @@ def _viz(context):
             "foxglove": LaunchConfiguration("foxglove"),
             "use_sim_time": LaunchConfiguration("use_sim_time"),
             "rviz_config": PathJoinSubstitution([FindPackageShare(package), "rviz", config]),
-            # The sim has odom (its EKF), so the rover moves in the view; the real drivetrain
-            # has no odom frame yet, so the view follows base_link.
-            "fixed_frame": "odom" if sim else "base_link",
+            # Both paths publish odom (sim: EKF; real: wheel-odometry TF), so the rover
+            # moves across the grid in either.
+            "fixed_frame": LaunchConfiguration("fixed_frame"),
         }.items(),
     )]
 

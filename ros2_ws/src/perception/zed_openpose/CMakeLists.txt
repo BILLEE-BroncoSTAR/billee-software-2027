@@ -7,12 +7,18 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 
-# The 3D lift (skeleton_3d.hpp) has no ZED/OpenPose dependency: test it on every machine.
+# The 3D lift (skeleton_3d.hpp) and the VIO pose math (vio_pose.hpp) have no ZED/OpenPose
+# dependency: test them on every machine.
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(tf2 REQUIRED)
   ament_add_gtest(test_skeleton_3d test/test_skeleton_3d.cpp)
   target_include_directories(test_skeleton_3d PRIVATE include)
   target_compile_features(test_skeleton_3d PRIVATE cxx_std_17)
+  ament_add_gtest(test_vio_pose test/test_vio_pose.cpp)
+  target_include_directories(test_vio_pose PRIVATE include)
+  target_compile_features(test_vio_pose PRIVATE cxx_std_17)
+  ament_target_dependencies(test_vio_pose tf2)
 endif()
 
 install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
@@ -42,6 +48,7 @@ find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs
 find_package(rclcpp REQUIRED)
 find_package(people_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(tf2 REQUIRED)
@@ -52,7 +59,7 @@ target_compile_features(zed_openpose_node PUBLIC cxx_std_17)
 target_include_directories(zed_openpose_node PRIVATE
   include ${OPENPOSE_INCLUDE_DIR} ${ZED_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 ament_target_dependencies(zed_openpose_node
-  rclcpp people_msgs geometry_msgs sensor_msgs visualization_msgs tf2 tf2_ros)
+  rclcpp people_msgs geometry_msgs nav_msgs sensor_msgs visualization_msgs tf2 tf2_ros)
 # OpenPose links OpenCV's highgui, which drags in the system GTK + GLib, while the pixi env has
 # its own, newer GLib: mixing the two aborts at load ("libgio-2.0.so.0: undefined symbol
 # g_variant_builder_..."). Link the env's GLib first and keep it in NEEDED, so it loads before

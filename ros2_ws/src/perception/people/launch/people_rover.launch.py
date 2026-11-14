@@ -9,6 +9,9 @@
     # modes: OpenPose + point cloud (default), or the point cloud alone (no OpenPose, no gestures)
     ros2 launch people people_rover.launch.py openpose:=false
 
+    # + the ZED's visual-inertial odometry for the EKF (/zed/vio/odom); rover.launch.py vio:=true
+    ros2 launch people people_rover.launch.py vio:=true
+
 Skeletons are placed in base_link, i.e. relative to the rover, using the URDF's
 base_link -> camera_link mount. Ground station layouts, one per mode:
   Foxglove (ws://<rover>:8765): people/foxglove/people_rover.json | zed_points.json
@@ -49,6 +52,9 @@ def generate_launch_description():
                               description="Run OpenPose + gestures. false = point cloud only."),
         DeclareLaunchArgument("point_cloud", default_value="true",
                               description="Publish the ZED point cloud on /zed/points."),
+        DeclareLaunchArgument("vio", default_value="false",
+                              description="Publish the ZED's visual-inertial odometry on "
+                              "/zed/vio/odom for the EKF."),
         DeclareLaunchArgument("use_sim_time", default_value="false",
                               description="true next to the Jetson sim: stamp with sim time."),
 
@@ -62,6 +68,7 @@ def generate_launch_description():
                 "svo_path": LaunchConfiguration("svo_path"),
                 "openpose": openpose,
                 "point_cloud": LaunchConfiguration("point_cloud"),
+                "vio": LaunchConfiguration("vio"),
                 "use_sim_time": LaunchConfiguration("use_sim_time"),
             }.items(),
         ),

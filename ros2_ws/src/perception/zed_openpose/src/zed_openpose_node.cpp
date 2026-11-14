@@ -9,11 +9,17 @@
 //   /people/debug_image(/compressed)                      OpenPose's rendering (opencv_display)
 //   /zed/points                    PointCloud2            optional (ogl_ptcloud)
 //   /zed/depth_image               Image                  optional (depth_display)
+//   /zed/vio/odom                  Odometry               optional (publish_odom), ROS addition
 // The sample's floor-plane alignment is replaced by TF: the ZED reports points in its left camera
 // frame with ROS axes, and the URDF says where camera_link sits on the rover.
 //
 // enable_pose:=false is the camera-only mode: no OpenPose thread, no model load, no /people/*;
 // the ZED thread grabs at the camera's own rate and only publishes /zed/points (+ depth).
+//
+// publish_odom:=true turns on the SDK's positional tracking (visual-inertial odometry) and
+// publishes base_footprint's pose in odom for the EKF, in the synthetic VIO's (zed2i) format.
+// Tracking needs every frame, so the ZED thread then grabs at the camera's rate even while
+// OpenPose is busy, and hands OpenPose only the newest frame when it asks for one.
 //
 // Copyright (c) 2019 Stereolabs, MIT License (LICENSE.zed-openpose). ROS 2 port for BILLEE.
 
@@ -24,6 +30,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -35,6 +42,7 @@
 
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "people_msgs/msg/skeletons.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/compressed_image.hpp"
@@ -48,6 +56,7 @@
 #include "visualization_msgs/msg/marker_array.hpp"
 
 #include "zed_openpose/skeleton_3d.hpp"
+#include "zed_openpose/vio_pose.hpp"
 
 namespace zed_openpose
 {
@@ -80,6 +89,26 @@ sl::DEPTH_MODE parse_depth_mode(const std::string & name)
       "depth_mode must be PERFORMANCE, QUALITY, ULTRA, NEURAL_LIGHT, NEURAL or NEURAL_PLUS");
   }
   return it->second;
+}
+
+sl::POSITIONAL_TRACKING_MODE parse_tracking_mode(const std::string & name)
+{
+  static const std::map<std::string, sl::POSITIONAL_TRACKING_MODE> names = {
+    {"GEN_1", sl::POSITIONAL_TRACKING_MODE::GEN_1},
+    {"GEN_3", sl::POSITIONAL_TRACKING_MODE::GEN_3}};
+  const auto it = names.find(name);
+  if (it == names.end()) {
+    throw std::invalid_argument("tracking_mode must be GEN_1 or GEN_3");
+  }
+  return it->second;
+}
+
+// ZED transform -> tf2 (both in ROS axes: the camera opens with RIGHT_HANDED_Z_UP_X_FWD).
+tf2::Transform to_tf2(const sl::Transform & t)
+{
+  const sl::Orientation q = t.getOrientation();
+  const sl::Translation p = t.getTranslation();
+  return tf2::Transform(tf2::Quaternion(q.x, q.y, q.z, q.w), tf2::Vector3(p.x, p.y, p.z));
 }
 
 // cv::Mat view of a ZED CPU matrix (the sample's slMat2cvMat, for the types used here).
@@ -158,6 +187,14 @@ public:
     target_frame_ = declare_parameter<std::string>("target_frame", "base_link");
     cloud_step_ = declare_parameter<int>("cloud_step", 4);
     jpeg_quality_ = declare_parameter<int>("jpeg_quality", 80);
+    // VIO (positional tracking) for the EKF.
+    publish_odom_ = declare_parameter<bool>("publish_odom", false);
+    odom_topic_ = declare_parameter<std::string>("odom_topic", "/zed/vio/odom");
+    odom_frame_ = declare_parameter<std::string>("odom_frame", "odom");
+    base_frame_ = declare_parameter<std::string>("base_frame", "base_footprint");
+    tracking_mode_ = declare_parameter<std::string>("tracking_mode", "GEN_1");
+    min_position_var_ = declare_parameter<double>("min_position_var", 9e-4);
+    min_yaw_var_ = declare_parameter<double>("min_yaw_var", 4e-4);
 
     if (!model_folder_.empty() && model_folder_.back() != '/') {
       model_folder_ += '/';  // OpenPose appends "pose/<model>/..." to it as is
@@ -168,9 +205,13 @@ public:
     if (scale_gap_ <= 0. && scale_number_ > 1) {
       throw std::invalid_argument("scale_gap must be > 0 when scale_number > 1");
     }
-    if (!enable_pose_ && !publish_cloud_ && !publish_depth_) {
+    if (!enable_pose_ && !publish_cloud_ && !publish_depth_ && !publish_odom_) {
       throw std::invalid_argument(
-        "enable_pose, publish_cloud and publish_depth are all false: nothing to publish");
+        "enable_pose, publish_cloud, publish_depth and publish_odom are all false: "
+        "nothing to publish");
+    }
+    if (min_position_var_ <= 0. || min_yaw_var_ <= 0.) {
+      throw std::invalid_argument("min_position_var and min_yaw_var must be > 0");
     }
 
     open_zed();
@@ -187,6 +228,9 @@ public:
     }
     if (publish_depth_) {
       depth_pub_ = create_publisher<sensor_msgs::msg::Image>("/zed/depth_image", 1);
+    }
+    if (publish_odom_) {
+      odom_pub_ = create_publisher<nav_msgs::msg::Odometry>(odom_topic_, 10);
     }
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -261,6 +305,24 @@ private:
     lens.transform.rotation.w = 1.0;
     static_tf_ = std::make_unique<tf2_ros::StaticTransformBroadcaster>(this);
     static_tf_->sendTransform(lens);
+
+    if (publish_odom_) {
+      sl::PositionalTrackingParameters tracking;
+      // No area memory: its loop closures make the pose jump, and odom must stay continuous.
+      // Jumps belong in a map frame, which the rover doesn't have yet.
+      tracking.enable_area_memory = false;
+      tracking.enable_imu_fusion = true;
+      tracking.set_gravity_as_origin = true;
+      tracking.mode = parse_tracking_mode(tracking_mode_);
+      const sl::ERROR_CODE tracked = zed_.enablePositionalTracking(tracking);
+      if (tracked != sl::ERROR_CODE::SUCCESS) {
+        throw std::runtime_error(
+          std::string("ZED positional tracking failed to start: ") + sl::toString(tracked).c_str());
+      }
+      RCLCPP_INFO(
+        get_logger(), "ZED positional tracking %s on: %s (%s <- %s)", tracking_mode_.c_str(),
+        odom_topic_.c_str(), odom_frame_.c_str(), base_frame_.c_str());
+    }
   }
 
   // The sample's run(): grab while OpenPose works on the previous frame.
@@ -287,7 +349,8 @@ private:
 
     while (!quit_ && rclcpp::ok()) {
       // With OpenPose, grab only once it has taken the last frame; camera-only grabs freely.
-      if (enable_pose_ && !need_new_image_) {
+      // Tracking (publish_odom) needs every frame, so it grabs freely too.
+      if (enable_pose_ && !publish_odom_ && !need_new_image_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         continue;
       }
@@ -311,8 +374,15 @@ private:
         rclcpp::Time(
         static_cast<int64_t>(zed_.getTimestamp(sl::TIME_REFERENCE::IMAGE).getNanoseconds()),
         RCL_ROS_TIME) : now();
-      // XYZBGRA: the sample's XYZRGBA with the colour bytes in ROS's PointCloud2 rgb order.
-      zed_.retrieveMeasure(xyz_buffer, sl::MEASURE::XYZBGRA, sl::MEM::CPU, resolution);
+      if (publish_odom_) {publish_vio(stamp);}
+
+      // Read once: the OpenPose thread may ask for a frame at any time, and the next grab
+      // serves it. Without publish_odom the wait above already made this true.
+      const bool pose_frame = enable_pose_ && need_new_image_;
+      if (publish_cloud_ || pose_frame) {
+        // XYZBGRA: the sample's XYZRGBA with the colour bytes in ROS's PointCloud2 rgb order.
+        zed_.retrieveMeasure(xyz_buffer, sl::MEASURE::XYZBGRA, sl::MEM::CPU, resolution);
+      }
 
       if (publish_depth_) {
         zed_.retrieveImage(depth_img_buffer, sl::VIEW::DEPTH, sl::MEM::CPU, resolution);
@@ -324,7 +394,7 @@ private:
         cloud_sent = true;
       }
       RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 10000, "ZED %.1f fps", zed_.getCurrentFPS());
-      if (!enable_pose_) {continue;}
+      if (!pose_frame) {continue;}
 
       auto frame = std::make_shared<Frame>();
       frame->stamp = stamp;
@@ -527,12 +597,72 @@ private:
     cloud_pub_->publish(cloud);
   }
 
+  // The SDK's tracked camera pose -> base_frame in odom_frame (vio_pose.hpp), for the EKF.
+  // Published only while tracking is OK; meanwhile the EKF runs on the wheel odometry alone.
+  void publish_vio(const rclcpp::Time & stamp)
+  {
+    sl::Pose camera;
+    const sl::POSITIONAL_TRACKING_STATE state =
+      zed_.getPosition(camera, sl::REFERENCE_FRAME::WORLD);
+    if (state != sl::POSITIONAL_TRACKING_STATE::OK) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000, "ZED tracking %s: not publishing %s",
+        sl::toString(state).c_str(), odom_topic_.c_str());
+      return;
+    }
+    if (!base_to_camera_) {
+      // Static (URDF mount + this node's lens offset), so look it up once.
+      try {
+        const auto t = tf_buffer_->lookupTransform(base_frame_, zed_frame_, tf2::TimePointZero);
+        const auto & r = t.transform.rotation;
+        const auto & p = t.transform.translation;
+        base_to_camera_ =
+          tf2::Transform(tf2::Quaternion(r.x, r.y, r.z, r.w), tf2::Vector3(p.x, p.y, p.z));
+        RCLCPP_INFO(
+          get_logger(), "VIO: %s at (%.3f, %.3f, %.3f) m in %s", zed_frame_.c_str(), p.x, p.y,
+          p.z, base_frame_.c_str());
+      } catch (const tf2::TransformException & e) {
+        RCLCPP_WARN_THROTTLE(
+          get_logger(), *get_clock(), 5000, "VIO: no TF %s <- %s yet (robot_state_publisher?): %s",
+          base_frame_.c_str(), zed_frame_.c_str(), e.what());
+        return;
+      }
+    }
+
+    const tf2::Transform base = camera_to_base(*base_to_camera_, to_tf2(camera.pose_data));
+    Covariance6 sdk_cov;
+    std::copy(std::begin(camera.pose_covariance), std::end(camera.pose_covariance), sdk_cov.begin());
+    const Covariance6 cov =
+      base_covariance(base_to_camera_->getBasis(), sdk_cov, min_position_var_, min_yaw_var_);
+
+    nav_msgs::msg::Odometry odom;
+    odom.header.stamp = stamp;
+    odom.header.frame_id = odom_frame_;
+    odom.child_frame_id = base_frame_;
+    odom.pose.pose.position.x = base.getOrigin().x();
+    odom.pose.pose.position.y = base.getOrigin().y();
+    odom.pose.pose.position.z = base.getOrigin().z();
+    const tf2::Quaternion q = base.getRotation();
+    odom.pose.pose.orientation.x = q.x();
+    odom.pose.pose.orientation.y = q.y();
+    odom.pose.pose.orientation.z = q.z();
+    odom.pose.pose.orientation.w = q.w();
+    std::copy(cov.begin(), cov.end(), odom.pose.covariance.begin());
+    // Twist stays zero and isn't fused: the EKF takes velocity from the wheels.
+    for (int i = 0; i < 6; ++i) {odom.twist.covariance[i * 7] = kUnfusedVariance;}
+    odom_pub_->publish(odom);
+  }
+
   // Parameters.
   std::string model_pose_, model_folder_, net_resolution_, output_resolution_flag_, svo_path_;
   std::string camera_resolution_, depth_mode_, camera_frame_, zed_frame_, target_frame_;
   int num_gpu_start_, scale_number_, image_width_, image_height_, cloud_step_, jpeg_quality_;
   double scale_gap_, render_threshold_, alpha_pose_, cloud_max_hz_;
   bool disable_blending_, publish_cloud_, publish_depth_, enable_pose_, use_ros_clock_;
+  bool publish_odom_;
+  std::string odom_topic_, odom_frame_, base_frame_, tracking_mode_;
+  double min_position_var_, min_yaw_var_;
+  std::optional<tf2::Transform> base_to_camera_;  // T_B_C, cached on the first VIO publish
 
   // ZED + OpenPose state shared by the two threads (the sample's globals).
   sl::Camera zed_;
@@ -551,6 +681,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_, depth_pub_;
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr compressed_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_;

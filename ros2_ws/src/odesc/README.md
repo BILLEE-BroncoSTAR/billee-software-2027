@@ -12,14 +12,20 @@ real-hardware counterpart to the Gazebo `ign_ros2_control/IgnitionSystem` backen
 ever sees the six wheel-joint `position`/`velocity` state interfaces and one
 `velocity` command interface per joint.
 
-`diff_drive_controller` publishes wheel odometry on `/diff_drive_controller/odom`
-but not the `odom → base_footprint` TF. That TF belongs to the EKF (see
-[docs/architecture.md](../../../docs/architecture.md#odometry-and-tf)).
+Wheel `position` counts from the first encoder reply after the driver starts, not from ODESC
+power-on (the firmware's `Pos_Estimate`). `diff_drive_controller` starts its odometry from
+position 0, so an absolute angle of hundreds of radians would otherwise look like one huge
+first-cycle wheel movement and put the rover metres from the `odom` origin.
+
+`diff_drive_controller` publishes wheel odometry on `/diff_drive_controller/odom`. In sim
+the `odom → base_footprint` TF belongs to the EKF; on the real path `real.launch.py`
+(`odom_tf:=true`, the default) has `diff_drive_controller` publish it from this wheel
+odometry (see [docs/architecture.md](../../../docs/architecture.md#odometry-and-tf)).
 
 ```
                        ┌────────────────────────────┐
  /diff_drive_controller │  diff_drive_controller     │  /diff_drive_controller/odom
- /cmd_vel_unstamped ───►│  (same config either way)  ├───► (no TF: enable_odom_tf: false)
+ /cmd_vel_unstamped ───►│  (same config either way)  ├───► (+ odom TF on real, odom_tf:=true)
                        └──────────┬─────────────────┘
                                   │ wheel-joint rad, rad/s
               ┌───────────────────┴───────────────────┐
