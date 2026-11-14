@@ -1,41 +1,60 @@
 {
   "configById": {
-    "Image!camera": {
-      "foxglovePanelTitle": "Camera",
-      "cameraState": {
-        "distance": 20,
-        "perspective": true,
-        "phi": 60,
-        "target": [0, 0, 0],
-        "targetOffset": [0, 0, 0],
-        "targetOrientation": [0, 0, 0, 1],
-        "thetaOffset": 45,
-        "fovy": 45,
-        "near": 0.5,
-        "far": 5000
-      },
-      "followMode": "follow-pose",
-      "scene": {},
-      "transforms": {},
-      "topics": {},
-      "layers": {},
-      "publish": {
-        "type": "point",
-        "poseTopic": "/move_base_simple/goal",
-        "pointTopic": "/clicked_point",
-        "poseEstimateTopic": "/initialpose",
-        "poseEstimateXDeviation": 0.5,
-        "poseEstimateYDeviation": 0.5,
-        "poseEstimateThetaDeviation": 0.26
-      },
+    "Tab!front": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "title": "cam0",
+          "layout": "Image!cam0"
+        },
+        {
+          "title": "ZED 2i",
+          "layout": "Image!zed"
+        }
+      ]
+    },
+    "Image!cam0": {
+      "foxglovePanelTitle": "Front (cam0)",
       "imageMode": {
-        "imageTopic": "/depth_cam/image",
-        "calibrationTopic": "/depth_cam/camera_info"
+        "imageTopic": "/cam0/video"
+      }
+    },
+    "Image!zed": {
+      "foxglovePanelTitle": "Front (ZED 2i, camera:=openpose/both)",
+      "imageMode": {
+        "imageTopic": "/people/debug_image/compressed"
+      }
+    },
+    "Image!cam3": {
+      "foxglovePanelTitle": "Top front (cam3)",
+      "imageMode": {
+        "imageTopic": "/cam3/video"
+      }
+    },
+    "Image!cam1": {
+      "foxglovePanelTitle": "Rear left (cam1)",
+      "imageMode": {
+        "imageTopic": "/cam1/video"
+      }
+    },
+    "Image!cam4": {
+      "foxglovePanelTitle": "Reverse (cam4)",
+      "imageMode": {
+        "imageTopic": "/cam4/video"
+      }
+    },
+    "Image!cam2": {
+      "foxglovePanelTitle": "Rear right (cam2)",
+      "imageMode": {
+        "imageTopic": "/cam2/video"
       }
     },
     "map!gps": {
       "foxglovePanelTitle": "GPS Map",
-      "center": { "lat": 38.418, "lon": -110.777 },
+      "center": {
+        "lat": 38.418,
+        "lon": -110.777
+      },
       "zoomLevel": 18,
       "customTileUrl": "",
       "disabledTopics": [],
@@ -53,9 +72,22 @@
         "distance": 12,
         "phi": 45,
         "thetaOffset": 46,
-        "target": [0, 0, 0],
-        "targetOffset": [0, 0, 0],
-        "targetOrientation": [0, 0, 0, 1],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
         "fovy": 45,
         "near": 0.01,
         "far": 5000
@@ -63,7 +95,11 @@
       "followMode": "follow-position",
       "followTf": "base_link",
       "scene": {
-        "transforms": { "showLabel": true, "labelSize": 0.06, "axisScale": 0.3 },
+        "transforms": {
+          "showLabel": true,
+          "labelSize": 0.06,
+          "axisScale": 0.3
+        },
         "backgroundColor": "#303030"
       },
       "transforms": {},
@@ -78,14 +114,22 @@
           "visible": true,
           "type": "arrow",
           "color": "#4a90e2ff",
-          "arrowScale": [0.6, 0.12, 0.12],
+          "arrowScale": [
+            0.6,
+            0.12,
+            0.12
+          ],
           "historySize": 100
         },
         "/odometry/global": {
           "visible": true,
           "type": "arrow",
           "color": "#7ed321ff",
-          "arrowScale": [0.6, 0.12, 0.12],
+          "arrowScale": [
+            0.6,
+            0.12,
+            0.12
+          ],
           "historySize": 100
         }
       },
@@ -101,8 +145,16 @@
           "divisions": 20,
           "lineWidth": 1,
           "color": "#a0a0a4ff",
-          "position": [0, 0, 0],
-          "rotation": [0, 0, 0]
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
         },
         "urdf": {
           "layerId": "foxglove.Urdf",
@@ -128,16 +180,38 @@
   },
   "globalVariables": {},
   "userNodes": {},
-  "playbackConfig": { "speed": 1 },
+  "playbackConfig": {
+    "speed": 1
+  },
   "layout": {
     "direction": "row",
-    "first": "Image!camera",
+    "first": {
+      "direction": "column",
+      "first": {
+        "direction": "row",
+        "first": "Tab!front",
+        "second": "Image!cam3",
+        "splitPercentage": 50
+      },
+      "second": {
+        "direction": "row",
+        "first": "Image!cam1",
+        "second": {
+          "direction": "row",
+          "first": "Image!cam4",
+          "second": "Image!cam2",
+          "splitPercentage": 50
+        },
+        "splitPercentage": 33.3
+      },
+      "splitPercentage": 50
+    },
     "second": {
       "direction": "column",
       "first": "map!gps",
       "second": "3D!odometry",
       "splitPercentage": 50
     },
-    "splitPercentage": 55
+    "splitPercentage": 62
   }
 }

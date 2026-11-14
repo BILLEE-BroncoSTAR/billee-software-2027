@@ -1,270 +1,422 @@
 #!/usr/bin/env python3
-"""
-CSI (Argus) camera -> NVENC -> foxglove_msgs/CompressedVideo publisher.
+"""One CSI camera (Argus) -> hardware H.264 + JPEG -> ROS, for Foxglove and RViz.
 
-Launch example (one camera):
-  ros2 run <your_pkg> csi_compressed_video_pub --ros-args \
-    -p sensor_id:=0 \
-    -p width:=1280 -p height:=720 -p fps:=30 \
-    -p bitrate:=3000000 -p gop:=30 \
-    -p encoding:=h264 \
-    -p topic:=/cam0/video -p frame_id:=cam0_optical
+    ros2 run camera_stream csi_compressed_video_pub --ros-args -p sensor_id:=0 -p name:=front \\
+        -p video_topic:=/cam0/video -p jpeg_topic:=/cam0/image_raw/compressed
 
-Run 6 cameras by launching 6 instances with different sensor_id/topic/frame_id.
+Publishes
+  video_topic  foxglove_msgs/CompressedVideo, H.264 (Annex B), one frame per message:
+               Foxglove's Image panel. About `bitrate` bits/s whatever the scene.
+  jpeg_topic   sensor_msgs/CompressedImage, JPEG at jpeg_width x jpeg_height, jpeg_fps: RViz's
+               Image display (a topic ending in /compressed selects that transport) and Foxglove.
+               DDS sends it only while something subscribes.
+
+Why a gst-launch-1.0 child process instead of GStreamer's Python bindings: ROS here comes from the
+pixi environment (Python 3.12), which has no GStreamer bindings, while NVIDIA's camera and encoder
+plugins (nvarguscamerasrc, nvv4l2h264enc, nvjpegenc) are built for the system GStreamer. The
+system gst-launch-1.0 runs the pipeline in its own process with the system libraries and writes
+the H.264 byte stream to stdout and the JPEGs to a second pipe; this node splits them into frames.
+
+A missing camera never crashes the launch. If the sensor wasn't detected at boot, or the Argus
+socket or gst-launch-1.0 is missing, or the pipeline fails, the node logs one warning, publishes a
+low-rate placeholder on both topics ("NO CAMERA" text when the pango plugin is installed, colour
+bars otherwise), and checks again every recheck_s seconds. source:=test sends a moving test
+pattern through the same encoders, to test with no camera.
 """
 
 from __future__ import annotations
 
+import collections
+import glob
+import os
+import signal
+import subprocess
 import threading
-from typing import Optional
+import time
+from typing import Callable, List, Optional
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
-
-from foxglove_msgs.msg import CompressedVideo
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage
 
-import gi  # type: ignore
-gi.require_version("Gst", "1.0")
-from gi.repository import Gst, GLib  # type: ignore
+try:
+    from foxglove_msgs.msg import CompressedVideo
+except ImportError:  # warned about in __init__
+    CompressedVideo = None
+
+GST_PLUGIN_DIR = "/usr/lib/aarch64-linux-gnu/gstreamer-1.0"
+ARGUS_SOCKET = "/tmp/argus_socket"
+# nvarguscamerasrc, nvvidconv, nvv4l2h26xenc, nvjpegenc
+NVIDIA_PLUGINS = ("nvarguscamerasrc", "nvvidconv", "nvvideo4linux2", "nvjpeg")
+
+# Access unit delimiter NAL unit after a 3-byte start code. insert-aud=true makes the encoder put
+# one at the start of every frame, so the byte stream splits into frames there. 00 00 01 can't
+# occur inside a NAL unit (emulation prevention), so the pattern only matches real delimiters.
+AUD = {"h264": b"\x00\x00\x01\x09", "h265": b"\x00\x00\x01\x46\x01"}
+
+
+def split_access_units(buf: bytearray, aud: bytes) -> List[bytes]:
+    """Remove and return the complete access units at the front of buf.
+
+    A unit runs from one delimiter to the next, so the newest stays in buf until the next frame
+    starts. Bytes before the first delimiter (a stream joined mid-frame) are dropped.
+    """
+    starts = []
+    i = buf.find(aud)
+    while i != -1:
+        starts.append(i - 1 if i > 0 and buf[i - 1] == 0 else i)  # 4-byte start code
+        i = buf.find(aud, i + len(aud))
+    if len(starts) < 2:
+        if starts and starts[0] > 0:
+            del buf[: starts[0]]
+        elif not starts and len(buf) > len(aud):
+            del buf[: -len(aud)]  # keep a start code + delimiter split across reads
+        return []
+    units = [bytes(buf[a:b]) for a, b in zip(starts, starts[1:])]
+    del buf[: starts[-1]]
+    return units
+
+
+def split_jpegs(buf: bytearray) -> List[bytes]:
+    """Remove and return the complete JPEGs (SOI ... EOI) at the front of buf.
+
+    0xFF inside JPEG entropy-coded data is stuffed (FF 00), so FF D9 only appears as the end.
+    """
+    images = []
+    while True:
+        soi = buf.find(b"\xff\xd8")
+        if soi == -1:
+            if len(buf) > 1:
+                del buf[:-1]  # keep an FF that may start a marker split across reads
+            return images
+        eoi = buf.find(b"\xff\xd9", soi + 2)
+        if eoi == -1:
+            del buf[:soi]
+            return images
+        images.append(bytes(buf[soi: eoi + 2]))
+        del buf[: eoi + 2]
+
+
+def detected_csi_sensors() -> int:
+    """CSI sensors the kernel probed at boot. Argus numbers them 0..n-1 in device-tree order."""
+    count = 0
+    for path in glob.glob("/sys/class/video4linux/video*/name"):
+        try:
+            with open(path) as fh:
+                count += fh.read().startswith("vi-output")
+        except OSError:
+            pass
+    return count
+
+
+def have_plugin(name: str) -> bool:
+    return os.path.exists(os.path.join(GST_PLUGIN_DIR, f"libgst{name}.so"))
 
 
 class CSICompressedVideoPublisher(Node):
     def __init__(self) -> None:
         super().__init__("csi_compressed_video_publisher")
 
-        # ---- Parameters ----
-        self.declare_parameter("topic", "/camera/video")
-        self.declare_parameter("frame_id", "camera_optical_frame")
-        self.declare_parameter("sensor_id", 0)
+        p = self.declare_parameter
+        self.cam_name = str(p("name", "camera").value)
+        self.sensor_id = int(p("sensor_id", 0).value)
+        self.source = str(p("source", "argus").value)  # argus | test
+        self.video_topic = str(p("video_topic", "/cam0/video").value)
+        self.jpeg_topic = str(p("jpeg_topic", "/cam0/image_raw/compressed").value)
+        self.frame_id = str(p("frame_id", "cam0_optical").value)
+        self.width = int(p("width", 1280).value)
+        self.height = int(p("height", 720).value)
+        self.fps = int(p("fps", 30).value)
+        self.encoding = str(p("encoding", "h264").value).lower()
+        self.bitrate = int(p("bitrate", 3_000_000).value)
+        self.gop = int(p("gop", 30).value)
+        self.flip_method = int(p("flip_method", 0).value)
+        self.jpeg_width = int(p("jpeg_width", 640).value)
+        self.jpeg_height = int(p("jpeg_height", 360).value)
+        self.jpeg_fps = int(p("jpeg_fps", 10).value)  # 0 = no JPEG topic
+        self.jpeg_quality = int(p("jpeg_quality", 70).value)
+        self.placeholder_fps = max(1, int(p("placeholder_fps", 2).value))
+        self.recheck_s = float(p("recheck_s", 10.0).value)
+        self.gst_launch = str(p("gst_launch", "/usr/bin/gst-launch-1.0").value)
 
-        self.declare_parameter("width", 1280)
-        self.declare_parameter("height", 720)
-        self.declare_parameter("fps", 30)
+        if self.encoding not in AUD:
+            raise ValueError(f"encoding must be h264 or h265, not {self.encoding!r}")
+        if self.source not in ("argus", "test"):
+            raise ValueError(f"source must be argus or test, not {self.source!r}")
+        self.label = f"cam{self.sensor_id} {self.cam_name}"
 
-        self.declare_parameter("encoding", "h264")          # "h264" or "h265"
-        self.declare_parameter("bitrate", 3_000_000)        # bits/sec
-        self.declare_parameter("gop", 30)                   # frames between keyframes/IDRs
-
-        # If True, use GStreamer PTS (anchored) instead of ROS "now"
-        self.declare_parameter("use_pts", False)
-
-        # Optional: "flip-method" for nvarguscamerasrc (0..7)
-        self.declare_parameter("flip_method", 0)
-
-        self.topic: str = str(self.get_parameter("topic").value)
-        self.frame_id: str = str(self.get_parameter("frame_id").value)
-        self.sensor_id: int = int(self.get_parameter("sensor_id").value)
-
-        self.width: int = int(self.get_parameter("width").value)
-        self.height: int = int(self.get_parameter("height").value)
-        self.fps: int = int(self.get_parameter("fps").value)
-
-        self.encoding: str = str(self.get_parameter("encoding").value).lower()
-        self.bitrate: int = int(self.get_parameter("bitrate").value)
-        self.gop: int = int(self.get_parameter("gop").value)
-
-        self.use_pts: bool = bool(self.get_parameter("use_pts").value)
-        self.flip_method: int = int(self.get_parameter("flip_method").value)
-
-        if self.encoding not in ("h264", "h265"):
-            raise ValueError("encoding must be 'h264' or 'h265'")
-
-        # ---- QoS: best-effort video (drop frames, don't build latency) ----
-        qos = QoSProfile(
-            history=HistoryPolicy.KEEP_LAST,
-            depth=1,
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            durability=DurabilityPolicy.VOLATILE,
-        )
-        self.pub = self.create_publisher(CompressedVideo, self.topic, qos)
-        self.pub_image = self.create_publisher(CompressedImage, self.topic + "/image", qos)
-
-        # ---- GStreamer ----
-        Gst.init(None)
-
-        self._pipeline: Optional[Gst.Pipeline] = None
-        self._appsink: Optional[Gst.Element] = None
-        self._appsink_image: Optional[Gst.Element] = None
-
-        # GLib loop for appsink callbacks
-        self._glib_loop = GLib.MainLoop()
-        self._glib_thread = threading.Thread(target=self._glib_loop.run, daemon=True)
-
-        self._ros_anchor_ns: Optional[int] = None  # for PTS->ROS stamping
-
-        self._build_and_start_pipeline()
-        self._glib_thread.start()
-
-        self.get_logger().info(
-            f"CSI sensor-id={self.sensor_id} -> {self.encoding} -> {self.topic} "
-            f"({self.width}x{self.height}@{self.fps}, bitrate={self.bitrate}, gop={self.gop})"
-        )
-
-    def _pipeline_string(self) -> str:
-        # Capture
-        # nvarguscamerasrc outputs NVMM buffers (GPU-friendly)
-        src = (
-            f"nvarguscamerasrc sensor-id={self.sensor_id} ! "
-            f"video/x-raw(memory:NVMM),width={self.width},height={self.height},framerate={self.fps}/1 ! "
-        )
-
-        # Optional flip
-        if self.flip_method != 0:
-            src += f"nvvidconv flip-method={self.flip_method} ! video/x-raw(memory:NVMM),width={self.width},height={self.height},framerate={self.fps}/1 ! "
-
-        # Encode + parse
-        # Foxglove CompressedVideo constraints:
-        # - no B-frames
-        # - Annex-B byte-stream
-        # - access-unit alignment (one frame per buffer/message)
-        if self.encoding == "h264":
-            enc = (
-                "nvv4l2h264enc "
-                f"bitrate={self.bitrate} "
-                "insert-sps-pps=1 "
-                f"iframeinterval={self.gop} idrinterval={self.gop} "
-                "num-B-Frames=0 ! "
-                "h264parse config-interval=1 ! "
-                "video/x-h264,stream-format=byte-stream,alignment=au ! "
-            )
+        # Best effort, newest frames only: a slow link drops frames instead of building latency.
+        # Subscribers must be best effort too (RViz: Reliability Policy "Best Effort").
+        qos = QoSProfile(history=HistoryPolicy.KEEP_LAST, depth=2,
+                         reliability=ReliabilityPolicy.BEST_EFFORT,
+                         durability=DurabilityPolicy.VOLATILE)
+        self.video_pub = None
+        if CompressedVideo is not None:
+            self.video_pub = self.create_publisher(CompressedVideo, self.video_topic, qos)
         else:
-            enc = (
-                "nvv4l2h265enc "
-                f"bitrate={self.bitrate} "
-                "insert-sps-pps=1 "
-                f"iframeinterval={self.gop} idrinterval={self.gop} "
-                "num-B-Frames=0 ! "
-                "h265parse config-interval=1 ! "
-                "video/x-h265,stream-format=byte-stream,alignment=au ! "
-            )
+            self.get_logger().warning(
+                f"{self.label}: foxglove_msgs isn't built, so no H.264 on {self.video_topic}, "
+                f"only JPEG on {self.jpeg_topic}. Build it: "
+                "pixi run colcon build --packages-select foxglove_msgs camera_stream")
+        self.jpeg_pub = None
+        if self.jpeg_fps > 0:
+            self.jpeg_pub = self.create_publisher(CompressedImage, self.jpeg_topic, qos)
 
-        video_sink = "appsink name=vsink emit-signals=true sync=false max-buffers=1 drop=true"
-        image_sink = "appsink name=jsink emit-signals=true sync=false max-buffers=1 drop=true"
+        self._stop = threading.Event()
+        self._proc: Optional[subprocess.Popen] = None
+        self._proc_lock = threading.Lock()
+        self._frames = 0
+        self._supervisor = threading.Thread(target=self._supervise, daemon=True)
+        self._supervisor.start()
 
-        jpeg_branch = (
-            "queue ! "
-            "nvvidconv ! video/x-raw,format=I420 ! "
-            "nvjpegenc ! image/jpeg ! "
-        )
+    # ---- what can run ----
 
-        return (
-            src
-            + "tee name=t "
-            + "t. ! queue ! "
-            + enc
-            + video_sink
-            + " t. ! "
-            + jpeg_branch
-            + image_sink
-        )
+    def _encoder_missing(self) -> Optional[str]:
+        """Why nothing at all can be encoded here (no placeholder either), or None."""
+        if not os.path.exists(self.gst_launch):
+            return (f"{self.gst_launch} is missing: rebuild the Jetson dev container "
+                    "(it installs gstreamer1.0-tools)")
+        missing = [name for name in NVIDIA_PLUGINS if not have_plugin(name)]
+        if missing:
+            return f"no NVIDIA GStreamer plugins ({', '.join(missing)}): not a Jetson container"
+        return None
 
-    def _build_and_start_pipeline(self) -> None:
-        pipe_str = self._pipeline_string()
-        self.get_logger().info(f"GStreamer pipeline:\n{pipe_str}")
+    def _camera_missing(self) -> Optional[str]:
+        """Why the camera itself can't stream now, or None."""
+        reason = self._encoder_missing()
+        if reason or self.source == "test":
+            return reason
+        if not os.path.exists(ARGUS_SOCKET):
+            return (f"no Argus socket ({ARGUS_SOCKET}) in this container: rebuild the Jetson "
+                    "dev container (it mounts it)")
+        found = detected_csi_sensors()
+        if self.sensor_id >= found:
+            return (f"no camera on sensor-id {self.sensor_id} ({found} CSI camera(s) detected at "
+                    "boot): connect it with the Jetson powered off, then boot")
+        return None
 
-        pipeline = Gst.parse_launch(pipe_str)
-        if not isinstance(pipeline, Gst.Pipeline):
-            raise RuntimeError("Failed to create GStreamer pipeline")
+    def _pipeline(self, placeholder: bool, jpeg_fd: Optional[int]) -> List[str]:
+        """gst-launch-1.0 argv: source -> tee -> H.264 to fd 1, JPEG to jpeg_fd."""
+        nvmm = f"video/x-raw(memory:NVMM),width={self.width},height={self.height}"
+        gop = self.gop
+        if placeholder or self.source == "test":
+            rate = self.placeholder_fps if placeholder else self.fps
+            text = placeholder and have_plugin("pango")
+            pattern = ("black" if text else "smpte") if placeholder else "ball"
+            src = ["videotestsrc", "is-live=true", f"pattern={pattern}", "!",
+                   f"video/x-raw,format=I420,width={self.width},height={self.height},"
+                   f"framerate={rate}/1"]
+            if text:
+                src += ["!", "textoverlay", f"text={self.label}: NO CAMERA", "valignment=center",
+                        "halignment=center", "font-desc=Sans 36"]
+            src += ["!", "nvvidconv", "!", f"{nvmm},format=NV12"]
+            if placeholder:
+                gop = rate  # a keyframe every second, so a new viewer sees it at once
+        else:
+            src = ["nvarguscamerasrc", f"sensor-id={self.sensor_id}", "!",
+                   f"{nvmm},framerate={self.fps}/1"]
+            if self.flip_method:
+                src += ["!", "nvvidconv", f"flip-method={self.flip_method}", "!", nvmm]
+        enc = "nvv4l2h264enc" if self.encoding == "h264" else "nvv4l2h265enc"
+        argv = src + [
+            "!", "tee", "name=t",
+            "t.", "!", "queue", "max-size-buffers=2", "leaky=downstream",
+            "!", enc, f"bitrate={self.bitrate}", "control-rate=1", f"iframeinterval={gop}",
+            f"idrinterval={gop}", "insert-sps-pps=true", "insert-aud=true", "num-B-Frames=0",
+            "!", f"video/x-{self.encoding},stream-format=byte-stream",
+            "!", "fdsink", "fd=1", "sync=false",
+        ]
+        if jpeg_fd is not None:
+            argv += [
+                "t.", "!", "queue", "max-size-buffers=1", "leaky=downstream",
+                "!", "nvvidconv",
+                "!", f"video/x-raw,width={self.jpeg_width},height={self.jpeg_height},format=I420",
+                "!", "videorate", "drop-only=true", f"max-rate={self.jpeg_fps}",
+                "!", "nvjpegenc", f"quality={self.jpeg_quality}",
+                "!", "fdsink", f"fd={jpeg_fd}", "sync=false",
+            ]
+        return argv
 
-        appsink = pipeline.get_by_name("vsink")
-        if appsink is None:
-            raise RuntimeError("Failed to find appsink 'vsink'")
+    # ---- supervision ----
 
-        appsink_image = pipeline.get_by_name("jsink")
-        if appsink_image is None:
-            raise RuntimeError("Failed to find appsink 'jsink'")
+    def _supervise(self) -> None:
+        warned = None  # the kind of problem last warned about, to warn once per change
+        backoff = self.recheck_s
+        while not self._stop.is_set():
+            reason = self._camera_missing()
+            kind = reason
+            if reason is None:
+                if warned:
+                    self.get_logger().info(f"{self.label}: starting the camera")
+                self._frames = 0
+                started = time.monotonic()
+                err = self._run(placeholder=False, stop_when=None)
+                if self._stop.is_set():
+                    return
+                if self._frames:
+                    kind = "stopped"
+                    reason = (f"camera stopped after {time.monotonic() - started:.0f} s "
+                              f"({err or 'no error output'})")
+                    backoff = self.recheck_s
+                else:
+                    kind = "failed"
+                    reason = f"camera failed to start ({err or 'no error output'})"
+                    backoff = min(backoff * 2, 120.0) if warned == "failed" else self.recheck_s
+            else:
+                backoff = self.recheck_s
+            if kind != warned:
+                self.get_logger().warning(
+                    f"{self.label}: {reason}. Publishing a placeholder on {self.video_topic}; "
+                    f"checking again every {self.recheck_s:.0f} s.")
+                warned = kind
+            if self._encoder_missing():
+                self._stop.wait(backoff)  # nothing can be encoded, not even the placeholder
+                continue
+            retry_at = time.monotonic() + backoff
+            self._run(placeholder=True,
+                      stop_when=lambda: (time.monotonic() >= retry_at
+                                         and self._camera_missing() is None))
 
-        appsink.connect("new-sample", self._on_new_sample_video)
-        appsink_image.connect("new-sample", self._on_new_sample_image)
+    def _run(self, placeholder: bool, stop_when: Optional[Callable[[], bool]]) -> str:
+        """Run one gst-launch-1.0 until it exits, stop_when() is true, or shutdown.
 
-        self._pipeline = pipeline
-        self._appsink = appsink
-        self._appsink_image = appsink_image
-        self._ros_anchor_ns = self.get_clock().now().nanoseconds
-
-        ret = self._pipeline.set_state(Gst.State.PLAYING)
-        if ret == Gst.StateChangeReturn.FAILURE:
-            raise RuntimeError("Failed to set pipeline to PLAYING")
-
-    def _stamp_from_pts(self, pts_ns: int) -> rclpy.time.Time:
-        anchor = self._ros_anchor_ns if self._ros_anchor_ns is not None else self.get_clock().now().nanoseconds
-        return rclpy.time.Time(nanoseconds=anchor + int(pts_ns))
-
-    def _on_new_sample_video(self, sink: Gst.Element) -> Gst.FlowReturn:
-        sample = sink.emit("pull-sample")
-        if sample is None:
-            return Gst.FlowReturn.ERROR
-
-        buf: Gst.Buffer = sample.get_buffer()
-        if buf is None:
-            return Gst.FlowReturn.ERROR
-
-        ok, mapinfo = buf.map(Gst.MapFlags.READ)
-        if not ok:
-            return Gst.FlowReturn.ERROR
-
+        Returns its last line of error output.
+        """
+        jpeg_r = jpeg_w = None
+        if self.jpeg_pub is not None:
+            jpeg_r, jpeg_w = os.pipe()
+        argv = self._pipeline(placeholder, jpeg_w)
+        # A clean environment: the system GStreamer, nothing from the pixi environment.
+        env = {k: v for k, v in os.environ.items()
+               if k in ("HOME", "USER", "LANG", "LC_ALL", "XDG_RUNTIME_DIR")}
+        env["PATH"] = "/usr/bin:/bin"
+        # setpriv --pdeathsig: gst-launch-1.0 dies with this node, even after a kill -9.
+        prefix = (["/usr/bin/setpriv", "--pdeathsig", "TERM", "--"]
+                  if os.path.exists("/usr/bin/setpriv") else [])
+        stderr_tail: collections.deque = collections.deque(maxlen=20)
         try:
-            payload = bytes(mapinfo.data)  # one access unit (one frame) due to alignment=au
+            proc = subprocess.Popen(prefix + [self.gst_launch, "-q", "-e"] + argv,
+                                    stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, env=env,
+                                    pass_fds=(jpeg_w,) if jpeg_w is not None else ())
+        except OSError as exc:
+            if jpeg_r is not None:
+                os.close(jpeg_r)
+            return str(exc)
         finally:
-            buf.unmap(mapinfo)
+            if jpeg_w is not None:
+                os.close(jpeg_w)  # exactly once; the child has its own copy
+        with self._proc_lock:
+            self._proc = proc
+        readers = [threading.Thread(target=self._read_video, args=(proc.stdout,), daemon=True),
+                   threading.Thread(target=self._read_lines, args=(proc.stderr, stderr_tail),
+                                    daemon=True)]
+        if jpeg_r is not None:
+            readers.append(threading.Thread(target=self._read_jpeg, args=(jpeg_r,), daemon=True))
+        for t in readers:
+            t.start()
+        if not placeholder:
+            self.get_logger().info(
+                f"{self.label}: {self.source} sensor-id={self.sensor_id} -> {self.encoding} "
+                f"{self.width}x{self.height}@{self.fps} {self.bitrate // 1000} kbit/s on "
+                f"{self.video_topic}"
+                + (f", JPEG {self.jpeg_width}x{self.jpeg_height}@{self.jpeg_fps} on "
+                   f"{self.jpeg_topic}" if self.jpeg_pub else ""))
+        next_check = time.monotonic() + 1.0
+        while proc.poll() is None and not self._stop.is_set():
+            if stop_when is not None and time.monotonic() >= next_check:
+                if stop_when():
+                    break
+                next_check = time.monotonic() + 1.0
+            time.sleep(0.2)
+        self._terminate(proc)
+        for t in readers:
+            t.join(timeout=2.0)
+        if jpeg_r is not None:
+            try:
+                os.close(jpeg_r)
+            except OSError:
+                pass
+        with self._proc_lock:
+            self._proc = None
+        errors = [line.strip() for line in stderr_tail if line.strip()]
+        return errors[-1] if errors else ""
 
-        msg = CompressedVideo()
-        msg.format = self.encoding
-        msg.data = payload
-        msg.frame_id = self.frame_id
-
-        if self.use_pts and buf.pts != Gst.CLOCK_TIME_NONE:
-            t = self._stamp_from_pts(int(buf.pts))
-            msg.timestamp.sec = int(t.nanoseconds // 1_000_000_000)
-            msg.timestamp.nanosec = int(t.nanoseconds % 1_000_000_000)
-        else:
-            msg.timestamp = self.get_clock().now().to_msg()
-
-        self.pub.publish(msg)
-        return Gst.FlowReturn.OK
-
-    def _on_new_sample_image(self, sink: Gst.Element) -> Gst.FlowReturn:
-        sample = sink.emit("pull-sample")
-        if sample is None:
-            return Gst.FlowReturn.ERROR
-
-        buf: Gst.Buffer = sample.get_buffer()
-        if buf is None:
-            return Gst.FlowReturn.ERROR
-
-        ok, mapinfo = buf.map(Gst.MapFlags.READ)
-        if not ok:
-            return Gst.FlowReturn.ERROR
-
+    @staticmethod
+    def _terminate(proc: subprocess.Popen) -> None:
+        if proc.poll() is not None:
+            return
+        # SIGINT with -e: gst-launch-1.0 sends EOS and closes the camera cleanly. Killing it
+        # outright can leave the Argus daemon needing a restart.
+        proc.send_signal(signal.SIGINT)
         try:
-            payload = bytes(mapinfo.data)
-        finally:
-            buf.unmap(mapinfo)
+            proc.wait(timeout=3.0)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
 
-        img_msg = CompressedImage()
-        img_msg.format = "jpeg"
-        img_msg.data = payload
-        img_msg.header.frame_id = self.frame_id
+    # ---- readers (one thread each) ----
 
-        if self.use_pts and buf.pts != Gst.CLOCK_TIME_NONE:
-            t = self._stamp_from_pts(int(buf.pts))
-            img_msg.header.stamp.sec = int(t.nanoseconds // 1_000_000_000)
-            img_msg.header.stamp.nanosec = int(t.nanoseconds % 1_000_000_000)
-        else:
-            img_msg.header.stamp = self.get_clock().now().to_msg()
+    def _publish(self, pub, msg) -> bool:
+        try:
+            pub.publish(msg)
+            return True
+        except Exception:  # context shut down while stopping
+            return False
 
-        self.pub_image.publish(img_msg)
-        return Gst.FlowReturn.OK
+    def _read_video(self, stream) -> None:
+        fd = stream.fileno()
+        buf = bytearray()
+        aud = AUD[self.encoding]
+        while chunk := self._read(fd):
+            buf += chunk
+            for unit in split_access_units(buf, aud):
+                self._frames += 1
+                if self.video_pub is None:
+                    continue
+                msg = CompressedVideo()
+                msg.timestamp = self.get_clock().now().to_msg()
+                msg.frame_id = self.frame_id
+                msg.format = self.encoding
+                msg.data = unit
+                if not self._publish(self.video_pub, msg):
+                    return
+
+    def _read_jpeg(self, fd: int) -> None:
+        buf = bytearray()
+        while chunk := self._read(fd):
+            buf += chunk
+            for jpeg in split_jpegs(buf):
+                msg = CompressedImage()
+                msg.header.stamp = self.get_clock().now().to_msg()
+                msg.header.frame_id = self.frame_id
+                msg.format = "jpeg"
+                msg.data = jpeg
+                if not self._publish(self.jpeg_pub, msg):
+                    return
+
+    @staticmethod
+    def _read(fd: int) -> bytes:
+        try:
+            return os.read(fd, 1 << 16)
+        except OSError:
+            return b""
+
+    def _read_lines(self, stream, sink: collections.deque) -> None:
+        for raw in iter(stream.readline, b""):
+            line = raw.decode(errors="replace").rstrip()
+            sink.append(line)
+            self.get_logger().debug(f"{self.label} gst: {line}")
 
     def destroy_node(self) -> bool:
-        try:
-            if self._pipeline is not None:
-                self._pipeline.set_state(Gst.State.NULL)
-        finally:
-            if self._glib_loop.is_running():
-                self._glib_loop.quit()
+        self._stop.set()
+        with self._proc_lock:
+            proc = self._proc
+        if proc is not None:
+            self._terminate(proc)
+        self._supervisor.join(timeout=5.0)
         return super().destroy_node()
 
 
@@ -274,12 +426,17 @@ def main() -> None:
     try:
         node = CSICompressedVideoPublisher()
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        # Ctrl-C under ros2 launch arrives twice (the terminal signals the process group, then
+        # launch signals each node). Ignore the second so it can't cut short the wait that lets
+        # gst-launch-1.0 close the camera cleanly.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         if node is not None:
             node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

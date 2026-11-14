@@ -9,6 +9,7 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose  # + OpenPose
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + both
     ros2 launch chassis_bringup rover.launch.py mode:=real vio:=true         # + ZED VIO + EKF
+    ros2 launch chassis_bringup rover.launch.py mode:=real csi_cameras:=0    # no CSI cameras
 
 `mode:=sim`  -> sim_gz.launch.py  (Gazebo + ign_ros2_control, no CAN)
 `mode:=real` -> real.launch.py    (standalone controller_manager + OdescSystemHardware)
@@ -23,6 +24,13 @@ its visual-inertial odometry (/zed/vio/odom), and a robot_localization EKF
 (navigation/config/ekf_real.yaml) fuses it with the wheel odometry and publishes
 `odom -> base_footprint`. The wheel-odometry TF is then off (real.launch.py odom_tf:=false),
 since a TF frame can have only one publisher. It combines with any camera:=.
+
+The five CSI cameras (camera_stream/launch/csi_cameras.launch.py) start in both modes, since
+they are real hardware on the Jetson even when the drivetrain is simulated: /camN/video (H.264,
+Foxglove) and /camN/image_raw/compressed (JPEG, RViz) for cam0 front, cam1 rear_left,
+cam2 rear_right, cam3 top_front, cam4 reverse. A camera that isn't connected publishes a
+"NO CAMERA" placeholder and never stops the launch. Skipped where there are no NVIDIA camera
+plugins (any machine but the Jetson).
 """
 
 import os
@@ -103,7 +111,17 @@ declare_args = [
         "that fuses it with the wheel odometry and publishes odom -> base_footprint "
         "(odom_tf is then false). Any camera:=. Jetson (l4t) only.",
     ),
+    DeclareLaunchArgument(
+        "csi_cameras",
+        default_value="5",
+        description="CSI cameras to start, cam0 upwards: cam0 front, cam1 rear_left, "
+        "cam2 rear_right, cam3 top_front, cam4 reverse; 0 = none. Both modes. A missing "
+        "camera publishes a NO CAMERA placeholder. Jetson (l4t) only.",
+    ),
 ]
+
+# nvarguscamerasrc, present only in the Jetson (l4t) container.
+CSI_PLUGIN = "/usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstnvarguscamerasrc.so"
 
 # camera:= -> people_rover.launch.py (openpose, point_cloud). "none" runs the ZED for vio:= alone.
 CAMERA_MODES = {
@@ -170,6 +188,7 @@ def _setup(context):
                 }.items(),
             )
         )
+    actions += _csi_cameras(context, mode)
     if vio:
         actions.append(
             Node(
@@ -224,6 +243,26 @@ def _camera_and_vio(context, mode):
             "rover.launch.py: vio:=true, the EKF publishes odom -> base_footprint "
             "(wheel-odometry TF off, odom_tf:=false).")))
     return camera, vio, logs
+
+
+def _csi_cameras(context, mode):
+    """The CSI camera nodes, or a log line saying why they're skipped here."""
+    count = LaunchConfiguration("csi_cameras").perform(context)
+    if count == "0":
+        return []
+    if not os.path.exists(CSI_PLUGIN):
+        return [LogInfo(msg=(
+            f"rover.launch.py: csi_cameras:={count} ignored, no NVIDIA camera plugins here "
+            "(the CSI cameras run in the Jetson container)."))]
+    return [IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [FindPackageShare("camera_stream"), "launch", "csi_cameras.launch.py"])),
+        launch_arguments={
+            "cameras": count,
+            "use_sim_time": "true" if mode == "sim" else "false",
+        }.items(),
+    )]
 
 
 def _camera_node_built():

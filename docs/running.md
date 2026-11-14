@@ -234,6 +234,39 @@ Drive a closed loop back to a taped start mark. Then plot the x/y of `/odometry/
 close near the mark, and the wheel track overshoots every turn. Lift the rover, or carry it, to
 test the VIO alone: 1 m forward reads x ≈ 1, and a spin in place leaves x and y ≈ 0.
 
+### CSI cameras
+
+Five Arducam IMX477 CSI cameras start with every `rover.launch.py`, in both modes
+(`csi_cameras:=0` turns them off). Each publishes two streams:
+
+| Camera | Where | Foxglove: H.264, 1280×720 @ 30, 3 Mbit/s | RViz: JPEG, 640×360 @ 10 Hz |
+|---|---|---|---|
+| cam0 | front (the ZED 2i also looks forward) | `/cam0/video` | `/cam0/image_raw/compressed` |
+| cam1 | rear left | `/cam1/video` | `/cam1/image_raw/compressed` |
+| cam2 | rear right | `/cam2/video` | `/cam2/image_raw/compressed` |
+| cam3 | top front | `/cam3/video` | `/cam3/image_raw/compressed` |
+| cam4 | reverse | `/cam4/video` | `/cam4/image_raw/compressed` |
+
+- **Connect the cameras only with the Jetson powered off**, then boot. They're detected only at
+  boot, and plugging a CSI cable in with the power on can damage the camera or the port. On the
+  host, `cat /sys/class/video4linux/video*/name` lists one `vi-output, imx477 …` per camera.
+- **camN is Argus sensor-id N:** the Nth camera detected at boot, in port order. A camera missing
+  from a lower port shifts the ones after it down by one.
+- **A missing camera never stops the launch.** Its node logs one warning saying why, publishes a
+  "NO CAMERA" frame on both topics, and checks again every 10 s.
+- **The Jetson container must be from 2026-11-14 or later.** It has `gst-launch-1.0` and the host's
+  Argus socket. An older one logs `no Argus socket` or `gst-launch-1.0 is missing`:
+  **Rebuild Container** (OpenPose isn't recompiled).
+- **H.264 needs `foxglove_msgs`**, which is built from `src/third_party/foxglove_msgs` with the rest
+  of the workspace. Without it the node logs `foxglove_msgs isn't built` and publishes only JPEG,
+  so the dashboard's camera panels stay empty. RViz still works.
+- **Viewing:** Foxglove's `rover_dashboard.json` shows all five, with the ZED 2i on a second tab of
+  the front view ([Foxglove](#foxglove)). In RViz, every `view:=` has an Image display per camera.
+- **Bandwidth:** 5 × 3 Mbit/s of H.264 while Foxglove shows the cameras. A JPEG stream crosses the
+  network only while RViz shows it.
+- **No cameras at hand:** `ros2 launch camera_stream csi_cameras.launch.py source:=test` sends a
+  moving test pattern through the same encoders.
+
 ### Camera rates and RAM (Orin Nano, 2026-11-13)
 
 | Jetson `camera:=` | Real drivetrain (mock) | Sim |
@@ -276,6 +309,7 @@ networking, so the host can reach their port 8765.
 
    | Jetson runs | Layout |
    |---|---|
+   | the rover, any `camera:=` | `ros2_ws/src/chassis_bringup/foxglove/rover_dashboard.json`: the five [CSI cameras](#csi-cameras) (front: tabs for cam0 and the ZED 2i, whose image needs `camera:=openpose` or `both`), GPS map, odometry |
    | no `camera:=` | `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json` (3D view, `/joy`, `/diff_drive_controller/cmd_vel_unstamped`) |
    | `camera:=cloud` | `ros2_ws/src/perception/people/foxglove/zed_points.json` (`drivetrain.json` + `/zed/points`) |
    | `camera:=openpose` or `camera:=both` | `ros2_ws/src/perception/people/foxglove/people_rover.json` (`drivetrain.json` + point cloud, skeletons, OpenPose image, `/people/gesture`) |
@@ -316,6 +350,7 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 | | `joy_control` | `false` | teleop on the Jetson. Only when no ground station runs it. |
 | | `rviz` / `gui` | `false` | RViz on the Jetson (needs a display) / the Gazebo window (`mode:=sim`) |
 | | `camera` | `none` | `cloud` (ZED point cloud), `openpose` (OpenPose) or `both`. Jetson container only. |
+| | `csi_cameras` | `5` | [CSI cameras](#csi-cameras) to start, cam0 upwards; `0` = none. Both modes. Jetson container only. |
 | | `vio` | `false` | `mode:=real` only: ZED visual-inertial odometry (`/zed/vio/odom`) + the EKF, which then publishes `odom → base_footprint` (forces `odom_tf:=false`). Jetson container only. |
 | `ground_station.launch.py` | `use_sim_time` | `true` | `false` when the Jetson runs `mode:=real` |
 | | `view` | `drivetrain` | RViz layout: `drivetrain`, `cloud`, `openpose` or `both` (match the Jetson's `camera:=`) |
@@ -377,6 +412,10 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | ZED: `NvRmMemInitNvmap failed with Permission denied`, then `CAMERA STREAM FAILED TO START` or `NO GPU DETECTED` | The terminal lacks the GPU device groups. In a Jetson container terminal, `id` must list `44` (video), `104` and `995`. If not, the container was created before 2026-11-13: **Rebuild Container**. Meanwhile, `exec sudo -iu ros_user` in that terminal gives it the groups. |
 | `ZED open failed: CAMERA STREAM FAILED TO START` or `NOT ENOUGH GPU MEMORY` | Not enough free RAM for the camera (the GPU shares it); the launch already frees the kernel's file cache first, and the node retries 5 times, 3 s apart. Free RAM: on the Jetson host, check `ps -eo rss,args --sort=-rss \| head` (the F' GDS on port 5001 grows by about 2 GB an hour: `sudo systemctl restart billee-scm-lan-gds`), then launch again. If RAM is fine, unplug and replug the ZED. |
 | Sim: Gazebo keeps running after the launch is stopped (`ps -eo pid,args \| grep "[i]gn gazebo"` lists it) | It ignores Ctrl-C and SIGTERM. In the Jetson container: `kill -9 <pid>`. A leftover Gazebo conflicts with the next sim. |
+| A camera view shows `camN …: NO CAMERA` (or colour bars) | That camera wasn't detected at boot, or its pipeline failed. The Jetson log has one warning per camera saying which. Power off, check its CSI cable, boot. On the host, `cat /sys/class/video4linux/video*/name` must list a `vi-output, imx477` for it. |
+| CSI camera: `no Argus socket (/tmp/argus_socket)` or `gst-launch-1.0 is missing` | The Jetson container predates the CSI cameras: **Rebuild Container**. |
+| CSI camera: `camera stopped` or `failed to start` with an Argus error | On the Jetson host, `sudo systemctl restart nvargus-daemon`, then relaunch. |
+| Foxglove camera panels stay empty, RViz shows the cameras, the Jetson logs `foxglove_msgs isn't built` | Jetson container: `pixi run colcon build --symlink-install --packages-select foxglove_msgs camera_stream`, then relaunch. The ground station's bridge needs it too: `pixi run colcon build --packages-select foxglove_msgs` there (or connect Foxglove to `ws://<jetson-ip>:8765`). |
 | `ZED open failed: CAMERA NOT DETECTED` | On the host, `lsusb \| grep 2b03` must list `ZED 2i`. Use a USB 3 port. |
 | `[ZED][MCU] Permissions denied`, then `NOT VALID SERIAL NUMBER FOR SENSORS MODULE MCU` | The host has no ZED udev rule. The container installs it at start: on the host, `ls /etc/udev/rules.d/99-slabs.rules`. If it's missing, the container was created before this was added: **Rebuild Container**. |
 | OpenPose stops with `out of memory`, `CUDNN_STATUS_INTERNAL_ERROR` or `NvMapMemAlloc… error 12` | Not enough RAM (the GPU shares it). On the Jetson host, `free -m` must show at least 3000 MB `available`. Find what uses it: `ps -eo rss,args --sort=-rss \| head`. On the dev Jetson, the F' GDS on port 5001 grows by about 2 GB an hour; `sudo systemctl restart billee-scm-lan-gds` frees it. VS Code attached to the container can take 1.4 GB. The launch frees the kernel's file cache itself before starting OpenPose. An image built before 2026-11-13 needs **Rebuild Container**. |
