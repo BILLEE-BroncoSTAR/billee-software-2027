@@ -2,7 +2,8 @@
 
 There is one control stack with swappable hardware backends. `diff_drive_controller` only sees
 wheel-joint position/velocity interfaces, so the controller, topics and TF are the same whether
-the wheel data comes from Gazebo, the real ODESC controllers over CAN, or a loopback mock.
+the wheel data comes from Gazebo, the real ODESC controllers over CAN, or an emulator on a virtual
+bus.
 
 ```mermaid
 flowchart TB
@@ -32,13 +33,13 @@ flowchart TB
     end
     subgraph REALB["real.launch.py (use_sim:=false)"]
         ODESC["odesc/OdescSystemHardware (48:1, SocketCAN)"]
-        ODESC --> CAN["can2: 6× ODESC + NEO<br/>vcan0: virtual bus<br/>mock: loopback, no CAN"]
+        ODESC --> CAN["can2: 6× ODESC + NEO<br/>vcan0: virtual bus + emulator"]
     end
     RM --- SIMB
     RM --- REALB
 
     JSB -->|"/joint_states"| RSP["robot_state_publisher"] --> TF["/tf, /tf_static"]
-    VIO["synthetic VIO (zed2i pkg)<br/>/depth_cam/vio/odom"] -->|"pose x, y, yaw"| EKF["robot_localization EKF<br/>(navigation:=true, sim only)"]
+    VIO["synthetic VIO (zed2i pkg)<br/>/depth_cam/vio/odom"] -->|"pose x, y, yaw"| EKF["robot_localization EKF<br/>(sim: navigation:=true, real: vio:=true)"]
     DDC -->|"/diff_drive_controller/odom<br/>vx, vyaw"| EKF
     EKF -->|"odom → base_footprint"| TF
     TF --> FB["foxglove_bridge :8765"] <--> FGS
@@ -64,7 +65,6 @@ The launch file picks the backend; you never pass `use_sim` yourself. On the rea
 |---|---|---|---|
 | `can2` (default) | real SocketCAN | 6 ODESC V4.2 + NEO | driving the rover |
 | `vcan0` | virtual CAN | `odesc_vcan_emulator.py`, or nothing (`candump`/`cansend` by hand) | checking the exact CAN frames |
-| `mock` / `none` | none | the plugin loops commands back through the gear ratio | bringing up the full non-Gazebo stack with no hardware |
 
 The CAN node ID ↔ wheel map has two copies, kept in sync by hand: `odesc/config/node_map.yaml`
 (the canonical one) and the URDF `node_id` params.
@@ -109,13 +109,6 @@ The covariance can't go in `ekf_real.yaml` instead. `robot_localization` takes e
 covariance from the message it receives and has no setting to override it, so the value has to be
 a `diff_drive_controller` parameter.
 
-Possible cleanup: move the fixed overrides (`use_sim_time`, the covariance) into a small
-`controllers_real.yaml` that `real.launch.py` merges over `controllers.yaml`. Only `odom_tf` would
-then stay in Python, because it follows a launch argument. Putting the covariance in
-`controllers.yaml` for both would also give the sim EKF realistic wheel uncertainty. Its wheel
-odometry reports turns about 1.6× too fast, so that would likely help, but the sim tuning would
-need rechecking.
-
 Wheel odometry alone drifts quickly when the rover turns. The six wheels skid sideways, and
 `diff_drive_controller` assumes they don't. In Gazebo it reports about 1.6× the real turn rate
 (commanded 0.5 rad/s, actual 0.31 rad/s). The VIO pose corrects this in the EKF, so the viewers
@@ -123,10 +116,9 @@ show the EKF output (`/odometry/filtered`), not `/diff_drive_controller/odom`.
 
 ## Time
 
-The sim uses `use_sim_time:=true` (Gazebo `/clock`) and the real stack uses wall clock.
-`controllers.yaml` has `use_sim_time: true`, so `real.launch.py` writes a temporary copy with it
-set to `false`. Without that, a standalone `ros2_control_node` waits forever for `/clock`.
-Teleop always runs on wall clock.
+The sim uses `use_sim_time:=true` (Gazebo `/clock`) and the real stack uses wall clock (the
+`use_sim_time: false` override above; without it a standalone `ros2_control_node` waits forever
+for `/clock`). Teleop always runs on wall clock.
 
 ## Cross-machine
 

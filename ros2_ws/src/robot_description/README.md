@@ -19,4 +19,5 @@ xacro src/robot_description/urdf/robot.urdf.xacro > /tmp/robot.urdf
 xacro src/robot_description/urdf/robot.urdf.xacro use_sim:=false > /tmp/robot_real.urdf
 ```
 
-`enable_odom_tf: false` is intentional: the EKF (`robot_localization`) owns `odom → base_footprint`.
+`enable_odom_tf: false` is intentional: in sim the EKF (`robot_localization`) owns
+`odom → base_footprint`. On the real path `real.launch.py odom_tf:=true` turns it on.

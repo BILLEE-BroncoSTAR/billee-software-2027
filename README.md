@@ -86,7 +86,7 @@ setup of both machines (clone, container, build, OpenPose models) is in
 
 - `camera:=cloud` adds the ZED point cloud, `camera:=openpose` OpenPose, `camera:=both` both. Use
   the ground station's `view:=` with the same name (`camera:=none` ↔ `view:=drivetrain`).
-- No motors connected: add `can_interface:=mock` on the Jetson and skip `can-up`.
+- No motors connected: use the virtual bus instead ([docs/running.md → CAN testing without motors](docs/running.md#can-testing-without-motors)).
 - On the ground-station **host**, open Foxglove Studio, connect to `ws://localhost:8765`, and
   import the layout for the camera mode ([docs/running.md → Foxglove](docs/running.md#foxglove)).
 - To drive, hold **LB / L1** on the gamepad and move the two sticks up and down.

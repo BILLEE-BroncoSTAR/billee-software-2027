@@ -32,7 +32,7 @@ ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose   # Open
 ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both       # point cloud + OpenPose
 ```
 
-Add `can_interface:=mock` when no motors are connected. On the **ground station**:
+Without motors, use the [virtual bus](running.md#can-testing-without-motors). On the **ground station**:
 `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=cloud` (or
 `view:=openpose`, `view:=both`), and the matching Foxglove layout below. All combinations,
 including the simulator: [running.md](running.md#pick-a-setup).
@@ -219,13 +219,12 @@ on `/people/gesture`.
 
 ## Troubleshooting
 
+Camera, GPU-group, RAM and missing-model errors (`CAMERA NOT DETECTED`, `[ZED][MCU] Permissions
+denied`, `out of memory`, `NvRmMemInitNvmap`, `Prototxt file not found`) are in
+[running.md → Troubleshooting](running.md#troubleshooting). Specific to this node:
+
 | Symptom | Fix |
 |---|---|
-| `ZED open failed: CAMERA NOT DETECTED` | No camera (this is expected without one), or a USB 2 port. Check `lsusb \| grep 2b03` on the host. |
-| `[ZED][MCU] Permissions denied`, then `NOT VALID SERIAL NUMBER FOR SENSORS MODULE MCU` | No ZED udev rule on the host. On the host, `ls /etc/udev/rules.d/99-slabs.rules`; if it's missing, **Rebuild Container** (the container start installs it). |
-| `out of memory` (`syncedmem.cpp`), `CUDNN_STATUS_INTERNAL_ERROR`, `NvMapMemAlloc… error 12` | Not enough RAM, which the GPU shares. On the host, `free -m` must show at least 3000 MB `available` before launching. An image built before 2026-11-13 also needs **Rebuild Container** (zero-workspace patch above). |
-| `CUDA error 100` / `801`, `NvRmMemInitNvmap failed with Permission denied`, `NO GPU DETECTED` | GPU groups missing (above). In a Jetson container terminal, `id` must list `44` (video), `104` and `995`. If not, **Rebuild Container**. |
-| `OpenPose: ... prototxt ... not found` | Run `get_openpose_models.sh` |
 | `No TF base_link <- zed_left_camera_frame` | `robot_state_publisher` isn't running. Use `standalone:=true` or start the drivetrain. |
 | `libgio-2.0.so.0: undefined symbol` | The GLib link lines in `zed_openpose/CMakeLists.txt` were changed. Restore them. |
 | `zed_openpose` "skipping the node" at build | ZED SDK or OpenPose not visible. This is normal off the Jetson image. On the Jetson, check that `/usr/local/zed` is readable. |

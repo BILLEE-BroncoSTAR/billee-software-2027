@@ -47,8 +47,7 @@ read()   wheel_rad_s      = motor_turns_per_sec * 2π / gear_ratio
 write()  motor_turns_per_sec = wheel_rad_s       * gear_ratio / 2π
 ```
 
-`gear_ratio` is **48.0** for the ODESC V4.2 + NEO REV v1.1 drivetrain (set by the
-team 2026-09-06). It is one overridable parameter — see the parameter table below.
+`gear_ratio` is **48.0**, one overridable parameter (see the parameter table below).
 
 Left/right mirroring is handled by `diff_drive_controller`'s wheel lists, **not**
 here. If a bench test shows that one ODESC's encoder/command sign is physically
@@ -94,9 +93,9 @@ inside `<xacro:unless value="${use_sim}">`:
 
 | scope | param | default | notes |
 |---|---|---|---|
-| `<hardware>` | `can_interface` | `can2` | SocketCAN interface. Overridable from the launch file: `real.launch.py can_interface:=…`. (`mock` / `none` is currently broken, see below.) |
+| `<hardware>` | `can_interface` | `can2` | SocketCAN interface. Overridable from the launch file: `real.launch.py can_interface:=…`. (`mock` / `none` is [currently broken](#mock-mode).) |
 | `<hardware>` | `fault_policy` | `warn` | What happens when a wheel is unhealthy (see [Wheel health](#wheel-health-and-fault_policy)): `warn` logs it and keeps driving; `fault` stops the drivetrain. Overridable: `rover.launch.py` / `real.launch.py fault_policy:=fault`. |
-| `<hardware>` | `gear_ratio` | `48.0` | Motor-shaft turns per wheel turn. `48.0` for the ODESC V4.2 + NEO REV v1.1 drivetrain (team, 2026-09-06). One-line override (`real.launch.py gear_ratio:=…`), not a code change. Not yet confirmed on hardware: drive a measured straight distance and compare it with `/diff_drive_controller/odom`. |
+| `<hardware>` | `gear_ratio` | `48.0` | Motor-shaft turns per wheel turn, for the ODESC V4.2 + NEO REV v1.1 drivetrain (team, 2026-09-06). One-line override (`real.launch.py gear_ratio:=…`), not a code change. Not yet confirmed on hardware: drive a measured straight distance and compare it with `/diff_drive_controller/odom`. |
 | per `<joint>` | `node_id` | *(required)* | CAN node ID 0–63 (the rover uses 2–7). Canonical map: [`config/node_map.yaml`](config/node_map.yaml). |
 | per `<joint>` | `invert` | `false` | Optional. Set `true` only after a wheels-up direction test proves that this axis's physical sign is opposite the URDF wheel-joint convention. |
 
@@ -136,27 +135,17 @@ node ID and the reasons.
   `on_error`, which sends zero velocity then IDLE to every axis and closes the
   socket, and the controllers deactivate. Restart the launch to recover.
 
-### Mock mode (no CAN, no motor hardware)
+### Mock mode
 
-> **Currently broken.** The new driver (`src/odesc.cpp`) has no mock path, so
-> `can_interface:=mock` fails in `on_configure`. Restoring it (by reusing
-> `MockDriveBackend`) is deferred. Until then use the vCAN emulator below.
-
-Set `can_interface` to `mock` (or `none`) — e.g.
-`ros2 launch chassis_bringup real.launch.py can_interface:=mock` — and the plugin
-opens **no** CAN socket. `read()` feeds the commanded wheel velocity back through
-the same gear-ratio round-trip the real path uses and integrates position, so the
-full **encoder-feedback → `diff_drive_controller` → `/diff_drive_controller/odom` + `/joint_states` → RViz/Foxglove**
-pipeline runs with no ODESC/NEO present. Use it to bring up and view the real
-(non-Gazebo) control stack on a bench Jetson, or to regression-test the launch
-graph. It is a perfect-tracking loopback, not a physics model — for dynamics use
-the Gazebo backend (`sim_gz.launch.py`).
+**Currently broken.** `can_interface:=mock` (or `none`) was a no-CAN loopback, but the
+current driver (`src/odesc.cpp`) has no mock path, so it fails in `on_configure`.
+Restoring it (by reusing `MockDriveBackend`) is deferred. Use the vCAN emulator below.
 
 ### vCAN ODrive emulator (CAN-path test, no motor hardware)
 
 [`scripts/odesc_vcan_emulator.py`](scripts/odesc_vcan_emulator.py) is a small,
-Linux-only ODrive CANSimple peer for the driver. Unlike `mock` mode, the driver
-opens a real SocketCAN socket and exchanges frames; this verifies the CAN
+Linux-only ODrive CANSimple peer for the driver. The driver opens a real
+SocketCAN socket and exchanges frames with it; this verifies the CAN
 arbitration IDs, `Set_Input_Vel` payload encoding, and encoder-feedback parsing.
 
 It emulates nodes 2–7 (`--nodes` to change) and behaves like the rover's firmware:
@@ -249,10 +238,3 @@ to the previous driver design. They are still compiled but unused.
 This package is Linux-only: it directly uses the kernel SocketCAN API and is
 therefore built only when CMake targets Linux. Use the `use_sim:=true` Gazebo
 backend on other platforms.
-
-## Selecting this backend
-
-```bash
-ros2 launch chassis_bringup real.launch.py      # real hardware, no Gazebo
-ros2 launch chassis_bringup sim_gz.launch.py    # Gazebo, unchanged
-```

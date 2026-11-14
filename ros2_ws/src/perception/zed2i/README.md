@@ -1,50 +1,58 @@
 # Synthetic ZED 2i VIO
 
 `synthetic_vio_node` publishes a controllably degraded VIO-like `nav_msgs/Odometry`
-measurement from Gazebo **ground truth**. It is for EKF simulation, not a ZED SDK or
-camera emulator. It intentionally does not publish TF; the EKF should be the only
-publisher of `odom -> base_footprint`.
+measurement from Gazebo **ground truth**, for testing the EKF in simulation. It is not a ZED
+SDK or camera emulator and doesn't process images. Starting from truth (not wheel odometry)
+keeps its errors independent of the wheel-odometry input the EKF also fuses. It doesn't publish
+TF; the EKF is the only publisher of `odom -> base_footprint`.
 
-See the [Synthetic VIO User Guide](docs/SYNTHETIC_VIO_USER_GUIDE.md) for required
-Gazebo wiring, profile behaviour, all parameters, EKF configuration, and experiment
-workflow.
+```text
+VIO pose = truth pose + per-run scale error + random-walk drift + Gaussian jitter
+           (+ latency, dropouts, outliers in the stress profile)
+```
 
 ## Run
 
-Bridge the Gazebo model's ground-truth odometry to a ROS 2 `nav_msgs/Odometry` topic,
-then launch the node. The exact Gazebo topic is world/model dependent, so pass it as
-an argument instead of assuming a wheel-odometry topic. The supplied launch file sets
-`use_sim_time:=true`, so latency is measured against Gazebo's `/clock`:
+`sim_gz.launch.py navigation:=true` (the default) already starts it through
+`navigation/launch/pose_estim.launch.py`. To run it on its own:
 
 ```bash
 ros2 launch zed2i synthetic_vio.launch.py \
   truth_topic:=/gz/odom profile:=validation seed:=42
 ```
 
-Use `seed:=-1` to select a new seed; the resolved seed is printed at startup and can
-be reused to reproduce the run.
+`truth_topic` must be a ground-truth odometry topic bridged from Gazebo, never
+`/diff_drive_controller/odom`. The launch file sets `use_sim_time:=true`, so latency follows
+Gazebo's `/clock`. The node logs the resolved seed at startup; `seed:=-1` picks a new one.
+The same profile, parameters and seed replay a run exactly.
 
-The output topic is `/depth_cam/vio/odom`, set by `config/synthetic_vio.yaml`, which both
-this launch file and `navigation/launch/pose_estim.launch.py` load. The EKF in
-`navigation/config/ekf_sim.yaml` subscribes to it. (Running the bare executable without
-that file falls back to the built-in default `/sim/zed/vio/odom`.) Fuse only its `x`, `y`, and `yaw` fields;
-fuse wheel odometry as twist (`vx`, `vyaw`) so the EKF is not given the same wheel
-measurement twice.
+The output topic is `/depth_cam/vio/odom` (frame `odom`, child `base_footprint`), set by
+`config/synthetic_vio.yaml`, which both launch files load. The bare executable without that
+file falls back to `/sim/zed/vio/odom` and child `base_link`.
+
+## EKF wiring
+
+`navigation/config/ekf_sim.yaml` fuses this topic as pose only (`x`, `y`, `yaw`,
+`odom1_relative: true`) and wheel odometry as velocity only (`vx`, `vyaw`), so the same
+measurement isn't counted twice. Don't fuse the VIO twist fields; they carry a deliberately huge
+covariance, as do z, roll and pitch.
 
 ## Profiles
 
-`calibration` uses the configured model exactly and is suitable for initial measurement
-covariance tuning. `validation` independently samples the configured noise,
-drift, and scale-error standard deviations between the validation multipliers for
-each process. `stress` additionally enables latency, dropouts, outliers, and a
-deliberate covariance mismatch. `nominal` remains an alias for `calibration`. Do not
-tune the EKF on validation or stress runs.
+| Profile | Use | Behaviour |
+|---|---|---|
+| `calibration` (alias `nominal`) | initial EKF covariance tuning | the configured model exactly, no faults |
+| `validation` | evaluating a fixed filter | each noise, drift and scale std sampled per run between `validation_{min,max}_multiplier` |
+| `stress` | resilience, innovation rejection | larger errors, plus latency, dropouts, outliers and an overconfident reported covariance |
 
-The model is:
+Tune only on `calibration` runs, then freeze the EKF settings and evaluate over several held-out
+`validation` seeds and routes. Use `stress` to find brittle behaviour, not to fit a trace. Every
+parameter, with units, is commented in `config/synthetic_vio.yaml`.
 
-```text
-VIO pose = truth pose + per-run scale error + random-walk drift + Gaussian jitter
-```
+## Troubleshooting
 
-The source and output topics, all model parameters, profile ranges, and fault values
-are documented in `config/synthetic_vio.yaml`.
+| Symptom | Check |
+|---|---|
+| No `/depth_cam/vio/odom` output | `truth_topic` exists, is `nav_msgs/msg/Odometry`, and has non-zero stamps |
+| Latency setting has no effect | the node runs with `use_sim_time:=true` and Gazebo publishes `/clock` |
+| EKF implausibly certain | the truth source isn't wheel odometry; VIO is fused as pose only |
