@@ -50,6 +50,9 @@ namespace odesc_ros2_control{
         bool set_axis_command_mode(const Axis& axis);
 
         bool active_ = false;
+        // can_interface:=mock (or none): no CAN socket; commanded wheel velocity is looped back
+        // as feedback, so the full stack runs with no motors (docs/running.md).
+        bool mock_ = false;
         EpollEventLoop event_loop_;
         std::vector<Axis> axes_;
         std::string can_interface_name_;
@@ -162,6 +165,7 @@ namespace odesc_ros2_control{
     }
 
     can_interface_name_ = can_interface->second;
+    mock_ = can_interface_name_ == "mock" || can_interface_name_ == "none";
     axes_ = std::move(configured_axes);
 
     return CallbackReturn::SUCCESS;
@@ -170,6 +174,12 @@ namespace odesc_ros2_control{
 
   CallbackReturn OdescHardwareInterface::on_configure(const State&){
     active_ = false;
+    if (mock_) {
+      RCLCPP_INFO(rclcpp::get_logger(kLogger),
+        "can_interface:=%s: no CAN, looping commanded wheel velocity back as feedback",
+        can_interface_name_.c_str());
+      return CallbackReturn::SUCCESS;
+    }
     if (!can_interface_.init(
         can_interface_name_, &event_loop_, std::bind(&OdescHardwareInterface::on_can_msg, this, _1))) {
       RCLCPP_ERROR(rclcpp::get_logger(kLogger), "failed to initialize SocketCAN on %s",
@@ -216,8 +226,16 @@ namespace odesc_ros2_control{
 
   }
 
-  return_type OdescHardwareInterface::read(const rclcpp::Time& timestamp, const rclcpp::Duration&){
+  return_type OdescHardwareInterface::read(const rclcpp::Time& timestamp, const rclcpp::Duration& period){
     timestamp_ = timestamp;
+
+    if (mock_) {
+      for (auto& axis : axes_) {
+        axis.vel_estimate_ = active_ && std::isfinite(axis.vel_setpoint_) ? axis.vel_setpoint_ : 0.0;
+        axis.pos_estimate_ += axis.vel_estimate_ * period.seconds();
+      }
+      return return_type::OK;
+    }
 
     while(can_interface_.read_nonblocking()){
       // repeat until interface has no mroe messages
@@ -236,6 +254,10 @@ namespace odesc_ros2_control{
       if (!std::isfinite(axis.vel_setpoint_)) {
         RCLCPP_ERROR(rclcpp::get_logger(kLogger), "refusing non-finite velocity command");
         return return_type::ERROR;
+      }
+      if (mock_) {
+        axis.last_vel_setpoint_ = axis.vel_setpoint_;
+        continue;
       }
       if(axis.last_vel_setpoint_ != axis.vel_setpoint_){
         Set_Input_Vel_msg_t msg;
@@ -296,6 +318,9 @@ void OdescHardwareInterface::on_can_msg(const can_frame& frame) {
 }
 
 bool OdescHardwareInterface::set_axis_command_mode(const Axis& axis) {
+    if (mock_) {
+      return true;
+    }
     if (!active_) {
         Set_Axis_State_msg_t idle_msg;
         idle_msg.Axis_Requested_State = AXIS_STATE_IDLE;
@@ -337,7 +362,9 @@ CallbackReturn OdescHardwareInterface::on_cleanup(const State& previous_state){
   if (active_) {
     (void)on_deactivate(previous_state);
   }
-  can_interface_.deinit();
+  if (!mock_) {
+    can_interface_.deinit();
+  }
   return CallbackReturn::SUCCESS;
 }
 
@@ -346,7 +373,7 @@ CallbackReturn OdescHardwareInterface::on_deactivate(const State&) {
     bool success = true;
     for (auto& axis : axes_) {
       Set_Input_Vel_msg_t zero_velocity_msg;
-      success = axis.send(zero_velocity_msg) && success;
+      success = (mock_ || axis.send(zero_velocity_msg)) && success;
       axis.vel_setpoint_ = 0.0;
       axis.last_vel_setpoint_ = NAN;
     }
