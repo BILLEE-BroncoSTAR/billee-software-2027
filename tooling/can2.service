@@ -1,32 +1,32 @@
-# Persistent can3 bring-up for the BILLEE drivetrain.
+# Persistent can2 bring-up for the BILLEE drivetrain.
 #
 # Install on the Jetson:
-#   sudo cp tooling/can3.service /etc/systemd/system/can3.service
+#   sudo cp tooling/can2.service /etc/systemd/system/can2.service
 #   sudo systemctl daemon-reload
-#   sudo systemctl enable --now can3.service
-#   systemctl status can3.service
+#   sudo systemctl enable --now can2.service
+#   systemctl status can2.service
 #
 # Bitrate 500000 matches BILLEE_NEO_ODESC_Hardware_Integration_Guide.md §3.4.
 # Change it here if the ODESC firmware is configured differently, then
-# `sudo systemctl restart can3.service`.
+# `sudo systemctl restart can2.service`.
 #
 # This only configures an interface the kernel already exposes (Tegra mttcan or a
-# USB-CAN adapter). It is a no-op / fails cleanly if can3 is absent.
+# USB-CAN adapter). It is a no-op / fails cleanly if can2 is absent.
 
 [Unit]
-Description=Bring up can3 for the ODESC drivetrain
+Description=Bring up can2 for the ODESC drivetrain
 After=network-pre.target
 Wants=network-pre.target
-BindsTo=sys-subsystem-net-devices-can3.device
-After=sys-subsystem-net-devices-can3.device
+BindsTo=sys-subsystem-net-devices-can2.device
+After=sys-subsystem-net-devices-can2.device
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 # The ODESC driver queues 12 frames per cycle; the kernel's default CAN queue is 10.
-ExecStartPre=/sbin/ip link set can3 txqueuelen 100
-ExecStart=/sbin/ip link set can3 up type can bitrate 500000 restart-ms 100
-ExecStop=/sbin/ip link set can3 down
+ExecStartPre=/sbin/ip link set can2 txqueuelen 100
+ExecStart=/sbin/ip link set can2 up type can bitrate 500000 restart-ms 100
+ExecStop=/sbin/ip link set can2 down
 
 [Install]
 WantedBy=multi-user.target

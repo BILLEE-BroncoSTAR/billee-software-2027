@@ -35,7 +35,7 @@ pixi run --environment default ros2 launch teleop teleop.launch.py
 
 Keep the rover supported / E-stop available for the first command.
 
-The drivetrain bus is `can3`: it is the default for both `tooling/can-up` and the
+The drivetrain bus is `can2`: it is the default for both `tooling/can-up` and the
 launch files, so the commands above need no interface argument. To use a different
 interface, pass it to both:
 

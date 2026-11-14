@@ -32,7 +32,7 @@ flowchart TB
     end
     subgraph REALB["real.launch.py (use_sim:=false)"]
         ODESC["odesc/OdescSystemHardware (48:1, SocketCAN)"]
-        ODESC --> CAN["can3: 6× ODESC + NEO<br/>vcan0: virtual bus<br/>mock: loopback, no CAN"]
+        ODESC --> CAN["can2: 6× ODESC + NEO<br/>vcan0: virtual bus<br/>mock: loopback, no CAN"]
     end
     RM --- SIMB
     RM --- REALB
@@ -48,7 +48,7 @@ flowchart TB
 
 | Layer | What | Where |
 |---|---|---|
-| CAN | `can3` at 500 kbit/s, ODrive CANSimple 0.5.x | `tooling/can-up` |
+| CAN | `can2` at 500 kbit/s, ODrive CANSimple 0.5.x | `tooling/can-up` |
 | Driver | `OdescSystemHardware`. This is the only place the 48:1 gear ratio is applied. | `src/odesc` |
 | Control | `diff_drive_controller` (0.67 m track, 0.11 m wheel radius) + `joint_state_broadcaster` | `robot_description/config/controllers.yaml` |
 | Model | URDF/xacro. `use_sim` picks the backend; per-joint CAN `node_id`s live here. | `robot_description/urdf/ros2_control.urdf.xacro` |
@@ -62,7 +62,7 @@ The launch file picks the backend; you never pass `use_sim` yourself. On the rea
 
 | `can_interface` | Socket | Other end | Use for |
 |---|---|---|---|
-| `can3` (default) | real SocketCAN | 6 ODESC V4.2 + NEO | driving the rover |
+| `can2` (default) | real SocketCAN | 6 ODESC V4.2 + NEO | driving the rover |
 | `vcan0` | virtual CAN | `odesc_vcan_emulator.py`, or nothing (`candump`/`cansend` by hand) | checking the exact CAN frames |
 | `mock` / `none` | none | the plugin loops commands back through the gear ratio | bringing up the full non-Gazebo stack with no hardware |
 
