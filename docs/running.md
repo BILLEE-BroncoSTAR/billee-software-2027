@@ -184,6 +184,7 @@ the ODESCs):
 | `both` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=both` |
 
 `view:=` picks the RViz layout. For Foxglove, import the matching layout ([Foxglove](#foxglove)).
+<<<<<<< HEAD
 RViz's fixed frame is `odom`, so the rover moves across the grid. The sim's EKF publishes `odom`.
 On the real drivetrain the Jetson publishes it from wheel odometry (`rover.launch.py odom_tf:=true`,
 the default), or from the EKF with `vio:=true`. `fixed_frame:=base_link` makes the view ride along
@@ -217,6 +218,11 @@ Drive a closed loop back to a taped start mark. Then plot the x/y of `/odometry/
 `/zed/vio/odom` and `/diff_drive_controller/odom` in Foxglove. The filtered and VIO tracks should
 close near the mark, and the wheel track overshoots every turn. Lift the rover, or carry it, to
 test the VIO alone: 1 m forward reads x ≈ 1, and a spin in place leaves x and y ≈ 0.
+=======
+RViz's fixed frame is `odom`, so the rover moves across the grid. The sim's EKF publishes `odom`;
+on the real drivetrain the Jetson publishes it from wheel odometry (`rover.launch.py odom_tf:=true`,
+the default). `fixed_frame:=base_link` makes the view ride along with the rover instead.
+>>>>>>> 813c11f (fix ground station)
 
 ### Camera rates and RAM (Orin Nano, 2026-11-13)
 
@@ -336,8 +342,11 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | Gamepad connected but the rover doesn't move | Hold RB. Check `ros2 topic echo /joy`, then `ros2 topic echo /diff_drive_controller/cmd_vel_unstamped`. |
 | `/joy` is silent | `ros2 run joy joy_enumerate_devices` lists the gamepads `joy_node` can open; set that `ID` as `device_id` in `teleop/config/joystick.yaml`. It is not the `N` of `/dev/input/jsN`. |
 | Every command seems doubled | Teleop runs on both machines. Use `rover.launch.py` (no teleop) on the Jetson, not `tooling/sim-up`. |
+<<<<<<< HEAD
 | `vio:=true`: `ZED tracking <state>: not publishing /zed/vio/odom` | The ZED's tracking isn't `OK`, and the EKF runs on the wheels alone meanwhile. `FPS_TOO_LOW`: lower the load (`camera:=none`, or `depth_mode: NEURAL_LIGHT` in `zed_openpose.yaml`). Otherwise give the camera texture to track, not a blank wall or the sky. |
 | `vio:=true`: `VIO: no TF base_footprint <- zed_left_camera_frame yet` | `robot_state_publisher` isn't running. `rover.launch.py` starts it; a standalone `zed_openpose.launch.py vio:=true` needs one (use `people_rover.launch.py`). |
+=======
+>>>>>>> 813c11f (fix ground station)
 | RViz/Foxglove: `Frame [odom] does not exist`, RobotModel errors, rover doesn't move in the view | Real drivetrain: the Jetson's `rover.launch.py` publishes `odom` (`odom_tf:=true`, the default). Check `ros2 run tf2_ros tf2_echo odom base_footprint` on the ground station. If it fails, rebuild `chassis_bringup` on the Jetson and relaunch. Also rebuild it on the ground station: an old install there still opens RViz on a fixed frame the rover doesn't publish. Sim: don't pass `navigation:=false`. |
 | Sim: `Switch controller timed out`, or `Couldn't open X display` | No usable display. On the Jetson, prefix the launch with `xvfb-run -a vglrun -d egl`. |
 | Real: controllers `inactive`, wheels dead | CAN down or wrong bitrate. Run `tooling/can-up` on the host and check `dmesg`. |
