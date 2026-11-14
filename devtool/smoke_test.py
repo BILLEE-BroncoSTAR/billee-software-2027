@@ -125,6 +125,26 @@ def main() -> int:
         except urllib.error.HTTPError as err:
             check("non-JSON POST refused", err.code == 415)
 
+        needs = info["needs"]
+        p = preview("setup.preview", {"platform": "x86"})
+        check("x86 setup is offered only with an NVIDIA GPU",
+              p["ok"] and bool(p["blocked"]) != (needs["nvidia"] and needs["x86-64-linux"]), p.get("blocked") or "allowed")
+        p = preview("setup.preview", {"platform": "mac"})
+        check("a setup for another kind of machine is blocked", p["ok"] and bool(p["blocked"]) != needs["apple-silicon"],
+              p.get("blocked") or "allowed")
+        if not needs["nvidia"]:
+            status, body = start("setup.preview", {"platform": "x86"})
+            check("start refuses x86 without an NVIDIA GPU", status == 409, body.get("error", ""))
+            status, body = call("/api/terminal", {"id": "setup.make", "args": {"platform": "x86"}})
+            check("terminal refuses x86 without an NVIDIA GPU", status == 409, body.get("error", ""))
+        status, body = start("setup.preview", {"platform": "auto"})
+        check("auto setup preview starts", status == 200, body.get("error", ""))
+        if status == 200:
+            out = log_of(body["run"]["id"])
+            check("auto picks this machine's setup and changes nothing",
+                  wait_status(body["run"]["id"], {"finished", "failed"}, 30) == "finished"
+                  and "uses the '" in out and "nothing is changed" in out, out.splitlines()[0] if out else "")
+
         status, body = start("drivetrain.mock")
         check("start mock drivetrain", status == 200, body.get("error", ""))
         mock = body["run"]["id"]

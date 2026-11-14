@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "repo": {
-    "commit": "6e1d6af",
-    "branch": "lucadev",
+    "commit": "744a200",
+    "branch": "anton/devtool (+ Prerelease-PoseDev)",
     "root": "billee-software-2027"
   },
   "kinds": {
@@ -23,6 +23,23 @@
         "mac": "tooling/desktop-ros2 run pixi run -e mac-cpu {cmd}",
         "linux-aarch64": "cd ros2_ws && pixi run -e linux-aarch64 {cmd}",
         "l4t": "tooling/rover-ros2 run pixi run -e l4t {cmd}"
+      },
+      "needs": {
+        "x86-native": [
+          "pixi"
+        ],
+        "linux-aarch64": [
+          "pixi"
+        ],
+        "x86-docker": [
+          "docker"
+        ],
+        "mac": [
+          "docker"
+        ],
+        "l4t": [
+          "docker"
+        ]
       }
     },
     "host": {
@@ -48,7 +65,7 @@
     }
   },
   "platforms": {
-    "x86-native": "x86-64 Linux with the workspace built natively in ros2_ws/.pixi/envs/default (this laptop). tooling/host-ros2 strips a system /opt/ros install from the environment first.",
+    "x86-native": "x86-64 Linux running the Pixi default env natively, no Docker: every x86 machine without an NVIDIA GPU (set up with x86-cpu), or one whose workspace was built on the host. tooling/host-ros2 strips a system /opt/ros install from the environment first.",
     "x86-docker": "x86-64 Linux + NVIDIA running the billee-desktop image (make setup x86).",
     "mac": "Apple-Silicon Mac running the billee-mac-cpu image. Headless: no RViz window, gamepad, vcan0 or DDS to other machines.",
     "linux-aarch64": "ARM64 Linux, native Pixi env, no container.",
@@ -57,25 +74,44 @@
   "needs": {
     "display": "An X/Wayland display for a window (RViz, Gazebo, rqt). Headless machines put xvfb-run -a in front of sim launches.",
     "vcan0": "The virtual CAN interface on the host: run can.vcan-up first (sudo).",
-    "can0": "A real CAN interface: the Jetson's mttcan or a USB-CAN adapter, brought up with can.up.",
+    "can": "A real CAN interface (any canN): the Jetson's ODESC bus can2, brought up with can.up, or a USB-CAN adapter.",
     "gamepad": "A gamepad at /dev/input/js0 (check with teleop.joy-list).",
     "docker": "Docker reachable without sudo (docker info works).",
     "sudo": "The user's sudo password.",
     "internet": "Network access for downloads.",
     "rover": "The physical rover. Wheels will turn: put it on blocks first.",
     "terminal": "Reads keys from its own terminal: the launcher must give it an interactive PTY.",
-    "drivetrain": "A running drivetrain item (any of the 'drivetrain' group)."
+    "drivetrain": "A running drivetrain item (any of the 'drivetrain' group).",
+    "pixi": "Pixi on PATH or in ~/.pixi/bin. Machine setup > Set up this machine installs it.",
+    "nvidia": "An NVIDIA GPU, found on the PCI bus (a Jetson counts).",
+    "x86-64-linux": "An x86-64 Linux machine.",
+    "arm64-linux": "An ARM64 Linux machine.",
+    "jetson": "An NVIDIA Jetson running JetPack (L4T).",
+    "apple-silicon": "An Apple-Silicon Mac.",
+    "zed": "A ZED 2i on USB. With the ZED SDK (Jetson container) every camera mode works; elsewhere cloud/both use zed_usb (CPU stereo) and OpenPose is skipped. OpenPose also needs its models (Perception > Download OpenPose models) and ~3000 MB free RAM."
+  },
+  "blocking": {
+    "pixi": "Pixi isn't installed. Run Machine setup > Set up this machine first.",
+    "nvidia": "This machine has no NVIDIA GPU.",
+    "x86-64-linux": "This machine isn't x86-64 Linux.",
+    "arm64-linux": "This machine isn't ARM64 Linux.",
+    "jetson": "This machine isn't an NVIDIA Jetson.",
+    "apple-silicon": "This machine isn't an Apple-Silicon Mac."
   },
   "resources": {
     "drivetrain": "Only one at a time. Each starts /controller_manager, /diff_drive_controller and /robot_state_publisher; two would publish conflicting odometry and TF.",
     "port-8765": "foxglove_bridge's WebSocket port. One bridge per machine; a second one fails to bind.",
-    "gamepad-nodes": "joy_node + joy_tank_drive. The sim always starts a pair (joy_control:=false is ignored), teleop.launch.py and ground_station.launch.py start another. Two pairs publish duplicate commands, and an idle pad publishes zeros at 20 Hz.",
-    "cmd-vel": "/diff_drive_controller/cmd_vel_unstamped. Every publisher here commands the wheels; the controller obeys the last message received."
+    "gamepad-nodes": "joy_node + joy_tank_drive. The sim starts a pair unless joy_control:=false, teleop.launch.py and ground_station.launch.py start another. Two pairs publish duplicate commands, and an idle pad publishes zeros at 20 Hz.",
+    "cmd-vel": "/diff_drive_controller/cmd_vel_unstamped. Every publisher here commands the wheels; the controller obeys the last message received.",
+    "zed": "The ZED 2i. One process can open it: rover.launch.py camera:=..., zed_openpose.launch.py, people_rover.launch.py and zed_usb all do.",
+    "pose-estimator": "synthetic VIO + EKF + Nav2 servers. The sim starts them unless navigation:=false; a second set would publish a second odom -> base_footprint TF."
   },
   "exclusive": [
     "drivetrain",
     "port-8765",
-    "gamepad-nodes"
+    "gamepad-nodes",
+    "zed",
+    "pose-estimator"
   ],
   "groups": [
     {
@@ -102,6 +138,11 @@
       "id": "addons",
       "label": "Add-ons",
       "description": "Run next to a drivetrain: bridge, RViz, emulator, ground station."
+    },
+    {
+      "id": "perception",
+      "label": "Perception & pose",
+      "description": "ZED 2i point cloud, OpenPose people + gestures, the sim's EKF pose estimate. Camera items run on the Jetson."
     },
     {
       "id": "drive",
@@ -146,20 +187,22 @@
       "label": "Set up this machine",
       "kind": "task",
       "runner": "host",
-      "cmd": "make setup {{platform}}",
+      "cmd": "devtool/setup-machine {{platform}}",
       "args": [
         {
           "name": "platform",
           "type": "enum",
           "choices": [
+            "auto",
+            "x86-cpu",
             "x86",
-            "mac",
             "linux-aarch64",
-            "l4t"
+            "l4t",
+            "mac"
           ],
-          "default": "x86",
+          "default": "auto",
           "style": "template",
-          "help": "Recorded in ros2_ws/.billee-platform"
+          "help": "auto picks the setup that fits this machine. Choices this machine can't run are disabled."
         },
         {
           "name": "SKIP_APT",
@@ -180,22 +223,147 @@
       ],
       "needs": [
         "sudo",
-        "internet",
-        "docker"
+        "internet"
       ],
+      "needsWhen": [
+        {
+          "arg": "platform",
+          "is": [
+            "x86"
+          ],
+          "needs": [
+            "x86-64-linux",
+            "nvidia"
+          ]
+        },
+        {
+          "arg": "platform",
+          "is": [
+            "x86-cpu"
+          ],
+          "needs": [
+            "x86-64-linux"
+          ]
+        },
+        {
+          "arg": "platform",
+          "is": [
+            "linux-aarch64"
+          ],
+          "needs": [
+            "arm64-linux"
+          ]
+        },
+        {
+          "arg": "platform",
+          "is": [
+            "l4t"
+          ],
+          "needs": [
+            "jetson"
+          ]
+        },
+        {
+          "arg": "platform",
+          "is": [
+            "mac"
+          ],
+          "needs": [
+            "apple-silicon"
+          ]
+        },
+        {
+          "arg": "platform",
+          "is": [
+            "mac",
+            "l4t"
+          ],
+          "needs": [
+            "docker"
+          ]
+        }
+      ],
+      "blockedHint": "Pick auto: it chooses the setup that fits this machine.",
       "status": "untested",
-      "notes": "Long-running and installs system packages. On x86 it exits with code 3 when a reboot or re-login is needed; run it again afterwards. linux-aarch64 needs no Docker.",
+      "notes": "Installs what this machine is missing, then builds the workspace. auto picks x86 (NVIDIA driver, Docker, billee-desktop image) on x86-64 + NVIDIA, x86-cpu (apt packages, Pixi, the default env built natively) on x86-64 without an NVIDIA GPU, l4t on a Jetson, linux-aarch64 on other ARM64 Linux and mac on an Apple-Silicon Mac. x86 exits with code 3 when a reboot or re-login is needed; run it again afterwards.",
       "docs": "README.md#setup"
     },
     {
-      "id": "setup.x86-preview",
+      "id": "setup.preview",
       "group": "setup",
-      "label": "Preview the x86 host install",
+      "label": "Preview the setup",
       "kind": "task",
       "runner": "host",
-      "cmd": "DRY_RUN=1 tooling/install-x86-host",
-      "status": "untested",
-      "notes": "Prints what make setup x86 would install (NVIDIA driver, Docker Engine, NVIDIA Container Toolkit) without changing anything."
+      "cmd": "DRY_RUN=1 devtool/setup-machine {{platform}}",
+      "args": [
+        {
+          "name": "platform",
+          "type": "enum",
+          "choices": [
+            "auto",
+            "x86-cpu",
+            "x86",
+            "linux-aarch64",
+            "l4t",
+            "mac"
+          ],
+          "default": "auto",
+          "style": "template",
+          "help": "auto picks the setup that fits this machine. Choices this machine can't run are disabled."
+        }
+      ],
+      "needsWhen": [
+        {
+          "arg": "platform",
+          "is": [
+            "x86"
+          ],
+          "needs": [
+            "x86-64-linux",
+            "nvidia"
+          ]
+        },
+        {
+          "arg": "platform",
+          "is": [
+            "x86-cpu"
+          ],
+          "needs": [
+            "x86-64-linux"
+          ]
+        },
+        {
+          "arg": "platform",
+          "is": [
+            "linux-aarch64"
+          ],
+          "needs": [
+            "arm64-linux"
+          ]
+        },
+        {
+          "arg": "platform",
+          "is": [
+            "l4t"
+          ],
+          "needs": [
+            "jetson"
+          ]
+        },
+        {
+          "arg": "platform",
+          "is": [
+            "mac"
+          ],
+          "needs": [
+            "apple-silicon"
+          ]
+        }
+      ],
+      "blockedHint": "Pick auto: it chooses the setup that fits this machine.",
+      "status": "verified",
+      "verified": "auto picks x86-cpu on this laptop (Intel graphics, no NVIDIA GPU) and lists the four steps; x86 is refused.",
+      "notes": "Shows what Set up this machine would install for the chosen platform, without changing anything."
     },
     {
       "id": "setup.platform",
@@ -273,14 +441,22 @@
             "chassis_bringup",
             "robot_description",
             "odesc",
-            "teleop"
+            "teleop",
+            "navigation",
+            "zed2i",
+            "zed_openpose",
+            "people",
+            "people_msgs",
+            "camera_stream",
+            "comms",
+            "pxx"
           ],
           "default": "teleop",
           "style": "template"
         }
       ],
       "status": "untested",
-      "notes": "Faster loop for C++ changes (odesc, teleop). Launch, config and Python files are symlinked, so editing them needs no rebuild."
+      "notes": "Faster loop for C++ changes (odesc, teleop, navigation, zed2i). Launch, config and Python files are symlinked, so editing them needs no rebuild. zed_openpose needs the ZED SDK + OpenPose (Jetson container); elsewhere it is skipped by colcon's package check or fails."
     },
     {
       "id": "build.first-l4t",
@@ -362,7 +538,7 @@
           "type": "enum",
           "choices": [
             "mock",
-            "can0",
+            "can2",
             "vcan0"
           ],
           "default": "mock",
@@ -403,6 +579,19 @@
           "type": "number",
           "default": 48.0,
           "style": "ros"
+        },
+        {
+          "name": "camera",
+          "type": "enum",
+          "default": "none",
+          "style": "ros",
+          "choices": [
+            "none",
+            "cloud",
+            "openpose",
+            "both"
+          ],
+          "help": "ZED 2i point cloud, OpenPose, or both. OpenPose needs the Jetson; elsewhere cloud/both use zed_usb (USB video + CPU stereo)"
         }
       ],
       "uses": [
@@ -415,7 +604,20 @@
       "ready": "Configured and activated .*joint_state_broadcaster",
       "status": "verified",
       "verified": "controllers active in under 1 s; odom and joint_states at 30 Hz; bridge on :8765",
-      "notes": "The real (non-Gazebo) stack with a software loopback in the ODESC plugin. No CAN, motors, Gazebo or GPU. Fastest loop. Wall-clock time (use_sim_time:=false for separate viewers). Starts no teleop."
+      "notes": "The real (non-Gazebo) stack with a software loopback in the ODESC plugin. No CAN, motors, Gazebo or GPU. Fastest loop. Wall-clock time (use_sim_time:=false for separate viewers). Starts no teleop. camera:=cloud|openpose|both adds the ZED 2i on the Jetson (PoseDev measured /zed/points 8.5 Hz, /people/skeletons 5.0 Hz with the mock drivetrain). The new ODESC driver (Prerelease-PoseDev) had lost its mock path and aborted with \"failed to initialize SocketCAN on mock\"; restored in odesc.cpp (smoke test passes 2026-11-13).",
+      "needsWhen": [
+        {
+          "arg": "camera",
+          "is": [
+            "cloud",
+            "openpose",
+            "both"
+          ],
+          "needs": [
+            "zed"
+          ]
+        }
+      ]
     },
     {
       "id": "drivetrain.sim",
@@ -431,6 +633,33 @@
           "default": false,
           "style": "ros",
           "help": "Also open RViz"
+        },
+        {
+          "name": "gui",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Open the Gazebo window"
+        },
+        {
+          "name": "joy_control",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Gamepad teleop here (only when no ground station runs it)"
+        },
+        {
+          "name": "camera",
+          "type": "enum",
+          "default": "none",
+          "style": "ros",
+          "choices": [
+            "none",
+            "cloud",
+            "openpose",
+            "both"
+          ],
+          "help": "ZED 2i point cloud, OpenPose, or both. OpenPose needs the Jetson; elsewhere cloud/both use zed_usb (USB video + CPU stereo)"
         }
       ],
       "needs": [
@@ -439,14 +668,33 @@
       "uses": [
         "drivetrain",
         "port-8765",
-        "gamepad-nodes"
+        "pose-estimator"
       ],
       "ports": [
         8765
       ],
       "ready": "Configured and activated .*joint_state_broadcaster",
-      "status": "untested",
-      "notes": "Gazebo Fortress, empty world, Foxglove bridge always on. Also starts gamepad teleop (it can't be turned off). Sim time: viewers need use_sim_time:=true. Opens a Gazebo window; headless machines prefix xvfb-run -a (not installed on this laptop, which also has no NVIDIA driver, so Gazebo renders on the CPU)."
+      "status": "verified",
+      "notes": "rover.launch.py mode:=sim: Gazebo (no window unless gui), Foxglove bridge always on, the EKF pose estimate + Nav2 servers. Gamepad teleop is off by default since PoseDev (the ground station runs it). Sim time: viewers need use_sim_time:=true. Headless machines: Gazebo still needs an X display for the camera sensor (xvfb-run -a, + vglrun -d egl on the Jetson).",
+      "usesWhen": {
+        "joy_control": [
+          "gamepad-nodes"
+        ]
+      },
+      "needsWhen": [
+        {
+          "arg": "camera",
+          "is": [
+            "cloud",
+            "openpose",
+            "both"
+          ],
+          "needs": [
+            "zed"
+          ]
+        }
+      ],
+      "verified": "controllers active in ~10 s under xvfb-run (2026-11-13, x86 laptop, no GPU); camera:=cloud starts zed_usb"
     },
     {
       "id": "drivetrain.sim-full",
@@ -456,6 +704,13 @@
       "runner": "ros",
       "cmd": "ros2 launch chassis_bringup sim_gz.launch.py",
       "args": [
+        {
+          "name": "gui",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Open the Gazebo window; false = server only"
+        },
         {
           "name": "foxglove",
           "type": "bool",
@@ -474,7 +729,7 @@
           "type": "bool",
           "default": false,
           "style": "ros",
-          "help": "Also run the ODESC driver + emulator on vcan0 (needs vcan0; see addons.emulator: currently broken)"
+          "help": "Also run the ODESC driver + emulator on vcan0 (needs vcan0)"
         },
         {
           "name": "x",
@@ -509,14 +764,21 @@
           "type": "bool",
           "default": true,
           "style": "ros",
-          "help": "Ignored: known bug, the gamepad nodes always start"
+          "help": "Start joy_node + joy_tank_drive with the sim"
         },
         {
           "name": "world_file",
           "type": "string",
           "default": "empty.sdf",
           "style": "ros",
-          "help": "Ignored: known bug, always empty.sdf"
+          "help": "A world in robot_description's share, or a Gazebo world such as shapes.sdf"
+        },
+        {
+          "name": "navigation",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Synthetic VIO + EKF + Nav2 servers; false saves CPU but removes the odom frame"
         }
       ],
       "needs": [
@@ -532,6 +794,9 @@
       "usesWhen": {
         "foxglove": [
           "port-8765"
+        ],
+        "navigation": [
+          "pose-estimator"
         ]
       }
     },
@@ -562,7 +827,7 @@
           ],
           "default": "true",
           "style": "template",
-          "help": "Passed as joy_control, which is ignored (bug)"
+          "help": "Passed as joy_control"
         },
         {
           "name": "RVIZ",
@@ -611,7 +876,7 @@
       ],
       "ready": "Configured and activated .*joint_state_broadcaster",
       "status": "untested",
-      "notes": "What make sim runs. Calls pixi run directly, so on this laptop it inherits the /opt/ros paths ~/.bashrc sources (the problem host-ros2 exists to avoid). Prefer drivetrain.sim here. Turns the ODESC shadow on by itself whenever vcan0 exists.",
+      "notes": "What make sim runs. Calls pixi run directly, so on this laptop it inherits the /opt/ros paths ~/.bashrc sources (the problem host-ros2 exists to avoid). Prefer drivetrain.sim here. Turns the ODESC shadow on by itself whenever vcan0 exists. Without a usable display it runs Gazebo server-only (gui:=false) under xvfb-run, plus vglrun on the Jetson.",
       "usesWhen": {
         "foxglove": [
           "port-8765"
@@ -660,11 +925,11 @@
           "name": "can_interface",
           "type": "enum",
           "choices": [
-            "can0",
+            "can2",
             "vcan0",
             "mock"
           ],
-          "default": "can0",
+          "default": "can2",
           "style": "ros"
         },
         {
@@ -678,11 +943,24 @@
           "type": "bool",
           "default": false,
           "style": "ros"
+        },
+        {
+          "name": "camera",
+          "type": "enum",
+          "default": "none",
+          "style": "ros",
+          "choices": [
+            "none",
+            "cloud",
+            "openpose",
+            "both"
+          ],
+          "help": "ZED 2i point cloud, OpenPose, or both. OpenPose needs the Jetson; elsewhere cloud/both use zed_usb (USB video + CPU stereo)"
         }
       ],
       "needs": [
         "rover",
-        "can0"
+        "can"
       ],
       "uses": [
         "drivetrain",
@@ -693,7 +971,20 @@
       ],
       "ready": "Configured and activated .*joint_state_broadcaster",
       "status": "untested",
-      "notes": "6× ODESC V4.2 + NEO over can0 at 500 kbit/s. Motion only with a command stream; wheels stop 0.25 s after the last command. First runs on blocks."
+      "notes": "6× ODESC V4.2 + NEO over can2 at 500 kbit/s. Motion only with a command stream; wheels stop 0.25 s after the last command. First runs on blocks.",
+      "needsWhen": [
+        {
+          "arg": "camera",
+          "is": [
+            "cloud",
+            "openpose",
+            "both"
+          ],
+          "needs": [
+            "zed"
+          ]
+        }
+      ]
     },
     {
       "id": "drivetrain.real-direct",
@@ -707,11 +998,11 @@
           "name": "can_interface",
           "type": "enum",
           "choices": [
-            "can0",
+            "can2",
             "vcan0",
             "mock"
           ],
-          "default": "can0",
+          "default": "can2",
           "style": "ros"
         },
         {
@@ -746,13 +1037,73 @@
       }
     },
     {
+      "id": "drivetrain.onboard-test",
+      "group": "drivetrain",
+      "label": "Bench test, all on the Jetson",
+      "kind": "service",
+      "runner": "ros",
+      "confirm": true,
+      "cmd": "ros2 launch chassis_bringup onboard_test.launch.py",
+      "args": [
+        {
+          "name": "can_interface",
+          "type": "enum",
+          "default": "can2",
+          "style": "ros",
+          "choices": [
+            "can2",
+            "vcan0",
+            "mock"
+          ]
+        },
+        {
+          "name": "gear_ratio",
+          "type": "number",
+          "default": 48.0,
+          "style": "ros"
+        },
+        {
+          "name": "rviz",
+          "type": "bool",
+          "default": true,
+          "style": "ros"
+        },
+        {
+          "name": "joy_control",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Gamepad plugged into the Jetson"
+        }
+      ],
+      "needs": [
+        "rover",
+        "can",
+        "display"
+      ],
+      "uses": [
+        "drivetrain",
+        "port-8765"
+      ],
+      "usesWhen": {
+        "joy_control": [
+          "gamepad-nodes"
+        ]
+      },
+      "ports": [
+        8765
+      ],
+      "ready": "Configured and activated .*joint_state_broadcaster",
+      "status": "untested",
+      "notes": "Real (or mock) drivetrain + gamepad teleop + viewers on one machine, with a monitor and gamepad on the Jetson. can_interface:=mock needs no motors."
+    },
+    {
       "id": "addons.emulator",
       "group": "addons",
       "label": "ODESC vCAN emulator",
       "kind": "service",
       "runner": "ros",
       "cmd": "ros2 run odesc odesc_vcan_emulator.py --interface {{interface}}",
-      "workaround": "python3 install/odesc/lib/odesc/odesc_vcan_emulator.py --interface {{interface}}",
       "args": [
         {
           "name": "interface",
@@ -764,9 +1115,9 @@
       "needs": [
         "vcan0"
       ],
-      "status": "broken",
-      "verified": "ros2 run: 'No executable found'. The script is committed without the executable bit (git mode 100644) and --symlink-install links to it, so odesc_shadow:=true hits 'Permission denied' too. python3 <path> works.",
-      "notes": "Answers as nodes 0–5 with 0x09 encoder frames at 100 Hz. Fix in the repo: git update-index --chmod=+x ros2_ws/src/odesc/scripts/odesc_vcan_emulator.py."
+      "status": "untested",
+      "verified": "ros2 run finds it (--help works); not run against vcan0 yet.",
+      "notes": "Answers as nodes 0–5 with 0x09 encoder frames at 100 Hz."
     },
     {
       "id": "addons.bridge",
@@ -853,6 +1204,19 @@
           "help": "Set false next to a local sim (it already runs gamepad nodes)"
         },
         {
+          "name": "view",
+          "type": "enum",
+          "default": "drivetrain",
+          "style": "ros",
+          "choices": [
+            "drivetrain",
+            "cloud",
+            "openpose",
+            "both"
+          ],
+          "help": "RViz layout: match the rover's camera:="
+        },
+        {
           "name": "fprime_gds",
           "type": "bool",
           "default": false,
@@ -862,7 +1226,7 @@
         {
           "name": "fprime_gds_url",
           "type": "string",
-          "default": "$FPRIME_GDS_URL",
+          "default": "http://192.168.4.73:5000",
           "style": "ros"
         }
       ],
@@ -874,7 +1238,7 @@
         8765
       ],
       "status": "untested",
-      "notes": "Meant for a second machine on the rover's LAN. On one machine, only rviz is useful (the rest duplicates what the drivetrain launch already runs).",
+      "notes": "Meant for a second machine on the rover's LAN. On one machine, only rviz is useful (the rest duplicates what the drivetrain launch already runs). view:= picks the RViz layout to match the rover's camera:=. RViz's fixed frame is odom on sim time, base_link otherwise.",
       "usesWhen": {
         "foxglove": [
           "port-8765"
@@ -883,6 +1247,397 @@
           "gamepad-nodes"
         ]
       }
+    },
+    {
+      "id": "perception.models",
+      "group": "perception",
+      "label": "Download OpenPose models",
+      "kind": "task",
+      "runner": "ros",
+      "cmd": "bash src/perception/zed_openpose/scripts/get_openpose_models.sh",
+      "needs": [
+        "internet"
+      ],
+      "status": "untested",
+      "notes": "Once per checkout, into ros2_ws/models/openpose (gitignored): BODY_25 and COCO. CMU's model server is offline, so the weights come from a pinned Hugging Face mirror, checksum-verified. Needed before any camera:=openpose|both."
+    },
+    {
+      "id": "perception.zed-usb",
+      "group": "perception",
+      "label": "ZED over USB, CPU depth (no NVIDIA GPU)",
+      "kind": "service",
+      "runner": "host",
+      "cmd": "tooling/zed-usb",
+      "args": [
+        {
+          "name": "standalone",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Also start the rover model TF + Foxglove bridge; false next to a drivetrain"
+        },
+        {
+          "name": "resolution",
+          "type": "enum",
+          "choices": [
+            "VGA",
+            "HD720",
+            "HD1080",
+            "HD2K"
+          ],
+          "default": "VGA",
+          "style": "ros",
+          "help": "CPU depth is ~60 ms/frame at VGA; USB 2 only carries VGA"
+        },
+        {
+          "name": "flip",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Camera mounted upside down"
+        },
+        {
+          "name": "cloud_max_hz",
+          "type": "number",
+          "default": 10.0,
+          "style": "ros"
+        },
+        {
+          "name": "use_sim_time",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "true next to the Gazebo sim"
+        },
+        {
+          "name": "ZED_USB_FORCE",
+          "type": "bool",
+          "default": false,
+          "style": "env",
+          "env": "ZED_USB_FORCE",
+          "help": "Run even where the ZED SDK is installed"
+        }
+      ],
+      "needs": [
+        "zed"
+      ],
+      "uses": [
+        "zed"
+      ],
+      "usesWhen": {
+        "standalone": [
+          "port-8765"
+        ]
+      },
+      "ports": [
+        8765
+      ],
+      "ready": "ZED SN \\d+ on /dev/video",
+      "status": "untested",
+      "notes": "Ported from Proj_1's zed_usb. Publishes /zed/points (same as zed_openpose_node) plus the ZED wrapper's rectified image and depth under /zed/zed_node/. Refuses on the Jetson (use camera:=cloud there). Calibration from configs/zed/, else downloaded once from Stereolabs. Foxglove: perception/people/foxglove/zed_points.json. Tested without a camera: stereo maths with the team's SN36243153 calibration (13 unit tests), the full node on synthetic frames (/zed/points at 1.999 m for a 2 m plane, 41 Hz), waiting for a camera, and the refusal when /zed/points already has a publisher. Not yet run with a ZED plugged in."
+    },
+    {
+      "id": "perception.zed-openpose",
+      "group": "perception",
+      "label": "ZED 2i + OpenPose (standalone)",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch zed_openpose zed_openpose.launch.py",
+      "args": [
+        {
+          "name": "openpose",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Run OpenPose on the left image"
+        },
+        {
+          "name": "point_cloud",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Publish /zed/points"
+        },
+        {
+          "name": "model_pose",
+          "type": "enum",
+          "default": "BODY_25",
+          "style": "ros",
+          "choices": [
+            "BODY_25",
+            "COCO"
+          ]
+        },
+        {
+          "name": "svo_path",
+          "type": "string",
+          "default": "",
+          "style": "ros",
+          "help": "Replay an .svo2 recording instead of the live camera"
+        },
+        {
+          "name": "target_frame",
+          "type": "string",
+          "default": "base_link",
+          "style": "ros"
+        },
+        {
+          "name": "use_sim_time",
+          "type": "bool",
+          "default": false,
+          "style": "ros"
+        }
+      ],
+      "needs": [
+        "jetson",
+        "zed"
+      ],
+      "uses": [
+        "zed"
+      ],
+      "status": "untested",
+      "notes": "The camera without a drivetrain. Drops the kernel file cache first so the GPU gets free RAM. Publishes /zed/points, /people/skeletons and the OpenPose image. With a drivetrain, use its camera:= instead."
+    },
+    {
+      "id": "perception.people",
+      "group": "perception",
+      "label": "People + gestures (camera + gesture node)",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch people people_rover.launch.py",
+      "args": [
+        {
+          "name": "standalone",
+          "type": "bool",
+          "default": true,
+          "style": "ros",
+          "help": "Also start robot_state_publisher + Foxglove bridge (false next to a drivetrain)"
+        },
+        {
+          "name": "openpose",
+          "type": "bool",
+          "default": true,
+          "style": "ros"
+        },
+        {
+          "name": "point_cloud",
+          "type": "bool",
+          "default": true,
+          "style": "ros"
+        },
+        {
+          "name": "model_pose",
+          "type": "enum",
+          "default": "BODY_25",
+          "style": "ros",
+          "choices": [
+            "BODY_25",
+            "COCO"
+          ]
+        },
+        {
+          "name": "svo_path",
+          "type": "string",
+          "default": "",
+          "style": "ros"
+        },
+        {
+          "name": "target_frame",
+          "type": "string",
+          "default": "base_link",
+          "style": "ros"
+        },
+        {
+          "name": "use_sim_time",
+          "type": "bool",
+          "default": false,
+          "style": "ros"
+        }
+      ],
+      "needs": [
+        "jetson",
+        "zed"
+      ],
+      "uses": [
+        "zed"
+      ],
+      "usesWhen": {
+        "standalone": [
+          "port-8765"
+        ]
+      },
+      "status": "untested",
+      "notes": "zed_openpose + gesture_node: /people/gesture from the skeletons (config: people/config/gestures.yaml). Foxglove layout: perception/people/foxglove/people_rover.json."
+    },
+    {
+      "id": "perception.csi-cameras",
+      "group": "perception",
+      "label": "CSI camera streams (H.264, 6 cameras)",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch camera_stream camera_stream.launch.py",
+      "args": [
+        {
+          "name": "width",
+          "type": "number",
+          "default": 1280,
+          "style": "ros"
+        },
+        {
+          "name": "height",
+          "type": "number",
+          "default": 720,
+          "style": "ros"
+        },
+        {
+          "name": "fps",
+          "type": "number",
+          "default": 30,
+          "style": "ros"
+        },
+        {
+          "name": "bitrate",
+          "type": "number",
+          "default": 3000000,
+          "style": "ros"
+        }
+      ],
+      "needs": [
+        "jetson"
+      ],
+      "uses": [
+        "port-8765"
+      ],
+      "ports": [
+        8765
+      ],
+      "status": "untested",
+      "notes": "Six CSI cameras on the Jetson, GStreamer hardware-encoded H.264 on /cam0/video ... /cam5/video, plus its own Foxglove bridge (so not next to a drivetrain on the same machine)."
+    },
+    {
+      "id": "pose.estimator",
+      "group": "perception",
+      "label": "Pose estimator (VIO + EKF + Nav2), standalone",
+      "kind": "service",
+      "runner": "ros",
+      "cmd": "ros2 launch navigation pose_estim.launch.py",
+      "args": [
+        {
+          "name": "use_sim",
+          "type": "bool",
+          "default": true,
+          "style": "ros"
+        },
+        {
+          "name": "sim_vio_profile",
+          "type": "string",
+          "default": "validation",
+          "style": "ros"
+        },
+        {
+          "name": "sim_vio_seed",
+          "type": "number",
+          "default": 42,
+          "style": "ros"
+        },
+        {
+          "name": "sim_vio_truth_topic",
+          "type": "string",
+          "default": "/gz/odom",
+          "style": "ros"
+        }
+      ],
+      "needs": [
+        "drivetrain"
+      ],
+      "uses": [
+        "pose-estimator"
+      ],
+      "status": "untested",
+      "notes": "The sim already starts this (navigation:=true). Use it only next to a sim started with navigation:=false."
+    },
+    {
+      "id": "pose.ekf-odom",
+      "group": "perception",
+      "label": "Watch fused pose (/odometry/filtered)",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic echo /odometry/filtered nav_msgs/msg/Odometry",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "notes": "EKF output: wheel-odometry velocity + synthetic VIO pose. Compare with /diff_drive_controller/odom and the Gazebo truth on /gz/odom.",
+      "verified": "after a 5 s drive: x 0.558 vs Gazebo truth 0.624 (wheel odom 0.590)"
+    },
+    {
+      "id": "pose.ekf-rate",
+      "group": "perception",
+      "label": "Fused pose rate",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic hz /odometry/filtered",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "verified": "14.2 Hz in the sim on this laptop (2026-11-13)"
+    },
+    {
+      "id": "pose.vio-odom",
+      "group": "perception",
+      "label": "Watch synthetic VIO (/depth_cam/vio/odom)",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic echo /depth_cam/vio/odom nav_msgs/msg/Odometry",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "notes": "Gazebo truth with the profile's noise and drift added (zed2i/config/synthetic_vio.yaml).",
+      "verified": "24.3 Hz in the sim on this laptop (2026-11-13)"
+    },
+    {
+      "id": "pose.truth",
+      "group": "perception",
+      "label": "Watch Gazebo ground truth (/gz/odom)",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic echo /gz/odom nav_msgs/msg/Odometry",
+      "needs": [
+        "drivetrain"
+      ],
+      "status": "verified",
+      "verified": "published by the sim (2026-11-13)"
+    },
+    {
+      "id": "perception.points-rate",
+      "group": "perception",
+      "label": "Point cloud rate (/zed/points)",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic hz /zed/points",
+      "status": "untested",
+      "notes": "PoseDev measured 8.5 Hz (mock drivetrain), 2.8 Hz in the sim (Orin Nano)."
+    },
+    {
+      "id": "perception.skeletons-rate",
+      "group": "perception",
+      "label": "Skeleton rate (/people/skeletons)",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic hz /people/skeletons",
+      "status": "untested",
+      "notes": "PoseDev measured 5.0 Hz (mock drivetrain). The first skeleton arrives ~10 s after launch."
+    },
+    {
+      "id": "perception.gesture",
+      "group": "perception",
+      "label": "Watch gestures (/people/gesture)",
+      "kind": "stream",
+      "runner": "ros",
+      "cmd": "ros2 topic echo /people/gesture people_msgs/msg/Gesture",
+      "status": "untested"
     },
     {
       "id": "drive.pub",
@@ -1035,7 +1790,7 @@
         {
           "name": "iface",
           "type": "string",
-          "default": "can0",
+          "default": "can2",
           "style": "template"
         },
         {
@@ -1047,7 +1802,7 @@
       ],
       "needs": [
         "sudo",
-        "can0"
+        "can"
       ],
       "status": "untested",
       "notes": "The interface must already exist (Jetson mttcan or a USB-CAN adapter). Already-up interfaces are left alone: take them down first to change the bitrate."
@@ -1121,15 +1876,15 @@
     {
       "id": "can.persist",
       "group": "can",
-      "label": "Persist can0 across reboots (Jetson)",
+      "label": "Persist can2 across reboots (Jetson)",
       "kind": "task",
       "runner": "host-sudo",
       "shell": true,
       "confirm": true,
-      "cmd": "sudo cp tooling/can0.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now can0.service",
+      "cmd": "sudo cp tooling/can2.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now can2.service",
       "needs": [
         "sudo",
-        "can0"
+        "can"
       ],
       "status": "untested"
     },
@@ -1167,9 +1922,9 @@
       "kind": "task",
       "runner": "ros",
       "shell": true,
-      "cmd": "ros2 pkg list | grep -E '^(chassis_bringup|odesc|robot_description|teleop)$'",
-      "status": "verified",
-      "verified": "all 4 listed"
+      "cmd": "ros2 pkg list | grep -E '^(chassis_bringup|odesc|robot_description|teleop|navigation|zed2i|zed_openpose|people|people_msgs|camera_stream)$'",
+      "status": "untested",
+      "notes": "zed_openpose is only built in the Jetson container (ZED SDK + OpenPose)."
     },
     {
       "id": "health.topics",
@@ -1293,7 +2048,9 @@
             "/controller_manager",
             "/robot_state_publisher",
             "/joy_tank_drive",
-            "/foxglove_bridge"
+            "/foxglove_bridge",
+            "/ekf_filter_node",
+            "/synthetic_vio"
           ],
           "default": "/diff_drive_controller",
           "style": "template"
@@ -1478,7 +2235,7 @@
         {
           "name": "topics",
           "type": "string",
-          "default": "/diff_drive_controller/odom /joint_states /tf /tf_static /robot_description /diff_drive_controller/cmd_vel_unstamped /rosout",
+          "default": "/diff_drive_controller/odom /joint_states /tf /tf_static /robot_description /diff_drive_controller/cmd_vel_unstamped /rosout /odometry/filtered /depth_cam/vio/odom /gz/odom",
           "style": "template"
         }
       ],
@@ -1559,8 +2316,19 @@
       "needs": [
         "docker"
       ],
+      "needsWhen": [
+        {
+          "platform": [
+            "x86-native",
+            "x86-docker"
+          ],
+          "needs": [
+            "nvidia"
+          ]
+        }
+      ],
       "status": "untested",
-      "notes": "Launcher pattern: start this first, then every ros item joins it via docker exec. The first desktop-ros2 run owns the container (--rm), so if a sim is the first process, stopping the sim kills everything else in that container."
+      "notes": "Launcher pattern: start this first, then every ros item joins it via docker exec. The first desktop-ros2 run owns the container (--rm), so if a sim is the first process, stopping the sim kills everything else in that container. On x86 the container starts with --gpus all, so it needs an NVIDIA GPU."
     },
     {
       "id": "containers.shell",
@@ -1573,8 +2341,19 @@
         "docker",
         "terminal"
       ],
+      "needsWhen": [
+        {
+          "platform": [
+            "x86-native",
+            "x86-docker"
+          ],
+          "needs": [
+            "nvidia"
+          ]
+        }
+      ],
       "status": "untested",
-      "notes": "Joins the running billee-<platform> container if there is one. tooling/rover-ros2 shell on the Jetson."
+      "notes": "Joins the running billee-<platform> container if there is one. tooling/rover-ros2 shell on the Jetson. On x86 the container starts with --gpus all, so it needs an NVIDIA GPU."
     },
     {
       "id": "containers.devcontainers",
@@ -1598,7 +2377,7 @@
       ],
       "status": "verified",
       "verified": "bridge answers on :8765 (protocol foxglove.sdk.v1)",
-      "notes": "Open connection → Foxglove WebSocket → ws://localhost:8765, then Layouts → Import from file → ros2_ws/src/chassis_bringup/foxglove/drivetrain.json. The Teleop panel drives on /diff_drive_controller/cmd_vel_unstamped."
+      "notes": "Open connection → Foxglove WebSocket → ws://localhost:8765, then Layouts → Import from file: ros2_ws/src/chassis_bringup/foxglove/drivetrain.json (drivetrain), rover_dashboard.json (odometry + fused pose), or ros2_ws/src/perception/people/foxglove/zed_points.json (camera:=cloud) / people_rover.json (camera:=openpose|both). The Teleop panel drives on /diff_drive_controller/cmd_vel_unstamped."
     },
     {
       "id": "links.fprime",
@@ -1624,28 +2403,8 @@
   ],
   "notBootable": [
     {
-      "what": "ZED camera node",
-      "why": "The ZED SDK is installed in the Docker images, but no ZED ROS wrapper is a dependency, and the zed_camera.launch.py hint in docker/ros_entrypoint*.sh comes from entrypoint scripts no Dockerfile uses."
-    },
-    {
-      "what": "Other Gazebo worlds",
-      "why": "sim_gz.launch.py ignores world_file and always loads empty.sdf."
-    },
-    {
-      "what": "Sim without gamepad nodes",
-      "why": "joy_control:=false is ignored (a LaunchConfiguration object is always truthy). Harmless without a pad; duplicates commands with a pad and teleop.launch.py."
-    },
-    {
-      "what": "ODESC emulator / sim + shadow",
-      "why": "odesc_vcan_emulator.py lacks the executable bit in git. Workaround: python3 install/odesc/lib/odesc/odesc_vcan_emulator.py."
-    },
-    {
-      "what": "Navigation / autonomy (Nav2)",
-      "why": "Mentioned as future work; nothing in the workspace yet."
-    },
-    {
       "what": "Radio-link bridge (zenoh-bridge-ros2dds)",
-      "why": "Planned in docs/RUN_GUIDE.md, not set up."
+      "why": "Planned, not set up."
     },
     {
       "what": "rosbridge (port 9090)",
@@ -1653,11 +2412,19 @@
     },
     {
       "what": "Headless sim on this laptop",
-      "why": "xvfb-run isn't installed on the host (sudo apt install xvfb)."
+      "why": "xvfb-run isn't installed on the host. Machine setup > Set up this machine installs it (or sudo apt install xvfb)."
     },
     {
       "what": "make build / shell / sim on this laptop",
       "why": "They go through Docker for the x86 platform, and Docker isn't reachable here. Use the tooling/host-ros2 runner."
+    },
+    {
+      "what": "ZED camera and OpenPose off the Jetson",
+      "why": "zed_openpose needs the ZED SDK and a CUDA OpenPose build, which only the l4t image has. camera:= is skipped with a log line elsewhere."
+    },
+    {
+      "what": "Nav2 goals / autonomy",
+      "why": "The sim starts the Nav2 controller and planner servers (straight-line planner), but there is no map, BT navigator or goal tool yet."
     }
   ]
 }

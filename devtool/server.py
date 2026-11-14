@@ -24,6 +24,7 @@ REPO_ROOT = HERE.parent
 WEB_DIR = HERE / "web"
 CATALOG_PATH = HERE / "catalog.json"
 
+PLATFORMS = ("x86-native", "x86-docker", "mac", "linux-aarch64", "l4t")
 MAX_LINES = 5000
 KEEP_FINISHED = 50
 ACTIVE = ("starting", "running", "stopping")
@@ -39,6 +40,8 @@ CONTENT_TYPES = {
     ".css": "text/css; charset=utf-8",
     ".json": "application/json",
     ".svg": "image/svg+xml",
+    ".woff2": "font/woff2",
+    ".txt": "text/plain; charset=utf-8",
 }
 
 
@@ -54,12 +57,22 @@ class Catalog:
         with self._lock:
             mtime = self.path.stat().st_mtime
             if mtime != self._mtime:
-                self._data = json.loads(self.path.read_text())
+                try:
+                    self._data = json.loads(self.path.read_text())
+                except ValueError as exc:
+                    if not self._data:
+                        raise
+                    print(f"billee-dev: {self.path.name} is not valid JSON ({exc}); keeping the last good copy",
+                          file=sys.stderr, flush=True)
                 self._mtime = mtime
             return self._data
 
     def item(self, item_id: str) -> dict | None:
         return next((i for i in self.data["items"] if i["id"] == item_id), None)
+
+
+class UnknownItem(LookupError):
+    pass
 
 
 class ArgError(ValueError):
@@ -152,6 +165,22 @@ def build_command(catalog: dict, item: dict, args: dict, platform: str) -> str:
     return cmd
 
 
+def needs_for(catalog: dict, item: dict, args: dict, platform: str) -> list:
+    found = [(n, None) for n in item.get("needs", [])]
+    found += [(n, None) for n in catalog["runners"].get(item["runner"], {}).get("needs", {}).get(platform, [])]
+    for rule in item.get("needsWhen", []):
+        if "platform" in rule and platform in rule["platform"]:
+            found += [(n, None) for n in rule["needs"]]
+        elif "arg" in rule and args[rule["arg"]][0] in rule["is"]:
+            found += [(n, f"{rule['arg']} {args[rule['arg']][0]}") for n in rule["needs"]]
+    seen, out = set(), []
+    for need, via in found:
+        if (need, via) not in seen:
+            seen.add((need, via))
+            out.append((need, via))
+    return out
+
+
 def resources_for(item: dict, args: dict) -> set:
     uses = set(item.get("uses", []))
     for arg_name, extra in item.get("usesWhen", {}).items():
@@ -169,11 +198,51 @@ def mode_of(item: dict) -> str:
     return "run"
 
 
+def has_nvidia() -> bool:
+    if Path("/etc/nv_tegra_release").exists():
+        return True
+    for dev in Path("/sys/bus/pci/devices").glob("*"):
+        try:
+            vendor = (dev / "vendor").read_text().strip()
+            pci_class = (dev / "class").read_text().strip()
+        except OSError:
+            continue
+        if vendor == "0x10de" and pci_class.startswith("0x03"):
+            return True
+    return False
+
+
+def machine_facts() -> dict:
+    system, arch = pyplatform.system(), pyplatform.machine().lower()
+    return {
+        "nvidia": has_nvidia(),
+        "x86-64-linux": system == "Linux" and arch in ("x86_64", "amd64"),
+        "arm64-linux": system == "Linux" and arch in ("aarch64", "arm64"),
+        "jetson": Path("/etc/nv_tegra_release").exists(),
+        "apple-silicon": system == "Darwin" and arch == "arm64",
+    }
+
+
+def zed_connected() -> bool:
+    """A Stereolabs camera (USB vendor 2b03) on the USB bus."""
+    for vendor in Path("/sys/bus/usb/devices").glob("*/idVendor"):
+        try:
+            if vendor.read_text().strip() == "2b03":
+                return True
+        except OSError:
+            pass
+    return False
+
+
+def pixi_ok() -> bool:
+    return bool(shutil.which("pixi")) or (Path.home() / ".pixi" / "bin" / "pixi").is_file()
+
+
 def detect_platform() -> str:
     ws = REPO_ROOT / "ros2_ws"
     marker = ws / ".billee-platform"
     recorded = marker.read_text().strip() if marker.exists() else ""
-    if not recorded:
+    if recorded not in ("x86", "mac", "linux-aarch64", "l4t"):
         machine = pyplatform.machine().lower()
         if pyplatform.system() == "Darwin":
             recorded = "mac"
@@ -185,6 +254,8 @@ def detect_platform() -> str:
             recorded = "linux-aarch64"
     if recorded != "x86":
         return recorded
+    if not has_nvidia():
+        return "x86-native"
     caches = sorted((ws / "build").glob("*/CMakeCache.txt"))
     host_built = bool(caches) and str(ws) in caches[0].read_text(errors="ignore")
     if host_built and (REPO_ROOT / "tooling" / "host-ros2").exists():
@@ -273,6 +344,7 @@ class Run:
                 if self.status == "starting" and self.ready.search(line):
                     self.status = "running"
                 self.cond.notify_all()
+        self.proc.stdout.close()
         code = self.proc.wait()
         with self.cond:
             self.exit_code = code
@@ -389,11 +461,13 @@ class Registry:
 
 
 class App:
-    def __init__(self, platform: str, port: int):
+    def __init__(self, platform: str, port: int, catalog_path: Path = CATALOG_PATH):
         self.platform = platform
         self.port = port
-        self.catalog = Catalog(CATALOG_PATH)
+        self.catalog = Catalog(catalog_path)
         self.registry = Registry(self.catalog)
+        self.machine = machine_facts()
+        self.start_lock = threading.Lock()
 
     def needs_status(self) -> dict:
         net = Path("/sys/class/net")
@@ -401,20 +475,39 @@ class App:
         return {
             "display": bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")),
             "vcan0": (net / "vcan0").exists(),
-            "can0": (net / "can0").exists(),
+            "can": any(net.glob("can[0-9]*")),
+            "zed": zed_connected(),
             "gamepad": dev_input.exists() and any(dev_input.glob("js*")),
             "docker": docker_ok(),
             "terminal": terminal_argv("true") is not None,
             "drivetrain": self.registry.holds("drivetrain") or port_in_use(8765),
+            "pixi": pixi_ok(),
+            **self.machine,
         }
+
+    def need_block(self, item: dict, args: dict, needs: dict | None = None) -> str | None:
+        needs = self.needs_status() if needs is None else needs
+        blocking = self.catalog.data.get("blocking", {})
+        for need, via in needs_for(self.catalog.data, item, args, self.platform):
+            if need in blocking and needs.get(need) is False:
+                if via:
+                    return f"{via}: {blocking[need]} {item.get('blockedHint', '')}".strip()
+                return blocking[need]
+        return None
 
     def prepare(self, body: dict) -> tuple:
         item = self.catalog.item(str(body.get("id", "")))
         if item is None:
-            raise LookupError(f"no catalog item {body.get('id')!r}")
+            raise UnknownItem(f"no catalog item {body.get('id')!r}")
         args = resolve_args(item, body.get("args"))
         command = build_command(self.catalog.data, item, args, self.platform)
         return item, args, command, resources_for(item, args)
+
+    def refusal(self, item: dict, args: dict, uses: set) -> str | None:
+        blocked = self.need_block(item, args)
+        if blocked is None and mode_of(item) == "run":
+            blocked = self.registry.conflict(item, uses)
+        return blocked
 
     def preview(self, body: dict) -> dict:
         try:
@@ -424,9 +517,13 @@ class App:
         mode = mode_of(item)
         needs = self.needs_status()
         catalog = self.catalog.data
+        blocking = catalog.get("blocking", {})
         warnings = [f"Missing here ({n}): {catalog['needs'][n]}"
-                    for n in item.get("needs", []) if needs.get(n) is False]
-        blocked = self.registry.conflict(item, uses) if mode == "run" else None
+                    for n, _via in needs_for(catalog, item, args, self.platform)
+                    if n not in blocking and needs.get(n) is False]
+        blocked = self.need_block(item, args, needs)
+        if blocked is None and mode == "run":
+            blocked = self.registry.conflict(item, uses)
         return {"ok": True, "command": command, "mode": mode, "uses": sorted(uses),
                 "warnings": warnings, "blocked": blocked}
 
@@ -456,10 +553,24 @@ def make_handler(app: App):
             self.send_json(403, {"error": "unexpected Host header"})
             return False
 
-
         def do_GET(self):
-            if not self.host_ok():
-                return
+            if self.host_ok():
+                self.guarded(self.get)
+
+        def do_POST(self):
+            if self.host_ok():
+                self.guarded(self.post)
+
+        def guarded(self, handler):
+            try:
+                handler()
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            except Exception as exc:
+                print(f"[billee-dev] {self.command} {self.path} failed: {exc!r}", file=sys.stderr, flush=True)
+                self.send_json(500, {"error": f"Server error: {exc}"})
+
+        def get(self):
             url = urlparse(self.path)
             path = url.path
             if path == "/api/info":
@@ -492,7 +603,7 @@ def make_handler(app: App):
         def serve_static(self, path: str):
             name = "index.html" if path in ("", "/") else path.lstrip("/")
             target = (WEB_DIR / name).resolve()
-            if target.parent != WEB_DIR or not target.is_file():
+            if WEB_DIR not in target.parents or not target.is_file():
                 return self.send_json(404, {"error": "not found"})
             data = target.read_bytes()
             self.send_response(200)
@@ -533,10 +644,7 @@ def make_handler(app: App):
             except (BrokenPipeError, ConnectionResetError):
                 return
 
-
-        def do_POST(self):
-            if not self.host_ok():
-                return
+        def post(self):
             origin = self.headers.get("Origin")
             if origin is not None and origin not in allowed_origins:
                 return self.send_json(403, {"error": "requests must come from the dev tool page"})
@@ -564,38 +672,51 @@ def make_handler(app: App):
                     return self.send_json(200, {"run": run.to_json()})
                 if path == "/api/terminal":
                     return self.terminal(body)
-            except LookupError as exc:
+            except UnknownItem as exc:
                 return self.send_json(404, {"error": str(exc)})
             except ArgError as exc:
                 return self.send_json(400, {"error": "Check the highlighted arguments.", "errors": exc.errors})
             return self.send_json(404, {"error": "not found"})
 
         def start(self, body: dict):
-            item, _args, command, uses = app.prepare(body)
+            item, args, command, uses = app.prepare(body)
             mode = mode_of(item)
             if mode != "run":
                 return self.send_json(409, {"error": f"{item['label']} can't run in the page ({mode})."})
-            if item.get("confirm") and body.get("confirmed") is not True:
-                return self.send_json(428, {"error": "confirm", "message":
-                                            f"{item['label']}: {item.get('notes', '')}\n\nRun it?"})
-            blocked = app.registry.conflict(item, uses)
-            if blocked:
-                return self.send_json(409, {"error": blocked})
-            run = app.registry.start(item, command, uses)
+            with app.start_lock:
+                blocked = app.refusal(item, args, uses)
+                if blocked:
+                    return self.send_json(409, {"error": blocked})
+                if self.unconfirmed(item, body):
+                    return None
+                run = app.registry.start(item, command, uses)
             print(f"[billee-dev] {run.id} start {item['id']}: {command}", flush=True)
             return self.send_json(200, {"run": run.to_json()})
 
+        def unconfirmed(self, item: dict, body: dict) -> bool:
+            if not item.get("confirm") or body.get("confirmed") is True:
+                return False
+            about = f"{item['label']}: {item['notes']}" if item.get("notes") else item["label"]
+            self.send_json(428, {"error": "confirm", "message": f"{about}\n\nRun it?"})
+            return True
+
         def terminal(self, body: dict):
-            item, _args, command, _uses = app.prepare(body)
+            item, args, command, uses = app.prepare(body)
             if mode_of(item) == "link":
                 return self.send_json(409, {"error": "Links have nothing to run."})
+            blocked = app.refusal(item, args, uses)
+            if blocked:
+                return self.send_json(409, {"error": blocked})
+            if self.unconfirmed(item, body):
+                return None
             script = (f"cd {shlex.quote(str(REPO_ROOT))} && {command}; echo; "
                       "read -rp '[billee-dev] done. Press Enter to close. ' _")
             argv = terminal_argv(script)
             if argv is None:
                 return self.send_json(501, {"error": "No terminal app found. Copy the command instead."})
-            subprocess.Popen(argv, cwd=REPO_ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.DEVNULL, start_new_session=True)
+            proc = subprocess.Popen(argv, cwd=REPO_ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL, start_new_session=True)
+            threading.Thread(target=proc.wait, daemon=True).start()
             print(f"[billee-dev] terminal {item['id']}: {command}", flush=True)
             return self.send_json(200, {"opened": True, "command": command})
 
@@ -605,10 +726,17 @@ def make_handler(app: App):
 def main() -> int:
     parser = argparse.ArgumentParser(description="Billee dev tool server")
     parser.add_argument("--port", type=int, default=7700)
-    parser.add_argument("--platform", help="override detection: x86-native, x86-docker, mac, linux-aarch64, l4t")
+    parser.add_argument("--platform", choices=PLATFORMS, help="override detection")
+    parser.add_argument("--catalog", type=Path, default=CATALOG_PATH, help=argparse.SUPPRESS)
     opts = parser.parse_args()
 
-    app = App(opts.platform or detect_platform(), opts.port)
+    try:
+        app = App(opts.platform or detect_platform(), opts.port, opts.catalog)
+        if not app.catalog.data.get("items"):
+            raise ValueError("no items")
+    except (OSError, ValueError) as exc:
+        print(f"billee-dev: can't read {opts.catalog}: {exc}", file=sys.stderr)
+        return 1
     try:
         httpd = ThreadingHTTPServer(("127.0.0.1", opts.port), make_handler(app))
     except OSError as exc:

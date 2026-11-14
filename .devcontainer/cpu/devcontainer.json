@@ -1,0 +1,63 @@
+{
+  // x86 Linux host WITHOUT an NVIDIA GPU (Intel/AMD integrated graphics laptops).
+  // Same image and pixi `default` env as ../devcontainer.json; only the NVIDIA GPU
+  // passthrough is dropped. The image builds fine without a GPU (the Dockerfile sets
+  // CONDA_OVERRIDE_CUDA); CUDA/ZED features won't work at runtime, Gazebo sim does.
+  // Needs the native Docker engine (`docker context use default`), not Docker
+  // Desktop — its VM hides host networking, /dev (joystick) and the host's vcan0.
+  "name": "desktop-roshumble_dev-x86-cpu",
+  "build": {
+    "dockerfile": "../../docker/Dockerfile.desktop.humble",
+    "context": "../.."
+  },
+
+  "initializeCommand": "xhost +local:",
+
+  "containerUser": "ros_user",
+  "remoteUser": "ros_user",
+
+  "runArgs": [
+    "--privileged",
+    "--network=host",
+    "--pid=host",
+    "--ipc=host",
+    "--hostname=ros-dev",
+    "--volume", "/tmp/.X11-unix:/tmp/.X11-unix",
+    "--volume", "/dev:/dev",
+    "--volume", "/dev/shm:/dev/shm"
+  ],
+
+  "postStartCommand": "cd ros2_ws && pixi install",
+
+  "containerEnv": {
+    "ROS_DISTRO": "humble",
+    "DISPLAY": "${localEnv:DISPLAY}"
+    // If Gazebo fails to open a GL context on the integrated GPU, fall back to
+    // software rendering (slower but reliable):
+    //"LIBGL_ALWAYS_SOFTWARE": "1"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "renan-r-santos.pixi-code",
+        "Ranch-Hand-Robotics.urdf-editor",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "smilerobotics.urdf",
+        "waderyan.gitblame"
+      ],
+      "settings": {
+        "python-envs.defaultEnvManager": "ms-python.python:system",
+        // See ../devcontainer.json: host networking makes auto port-forwarding run away.
+        "remote.autoForwardPorts": false,
+        "remote.autoForwardPortsFallback": 0,
+        "remote.restoreForwardedPorts": false,
+        "remote.otherPortsAttributes": {
+          "onAutoForward": "ignore"
+        }
+      }
+    }
+  }
+}
