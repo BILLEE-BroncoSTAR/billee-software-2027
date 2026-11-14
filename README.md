@@ -115,14 +115,15 @@ simulator, a bench test, CAN testing and troubleshooting are in
 Package docs: [chassis_bringup](ros2_ws/src/chassis_bringup/README.md) ·
 [odesc](ros2_ws/src/odesc/README.md) · [teleop](ros2_ws/src/teleop/README.md) ·
 [robot_description](ros2_ws/src/robot_description/README.md) ·
-[zed2i](ros2_ws/src/perception/zed2i/README.md)
+[zed2i](ros2_ws/src/perception/zed2i/README.md) ·
+[zed_usb](ros2_ws/src/perception/zed_usb/README.md) (ZED without an NVIDIA GPU)
 
 ## Repository layout
 
 ```
 .devcontainer/     dev container configs (x86 default, l4t/, mac/)
 docker/            Dockerfiles and container entrypoint/setup scripts
-tooling/           can-up (CAN bring-up, host), sim-up (one-command sim),
+tooling/           can-up (CAN bring-up, host), sim-up (one-command sim), zed-usb (ZED, no GPU),
                    desktop-ros2 / rover-ros2 (run the images without VS Code),
                    billee-env.sh (platform + Pixi env lookup for make and the scripts)
 devtool/           billee-dev: browser control panel for the repo's commands

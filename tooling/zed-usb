@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# zed-usb — the ZED 2i on a machine without an NVIDIA GPU: USB video + CPU stereo depth
+# (ros2_ws/src/perception/zed_usb). Publishes /zed/points like the Jetson's zed_openpose_node.
+#
+#   tooling/zed-usb                        # camera + rover model TF + Foxglove bridge on :8765
+#   tooling/zed-usb standalone:=false      # next to a running drivetrain (it has both already)
+#   tooling/zed-usb flip:=true resolution:=HD720
+#
+# Arguments are zed_usb.launch.py's (ros2 launch zed_usb zed_usb.launch.py --show-args).
+# Runs in this machine's ROS environment: directly inside a container or a native Pixi env,
+# else through tooling/desktop-ros2 (the container mounts /dev, so it sees the camera).
+# Where the ZED SDK can run (the Jetson), use rover.launch.py camera:=cloud instead;
+# ZED_USB_FORCE=1 runs zed_usb anyway.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+source "$repo_root/tooling/billee-env.sh"
+
+if [[ -z "${ZED_USB_FORCE:-}" ]] &&
+  { [[ -f /etc/nv_tegra_release ]] || [[ -f /usr/local/zed/include/sl/Camera.hpp ]]; }; then
+  echo "zed-usb: the ZED SDK can run here: use its depth instead of CPU stereo:" >&2
+  echo "  ros2 launch chassis_bringup rover.launch.py camera:=cloud   (or people_rover.launch.py openpose:=false)" >&2
+  echo "  (ZED_USB_FORCE=1 runs zed_usb anyway)" >&2
+  exit 1
+fi
+if [[ "$BILLEE_PLATFORM" == mac ]]; then
+  echo "zed-usb: Docker Desktop on a Mac can't pass USB cameras into the container." >&2
+  exit 1
+fi
+
+args=("$@")
+[[ -n "${ZED_USB_FORCE:-}" ]] && args+=(force:=true)
+launch=(ros2 launch zed_usb zed_usb.launch.py "${args[@]}")
+
+if lsusb 2>/dev/null | grep -qi ' 2b03:'; then
+  echo "zed-usb: ZED found on USB ($(lsusb | grep -i ' 2b03:' | head -1 | cut -d' ' -f6-))"
+elif command -v lsusb >/dev/null; then
+  echo "zed-usb: no ZED on USB yet (lsusb | grep 2b03); the node waits for one" >&2
+fi
+
+# Same choice as the devtool's ros runner: in a container or a native env, run Pixi directly;
+# an x86 machine without a container image uses its native env through tooling/host-ros2.
+if [[ -f /.dockerenv || "$BILLEE_PLATFORM" == linux-aarch64 ]]; then
+  cd "$BILLEE_WS"
+  exec pixi run --environment "$BILLEE_PIXI_ENV" "${launch[@]}"
+elif [[ "$BILLEE_PLATFORM" == x86 && -d "$BILLEE_WS/.pixi/envs/default" ]] &&
+  ! { command -v docker >/dev/null && docker image inspect billee-desktop:latest >/dev/null 2>&1; }; then
+  exec "$repo_root/tooling/host-ros2" "${launch[@]}"
+else
+  exec "$repo_root/tooling/desktop-ros2" run pixi run --environment "$BILLEE_PIXI_ENV" "${launch[@]}"
+fi

@@ -67,3 +67,6 @@ cpp_pubsub
 ros2_ws/.billee-platform
 # OpenPose weights etc. (src/perception/zed_openpose/scripts/get_openpose_models.sh)
 ros2_ws/models/
+
+# Python bytecode (a launch/__pycache__ breaks setup.py globs like launch/*)
+__pycache__/

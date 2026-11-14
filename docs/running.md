@@ -274,6 +274,20 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 
 `candump -L vcan0` should show six `0x07` frames on start, then `0x0D` frames while driving.
 
+## ZED without an NVIDIA GPU
+
+The ZED SDK and OpenPose need the Jetson. On any other Linux machine (a laptop ground station, a
+dev box) the ZED 2i still works over plain USB: `zed_usb` reads its stereo video, computes depth
+on the CPU and publishes the same `/zed/points` as `camera:=cloud` on the Jetson.
+
+```bash
+tooling/zed-usb                                            # host: camera + rover model TF + Foxglove bridge
+ros2 launch chassis_bringup rover.launch.py camera:=cloud  # container: uses zed_usb where zed_openpose isn't built
+```
+
+Same Foxglove layout as `camera:=cloud` (`zed_points.json`). No OpenPose and no IMU; depth has holes
+on blank surfaces. Details: [zed_usb README](../ros2_ws/src/perception/zed_usb/README.md).
+
 ## Troubleshooting
 
 | Symptom | Fix |

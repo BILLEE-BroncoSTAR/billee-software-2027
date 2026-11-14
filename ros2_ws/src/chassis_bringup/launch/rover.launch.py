@@ -70,7 +70,8 @@ declare_args = [
         default_value="none",
         choices=["none", "cloud", "openpose", "both"],
         description="ZED 2i on the Jetson: none; cloud = point cloud (/zed/points); "
-        "openpose = OpenPose people/gestures (/people/*); both. Jetson (l4t) only.",
+        "openpose = OpenPose people/gestures (/people/*); both. OpenPose is Jetson (l4t) only; "
+        "elsewhere cloud/both take the point cloud from zed_usb (CPU stereo).",
     ),
 ]
 
@@ -118,11 +119,32 @@ def _setup(context):
     camera = LaunchConfiguration("camera").perform(context)
     if camera != "none" and not _camera_node_built():
         # zed_openpose only builds its node where the ZED SDK and OpenPose are installed (the
-        # Jetson l4t image). Without it, keep the drivetrain running rather than abort the launch.
-        actions.append(LogInfo(msg=(
-            f"rover.launch.py: camera:={camera} ignored, zed_openpose_node isn't built here. "
-            "Build it in the Jetson (l4t) container: "
-            "pixi run build --packages-select zed_openpose people")))
+        # Jetson l4t image). Elsewhere the point cloud comes from zed_usb (USB video + CPU
+        # stereo, same /zed/points); OpenPose needs CUDA, so it has no stand-in. Either way keep
+        # the drivetrain running rather than abort the launch.
+        use_zed_usb = camera in ("cloud", "both") and _package_found("zed_usb")
+        if use_zed_usb:
+            actions.append(
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution(
+                            [FindPackageShare("zed_usb"), "launch", "zed_usb.launch.py"]
+                        )
+                    ),
+                    launch_arguments={
+                        "standalone": "false",
+                        "use_sim_time": "true" if mode == "sim" else "false",
+                    }.items(),
+                )
+            )
+            actions.append(LogInfo(msg=(
+                "rover.launch.py: point cloud from zed_usb (USB video + CPU stereo, no ZED SDK)")))
+        if camera != "cloud" or not use_zed_usb:
+            dropped = "OpenPose" if use_zed_usb else f"camera:={camera}"
+            actions.append(LogInfo(msg=(
+                f"rover.launch.py: {dropped} ignored, zed_openpose_node isn't built here. "
+                "Build it in the Jetson (l4t) container: "
+                "pixi run build --packages-select zed_openpose people")))
         camera = "none"
     if camera != "none":
         # The drivetrain launch above already runs robot_state_publisher and the foxglove
@@ -162,6 +184,14 @@ def _camera_node_built():
     except PackageNotFoundError:
         return False
     return os.access(os.path.join(prefix, "lib", "zed_openpose", "zed_openpose_node"), os.X_OK)
+
+
+def _package_found(name):
+    try:
+        get_package_prefix(name)
+    except PackageNotFoundError:
+        return False
+    return True
 
 
 def generate_launch_description():
