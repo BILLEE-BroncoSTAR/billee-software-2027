@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """can-clear-faults — clear latched ODESC (ODrive CANSimple) errors over CAN.
 
-    tooling/can-clear-faults                  # every wheel node in node_map.yaml, on can3
+    tooling/can-clear-faults                  # every wheel node in node_map.yaml, on can2
     tooling/can-clear-faults --nodes 5        # just node 5 (comma-separated list)
     tooling/can-clear-faults --reboot         # also reboot boards whose error a clear can't fix
     tooling/can-clear-faults --iface vcan0    # another interface
@@ -170,7 +170,7 @@ def reboot_and_wait(sock, nodes):
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--iface", default="can3", help="CAN interface (default can3)")
+    parser.add_argument("--iface", default="can2", help="CAN interface (default can2)")
     parser.add_argument("--nodes", type=parse_nodes, default=None,
                         help="comma-separated node IDs (default: the wheels in node_map.yaml)")
     parser.add_argument("--status", action="store_true", help="only report; send nothing")

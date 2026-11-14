@@ -145,6 +145,8 @@ class CSICompressedVideoPublisher(Node):
             raise ValueError(f"encoding must be h264 or h265, not {self.encoding!r}")
         if self.source not in ("argus", "test"):
             raise ValueError(f"source must be argus or test, not {self.source!r}")
+        if not 0 <= self.flip_method <= 7:
+            raise ValueError(f"flip_method must be 0-7 (nvvidconv), not {self.flip_method}")
         self.label = f"cam{self.sensor_id} {self.cam_name}"
 
         # Best effort, newest frames only: a slow link drops frames instead of building latency.
@@ -197,28 +199,42 @@ class CSICompressedVideoPublisher(Node):
                     "boot): connect it with the Jetson powered off, then boot")
         return None
 
+    def _output_size(self):
+        """(width, height, jpeg_width, jpeg_height) after flip_method.
+
+        flip_method is nvvidconv's: 0 none, 2 rotate 180, 4 mirror left-right, 6 mirror
+        top-bottom; 1/3 rotate 90 counter-/clockwise and 5/7 transpose, which swap width and
+        height (a portrait stream).
+        """
+        if self.flip_method in (1, 3, 5, 7):
+            return self.height, self.width, self.jpeg_height, self.jpeg_width
+        return self.width, self.height, self.jpeg_width, self.jpeg_height
+
     def _pipeline(self, placeholder: bool, jpeg_fd: Optional[int]) -> List[str]:
         """gst-launch-1.0 argv: source -> tee -> H.264 to fd 1, JPEG to jpeg_fd."""
-        nvmm = f"video/x-raw(memory:NVMM),width={self.width},height={self.height}"
+        out_w, out_h, jpeg_w, jpeg_h = self._output_size()
+        nvmm_out = f"video/x-raw(memory:NVMM),width={out_w},height={out_h}"
         gop = self.gop
         if placeholder or self.source == "test":
+            # Same size as the camera's stream, so a viewer's decoder needn't reconfigure.
             rate = self.placeholder_fps if placeholder else self.fps
             text = placeholder and have_plugin("pango")
             pattern = ("black" if text else "smpte") if placeholder else "ball"
             src = ["videotestsrc", "is-live=true", f"pattern={pattern}", "!",
-                   f"video/x-raw,format=I420,width={self.width},height={self.height},"
-                   f"framerate={rate}/1"]
+                   f"video/x-raw,format=I420,width={out_w},height={out_h},framerate={rate}/1"]
             if text:
                 src += ["!", "textoverlay", f"text={self.label}: NO CAMERA", "valignment=center",
                         "halignment=center", "font-desc=Sans 36"]
-            src += ["!", "nvvidconv", "!", f"{nvmm},format=NV12"]
+            src += ["!", "nvvidconv", "!", f"{nvmm_out},format=NV12"]
             if placeholder:
                 gop = rate  # a keyframe every second, so a new viewer sees it at once
         else:
             src = ["nvarguscamerasrc", f"sensor-id={self.sensor_id}", "!",
-                   f"{nvmm},framerate={self.fps}/1"]
+                   f"video/x-raw(memory:NVMM),width={self.width},height={self.height},"
+                   f"framerate={self.fps}/1"]
             if self.flip_method:
-                src += ["!", "nvvidconv", f"flip-method={self.flip_method}", "!", nvmm]
+                # In the Jetson's video hardware (VIC), before encoding: every viewer gets it.
+                src += ["!", "nvvidconv", f"flip-method={self.flip_method}", "!", nvmm_out]
         enc = "nvv4l2h264enc" if self.encoding == "h264" else "nvv4l2h265enc"
         argv = src + [
             "!", "tee", "name=t",
@@ -232,7 +248,7 @@ class CSICompressedVideoPublisher(Node):
             argv += [
                 "t.", "!", "queue", "max-size-buffers=1", "leaky=downstream",
                 "!", "nvvidconv",
-                "!", f"video/x-raw,width={self.jpeg_width},height={self.jpeg_height},format=I420",
+                "!", f"video/x-raw,width={jpeg_w},height={jpeg_h},format=I420",
                 "!", "videorate", "drop-only=true", f"max-rate={self.jpeg_fps}",
                 "!", "nvjpegenc", f"quality={self.jpeg_quality}",
                 "!", "fdsink", f"fd={jpeg_fd}", "sync=false",
@@ -318,12 +334,14 @@ class CSICompressedVideoPublisher(Node):
         for t in readers:
             t.start()
         if not placeholder:
+            out_w, out_h, jpeg_w, jpeg_h = self._output_size()
             self.get_logger().info(
-                f"{self.label}: {self.source} sensor-id={self.sensor_id} -> {self.encoding} "
-                f"{self.width}x{self.height}@{self.fps} {self.bitrate // 1000} kbit/s on "
-                f"{self.video_topic}"
-                + (f", JPEG {self.jpeg_width}x{self.jpeg_height}@{self.jpeg_fps} on "
-                   f"{self.jpeg_topic}" if self.jpeg_pub else ""))
+                f"{self.label}: {self.source} sensor-id={self.sensor_id}"
+                + (f" flip-method={self.flip_method}" if self.flip_method else "")
+                + f" -> {self.encoding} {out_w}x{out_h}@{self.fps} {self.bitrate // 1000} kbit/s "
+                f"on {self.video_topic}"
+                + (f", JPEG {jpeg_w}x{jpeg_h}@{self.jpeg_fps} on {self.jpeg_topic}"
+                   if self.jpeg_pub else ""))
         next_check = time.monotonic() + 1.0
         while proc.poll() is None and not self._stop.is_set():
             if stop_when is not None and time.monotonic() >= next_check:

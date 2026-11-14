@@ -22,13 +22,25 @@ from launch_ros.actions import Node
 
 # Index = Argus sensor-id = /camN. Names match the Foxglove dashboard panels
 # (chassis_bringup/foxglove/rover_dashboard.json) and the RViz displays.
-CAMERAS = ("front", "rear_left", "rear_right", "top_front", "reverse")
+# flip: how the camera is mounted, fixed in the Jetson's video hardware before encoding, so
+# Foxglove and RViz both get the corrected image (nvvidconv flip-method):
+#   0 as is   2 rotate 180 (mounted upside down)   4 mirror left-right   6 mirror top-bottom
+#   1 / 3 rotate 90 counter-/clockwise (the stream becomes portrait, 720x1280)
+# Change it here and relaunch; nothing to rebuild with a --symlink-install build.
+CAMERAS = (
+    # name, flip
+    ("front", 2),       # mounted upside down
+    ("rear_left", 2),   # mounted upside down
+    ("rear_right", 0),
+    ("top_front", 0),
+    ("reverse", 0),
+)
 
 declare_args = [
     DeclareLaunchArgument(
         "cameras", default_value=str(len(CAMERAS)),
         description=f"How many CSI cameras to start, cam0 upwards (0-{len(CAMERAS)}): "
-        + ", ".join(f"cam{i} {name}" for i, name in enumerate(CAMERAS)) + "."),
+        + ", ".join(f"cam{i} {name}" for i, (name, _) in enumerate(CAMERAS)) + "."),
     DeclareLaunchArgument(
         "source", default_value="argus", choices=["argus", "test"],
         description="argus = the cameras; test = a moving test pattern through the same "
@@ -69,13 +81,14 @@ def _cameras(context):
                 **shared,
                 "name": name,
                 "sensor_id": i,
+                "flip_method": flip,
                 "video_topic": f"/cam{i}/video",
                 "jpeg_topic": f"/cam{i}/image_raw/compressed",
                 "frame_id": f"cam{i}_optical",
                 "use_sim_time": LaunchConfiguration("use_sim_time"),
             }],
         )
-        for i, name in enumerate(CAMERAS[:count])
+        for i, (name, flip) in enumerate(CAMERAS[:count])
     ]
 
 
