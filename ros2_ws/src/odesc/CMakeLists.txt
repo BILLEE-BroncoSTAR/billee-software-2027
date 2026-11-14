@@ -36,7 +36,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     src/socket_can.cpp
     src/socketcan_drive_backend.cpp
   )
-  target_compile_features(odesc PUBLIC cxx_std_17)
+  # C++20 is needed by the implementation's designated initializers.  Keep it
+  # private: the installed public headers remain C++17-compatible.
+  target_compile_features(odesc PRIVATE cxx_std_20)
   target_include_directories(odesc PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
