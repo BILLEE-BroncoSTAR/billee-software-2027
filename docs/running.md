@@ -43,9 +43,17 @@ on the machine named above it. The only exceptions are marked **host** (outside 
    pixi shell -e l4t                                            # ignore "Could not find activation scripts" before the first build
    pixi run build --parallel-workers 2 --executor sequential    # ~4 min
    source install/local_setup.bash
-   src/perception/zed_openpose/scripts/get_openpose_models.sh   # OpenPose weights, ~300 MB
    ```
-5. Plug the ZED 2i into a **USB 3** port. On the **host**, `lsusb | grep 2b03` must list
+5. **Jetson container, once per clone: download the OpenPose models** (~300 MB, every file
+   checksum-verified). They aren't in git (`ros2_ws/models/` is ignored), so every new clone needs
+   this, even on a Jetson where another clone already has them. Without them, `camera:=openpose`
+   and `camera:=both` stop about 5 s after launch with `Prototxt file not found`, and the point
+   cloud goes down with them. `camera:=cloud` doesn't need the models.
+   ```bash
+   src/perception/zed_openpose/scripts/get_openpose_models.sh   # in ros2_ws, inside pixi shell -e l4t
+   ls models/openpose/pose/body_25/   # pose_deploy.prototxt  pose_iter_584000.caffemodel
+   ```
+6. Plug the ZED 2i into a **USB 3** port. On the **host**, `lsusb | grep 2b03` must list
    `STEREOLABS ZED 2i`.
 
 ### Ground station
@@ -166,6 +174,9 @@ start: see [Troubleshooting](#troubleshooting).
 controller manager exits on start (see `src/odesc/README.md`). Use the virtual bus instead:
 [CAN testing without motors](#can-testing-without-motors).
 
+`camera:=openpose` and `camera:=both` need the OpenPose models, downloaded once per clone
+([First-time setup](#jetson), step 5).
+
 **Wheel fault policy.** Every `mode:=real` launch takes `fault_policy:=warn` (the default) or
 `fault_policy:=fault`. It decides what happens when a wheel is unhealthy, meaning any of:
 no encoder reply for 0.25 s, no heartbeat for 0.5 s, an axis error, or the axis not in
@@ -278,11 +289,13 @@ and drive with the keyboard (below).
 
 Xbox or PlayStation (PS5 DualSense tested) gamepad over USB, on the machine that runs teleop:
 
-- **Hold RB / R1** to drive. Release it and the rover stops.
+- **Hold LB / L1** to drive. Release it and the rover stops.
 - **Left stick up/down** drives the left wheels, **right stick up/down** the right wheels.
 
-The mapping and speed are in `src/teleop/config/joystick.yaml`. Edits take effect without
-rebuilding.
+The deadman button, top speed (`max_vel`, m/s) and stick deadzone are in
+`src/teleop/config/joystick.yaml`. Relaunch the ground station after editing it. With
+`pixi run build` (a symlink install) that's all; an install built without `--symlink-install`
+also needs `pixi run colcon build --packages-select teleop`.
 
 Without a gamepad, from any machine on the ROS graph:
 
@@ -343,7 +356,7 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | Build killed, or the Jetson hangs | Out of RAM: `pixi run build --parallel-workers 2 --executor sequential` |
 | Ground station sees no Jetson topics | Check `echo $ROS_DOMAIN_ID` is `42` on both, both are on the same subnet, and nothing blocks multicast or UDP. Foxglove to `ws://<jetson-ip>:8765` still works without DDS. |
 | Foxglove "connection refused" | No bridge on that machine, or wrong IP. On that machine, `ss -ltn \| grep 8765` should show it listening. |
-| Gamepad connected but the rover doesn't move | Hold RB. Check `ros2 topic echo /joy`, then `ros2 topic echo /diff_drive_controller/cmd_vel_unstamped`. |
+| Gamepad connected but the rover doesn't move | Hold LB. Check `ros2 topic echo /joy`, then `ros2 topic echo /diff_drive_controller/cmd_vel_unstamped`. |
 | `/joy` is silent | `ros2 run joy joy_enumerate_devices` lists the gamepads `joy_node` can open; set that `ID` as `device_id` in `teleop/config/joystick.yaml`. It is not the `N` of `/dev/input/jsN`. |
 | Every command seems doubled | Teleop runs on both machines. Use `rover.launch.py` (no teleop) on the Jetson, not `tooling/sim-up`. |
 | `vio:=true`: `ZED tracking <state>: not publishing /zed/vio/odom` | The ZED's tracking isn't `OK`, and the EKF runs on the wheels alone meanwhile. `FPS_TOO_LOW`: lower the load (`camera:=none`, or `depth_mode: NEURAL_LIGHT` in `zed_openpose.yaml`). Otherwise give the camera texture to track, not a blank wall or the sky. |
@@ -359,6 +372,7 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | Real: `velocity command … not sent: No buffer space available` | The CAN transmit queue is too short. Run `tooling/can-up` again on the host (it sets `txqueuelen 100`). `cat /sys/class/net/<iface>/tx_queue_len` should print 100. |
 | `can-up` closes the terminal or stops the container | It was run with `source` and/or inside the container. Run `tooling/can-up` (no `source`) on the Jetson host. |
 | `vcan0` but no frames | Create `vcan0` on the host first, then check with `candump -L vcan0`. |
+| `camera:=openpose`/`both`: `zed_openpose_node` exits about 5 s after launch (`process has finished cleanly`), no point cloud or skeletons. The node's log (`~/.ros/log/zed_openpose_node_*.log`) says `Prototxt file not found: …/models/openpose/…` | This clone has no OpenPose models. In the Jetson container, in `ros2_ws`: `src/perception/zed_openpose/scripts/get_openpose_models.sh`, then relaunch. `camera:=cloud` works without them. |
 | `rover.launch.py: camera:=… ignored, zed_openpose_node isn't built here` | You're not in the Jetson container, or `zed_openpose` wasn't built there: `pixi run build --packages-select zed_openpose people`. The drivetrain still runs. |
 | ZED: `NvRmMemInitNvmap failed with Permission denied`, then `CAMERA STREAM FAILED TO START` or `NO GPU DETECTED` | The terminal lacks the GPU device groups. In a Jetson container terminal, `id` must list `44` (video), `104` and `995`. If not, the container was created before 2026-11-13: **Rebuild Container**. Meanwhile, `exec sudo -iu ros_user` in that terminal gives it the groups. |
 | `ZED open failed: CAMERA STREAM FAILED TO START` or `NOT ENOUGH GPU MEMORY` | Not enough free RAM for the camera (the GPU shares it); the launch already frees the kernel's file cache first, and the node retries 5 times, 3 s apart. Free RAM: on the Jetson host, check `ps -eo rss,args --sort=-rss \| head` (the F' GDS on port 5001 grows by about 2 GB an hour: `sudo systemctl restart billee-scm-lan-gds`), then launch again. If RAM is fine, unplug and replug the ZED. |

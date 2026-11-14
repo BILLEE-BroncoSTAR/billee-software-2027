@@ -21,11 +21,11 @@ Parameters (`config/joystick.yaml`, which you can edit without rebuilding):
 | Param | Value | |
 |---|---|---|
 | `device_id` | `0` | SDL joystick index (not the `N` of `/dev/input/jsN`) |
-| `deadzone` | `0.05` | |
+| `deadzone` | `0.15` | stick travel ignored around centre; the Xbox One S pad drifts ~0.09 at rest |
 | `left_axis` | `1` | left stick Y |
 | `right_axis` | `4` | right stick Y |
-| `safety_button` | `5` (code default) | RB / R1 |
-| `max_vel` | `2.0` | scales both linear and angular output |
+| `safety_button` | `4` | LB / L1, the deadman (code default `5`, RB / R1, broke on the Xbox One S pad) |
+| `max_vel` | `1.0` | top wheel speed in m/s at full stick; scales both linear and angular output. The drivetrain tops out near 1.36 m/s |
 | `track_width` | `0.67` | m |
 
 ```bash

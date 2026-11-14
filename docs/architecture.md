@@ -13,7 +13,7 @@ flowchart TB
 
     subgraph TELE["teleop"]
         JOY["joy_node"]
-        TANK["joy_tank_drive (tank mix + RB deadman)"]
+        TANK["joy_tank_drive (tank mix + LB deadman)"]
     end
     PAD --> JOY -->|"/joy"| TANK
     TANK -->|"/diff_drive_controller/cmd_vel_unstamped"| DDC
