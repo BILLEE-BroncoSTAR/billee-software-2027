@@ -80,7 +80,6 @@ publishes `/diff_drive_controller/odom` but, in `controllers.yaml`, no TF (`enab
 (`/diff_drive_controller/odom`) as velocity only (`vx`, `vyaw`) and the synthetic VIO
 (`/depth_cam/vio/odom`) as pose only (`x`, `y`, `yaw`), so position isn't counted twice.
 
-<<<<<<< HEAD
 On the real path, `odom → base_footprint` has one of two publishers, chosen by
 `rover.launch.py vio:=`:
 
@@ -116,13 +115,6 @@ then stay in Python, because it follows a launch argument. Putting the covarianc
 `controllers.yaml` for both would also give the sim EKF realistic wheel uncertainty. Its wheel
 odometry reports turns about 1.6× too fast, so that would likely help, but the sim tuning would
 need rechecking.
-=======
-The real path has no EKF yet. Instead `real.launch.py` (`odom_tf:=true`, the default) turns on
-`enable_odom_tf` with `base_frame_id: base_footprint`, so `diff_drive_controller` publishes
-`odom → base_footprint` from wheel odometry alone. The base frame must be `base_footprint`, not
-`base_link`: `base_link` already has `base_footprint` as its parent, and a TF frame can have only
-one. Pass `odom_tf:=false` once a real EKF publishes that transform, or the two will fight.
->>>>>>> 813c11f (fix ground station)
 
 Wheel odometry alone drifts quickly when the rover turns. The six wheels skid sideways, and
 `diff_drive_controller` assumes they don't. In Gazebo it reports about 1.6× the real turn rate

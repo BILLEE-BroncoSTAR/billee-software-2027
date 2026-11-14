@@ -85,11 +85,7 @@ declare_args = [
         default_value="true",
         description="mode:=real only. Publish odom -> base_footprint TF from the wheel "
         "odometry so the ground station's fixed frame odom exists. false once an EKF on the "
-<<<<<<< HEAD
         "rover publishes it. vio:=true forces it false. (mode:=sim always uses the sim EKF.)",
-=======
-        "rover publishes it. (mode:=sim always uses the sim EKF.)",
->>>>>>> 813c11f (fix ground station)
     ),
     DeclareLaunchArgument(
         "camera",
@@ -135,12 +131,8 @@ def _setup(context):
             "can_interface": LaunchConfiguration("can_interface"),
             "gear_ratio": LaunchConfiguration("gear_ratio"),
             "fault_policy": LaunchConfiguration("fault_policy"),
-<<<<<<< HEAD
             # The EKF owns odom -> base_footprint; diff_drive_controller must not also send it.
             "odom_tf": "false" if vio else LaunchConfiguration("odom_tf"),
-=======
-            "odom_tf": LaunchConfiguration("odom_tf"),
->>>>>>> 813c11f (fix ground station)
         }
         # real.launch.py has no teleop of its own (sim_gz does, via joy_control).
         actions.append(
