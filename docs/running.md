@@ -171,7 +171,7 @@ controllers `active`. If it can't reach `/controller_manager`, the controller ma
 start: see [Troubleshooting](#troubleshooting).
 
 **No ODESCs:** `can_interface:=mock` is currently broken. The new driver has no mock path, so the
-controller manager exits on start (see `src/odesc/README.md`). Use the virtual bus instead:
+controller manager exits on start (see [odesc.md](odesc.md#mock-mode)). Use the virtual bus instead:
 [CAN testing without motors](#can-testing-without-motors).
 
 `camera:=openpose` and `camera:=both` need the OpenPose models, downloaded once per clone
@@ -235,6 +235,8 @@ close near the mark, and the wheel track overshoots every turn. Lift the rover, 
 test the VIO alone: 1 m forward reads x ≈ 1, and a spin in place leaves x and y ≈ 0.
 
 ### CSI cameras
+
+How the camera node works and its settings: [cameras.md](cameras.md).
 
 Five Arducam IMX477 CSI cameras start with every `rover.launch.py`, in both modes
 (`csi_cameras:=0` turns them off). Each publishes two streams:

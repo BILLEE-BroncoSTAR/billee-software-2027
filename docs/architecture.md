@@ -50,11 +50,11 @@ flowchart TB
 | Layer | What | Where |
 |---|---|---|
 | CAN | `can2` at 500 kbit/s, ODrive CANSimple 0.5.x | `tooling/can-up` |
-| Driver | `OdescSystemHardware`. This is the only place the 48:1 gear ratio is applied. | `src/odesc` |
+| Driver | `OdescSystemHardware`. This is the only place the 48:1 gear ratio is applied. | `src/odesc` ([odesc.md](odesc.md)) |
 | Control | `diff_drive_controller` (0.67 m track, 0.11 m wheel radius) + `joint_state_broadcaster` | `robot_description/config/controllers.yaml` |
 | Model | URDF/xacro. `use_sim` picks the backend; per-joint CAN `node_id`s live here. | `robot_description/urdf/ros2_control.urdf.xacro` |
-| Teleop | `joy_node` → `joy_tank_drive` | `src/teleop` |
-| Viewers | Foxglove bridge `:8765`, RViz | `chassis_bringup/launch/viz.launch.py` |
+| Teleop | `joy_node` → `joy_tank_drive` | `src/teleop` ([teleop.md](teleop.md)) |
+| Viewers | Foxglove bridge `:8765`, RViz | `chassis_bringup/launch/viz.launch.py` ([launch.md](launch.md)) |
 
 ## Backends
 

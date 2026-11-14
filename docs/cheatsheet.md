@@ -8,7 +8,7 @@
 | `pixi run build` | build everything (inside the shell) |
 | `pixi run build --packages-select <pkg>` | build one package |
 | `pixi run -e <env> <cmd>` | run one command without entering the shell |
-| `pixi run fmt` | `ruff check src/ --fix` |
+| `pixi run fmt` | `ruff check src/ --fix` (rules in `ros2_ws/ruff.toml`) |
 | `pixi install -e <env>` | install or refresh the env |
 | `pixi add <pkg>` / `pixi remove <pkg>` | change dependencies (`pixi.toml`) |
 | `pixi task list` | list tasks |

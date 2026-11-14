@@ -82,8 +82,11 @@ is actually free, and the camera and OpenPose failed at startup when most RAM wa
 | 2D → 3D math (header-only, unit-tested) | `zed_openpose/include/zed_openpose/skeleton_3d.hpp` |
 | Node params | `zed_openpose/config/zed_openpose.yaml` |
 | Gesture rules + node (Python) | `people/people/gestures.py`, `gesture_node.py`, `people/config/gestures.yaml` |
-| Messages | `people_msgs/msg/` (`Skeleton`, `Skeletons`, `Gesture`) |
-| Launch | `people/launch/people_rover.launch.py` |
+| Messages | `people_msgs/msg/`: `Skeleton.msg`, `Skeletons.msg`, `Gesture.msg` (keypoint order and field meanings are commented in each) |
+| Viewer layouts | `people/foxglove/zed_points.json`, `people_rover.json`; `people/rviz/zed_points.rviz`, `people_rover.rviz` |
+| VIO pose (header-only, unit-tested) | `zed_openpose/include/zed_openpose/vio_pose.hpp` |
+| OpenPose model download | `zed_openpose/scripts/get_openpose_models.sh` |
+| Launch | `people/launch/people_rover.launch.py` (full), `zed_openpose/launch/zed_openpose.launch.py` (the node alone) |
 
 ## Topics
 
@@ -96,6 +99,7 @@ is actually free, and the camera and OpenPose failed at startup when most RAM wa
 | `/people/gesture_marker` | `Marker` | text label above the person |
 | `/zed/points` | `PointCloud2` | XYZ + colour in `zed_left_camera_frame`. Every 4th pixel of the 720×405 depth map (~18k points, ~290 kB), at most `cloud_max_hz` (10). With OpenPose it runs at the OpenPose rate (5 Hz on the Orin Nano). |
 | `/zed/depth_image` | `Image` | off by default (`publish_depth`) |
+| `/zed/vio/odom` | `Odometry` | only with `vio:=true` ([VIO](#vio)) |
 
 ## How it works
 
@@ -124,6 +128,24 @@ is actually free, and the camera and OpenPose failed at startup when most RAM wa
   | `left_arm_up` | left wrist above the head, right arm down | `resume` |
 
   **Nothing acts on `command` yet.** The commands are placeholders in `gestures.yaml`.
+
+## VIO
+
+With `vio:=true` (`rover.launch.py mode:=real vio:=true`, or `people_rover.launch.py vio:=true`),
+the same node also turns on the ZED SDK's positional tracking (visual-inertial: stereo plus the
+2i's IMU) and publishes `/zed/vio/odom` (`nav_msgs/Odometry`) for the rover's EKF
+([navigation.md](navigation.md#ekf-robot_localization)). It is the pose of `base_footprint` in
+`odom`, not the camera's: the node removes the mount's lever arm through TF
+(`zed_openpose/vio_pose.hpp`, unit-tested in `test_vio_pose`). The format matches the synthetic
+VIO's. It is published only while tracking is `OK`; the SDK's area memory is off, so the pose never
+jumps on a loop closure.
+
+| Param (`zed_openpose.yaml`) | Default | |
+|---|---|---|
+| `publish_odom` | `false` | set by the launch arg `vio:=` |
+| `odom_topic` / `odom_frame` / `base_frame` | `/zed/vio/odom` / `odom` / `base_footprint` | |
+| `tracking_mode` | `GEN_1` | SDK default, uses depth; or `GEN_3` |
+| `min_position_var` / `min_yaw_var` | `9.0e-4` / `4.0e-4` | floors on the reported variance (0.03 m, 0.02 rad std), so the EKF never treats the VIO as exact |
 
 ## Parameters
 
@@ -187,7 +209,8 @@ Dev container problems, already fixed:
   host's `/etc/udev/rules.d` and `/run/udev` mounted by `.devcontainer/l4t/devcontainer.json`.
 - **ZED calibration.** The SDK downloads `SN<serial>.conf` on a camera's first open (needs
   internet), into the container, so a rebuild loses it. The container start copies
-  `configs/zed/SN*.conf` into `/usr/local/zed/settings/`.
+  `configs/zed/SN*.conf` into `/usr/local/zed/settings/`
+  ([containers.md → ZED calibration](containers.md#zed-calibration-configszed)).
 - **Two GLibs.** OpenPose pulls in the system GLib 2.72 and pixi brings 2.88. Mixing them gave
   `libgio-2.0.so.0: undefined symbol g_variant_builder_...`. `zed_openpose/CMakeLists.txt` links
   pixi's GLib first with `-Wl,--no-as-needed`.
