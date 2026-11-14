@@ -45,9 +45,10 @@ write()  motor_turns_per_sec = wheel_rad_s       * gear_ratio / 2π
 team 2026-09-06). It is one overridable parameter — see the parameter table below.
 
 Left/right mirroring is handled by `diff_drive_controller`'s wheel lists, **not**
-here — `read()`/`write()` apply no per-side sign flip. If a bench test shows the
-ODESC reports the physically-mirrored sign on one side, that correction is added
-deliberately then, not guessed now.
+here. If a bench test shows that one ODESC's encoder/command sign is physically
+reversed, add an `invert` joint parameter for that motor. The driver applies the
+same sign correction to command and feedback, preserving ROS wheel-joint
+semantics. Do not add it speculatively.
 
 ## CAN command subset used
 
@@ -80,6 +81,22 @@ inside `<xacro:unless value="${use_sim}">`:
 | `<hardware>` | `can_interface` | `can2` | SocketCAN interface. Special values `mock` / `none` → **mock mode** (below). Overridable from the launch file: `real.launch.py can_interface:=…`. |
 | `<hardware>` | `gear_ratio` | `48.0` | Motor-shaft turns per wheel turn. `48.0` for the ODESC V4.2 + NEO REV v1.1 drivetrain (team, 2026-09-06). One-line override (`real.launch.py gear_ratio:=…`), not a code change. Not yet confirmed on hardware: drive a measured straight distance and compare it with `/diff_drive_controller/odom`. |
 | per `<joint>` | `node_id` | *(required)* | CAN node ID 0–5. Canonical map: [`config/node_map.yaml`](config/node_map.yaml). |
+| per `<joint>` | `invert` | `false` | Optional. Set `true` only after a wheels-up direction test proves that this axis's physical sign is opposite the URDF wheel-joint convention. |
+
+For example, to invert one confirmed-reversed motor, add this alongside that
+joint's `node_id` parameter in `ros2_control.urdf.xacro`:
+
+```xml
+<param name="invert">true</param>
+```
+
+### Command refresh and ODrive watchdog
+
+The velocity-only driver currently sends `Set_Input_Vel` when a wheel setpoint
+changes (and once after activation). The checked-in ODESC profiles have their
+CAN watchdog disabled, so this is intentional for now. If the watchdog is later
+enabled, the driver must gain a bounded periodic command refresh before it is
+used on hardware; otherwise a steady command will eventually trip the watchdog.
 
 ### Mock mode (no CAN, no motor hardware)
 
