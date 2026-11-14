@@ -221,7 +221,8 @@ struct Set_Axis_State_msg_t final {
     }
 
     static const uint8_t cmd_id = 0x007;
-    static const uint8_t msg_length = 8;
+    // ODESC CANSimple firmware used on this rover expects only the uint32 state.
+    static const uint8_t msg_length = 4;
     
     uint32_t Axis_Requested_State = 0;
 };
