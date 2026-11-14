@@ -1,28 +1,9 @@
 {
   "configById": {
-    "Tab!front": {
-      "activeTabIdx": 0,
-      "tabs": [
-        {
-          "title": "cam0",
-          "layout": "Image!cam0"
-        },
-        {
-          "title": "ZED 2i",
-          "layout": "Image!zed"
-        }
-      ]
-    },
     "Image!cam0": {
       "foxglovePanelTitle": "Front (cam0)",
       "imageMode": {
         "imageTopic": "/cam0/video"
-      }
-    },
-    "Image!zed": {
-      "foxglovePanelTitle": "Front (ZED 2i, camera:=openpose/both)",
-      "imageMode": {
-        "imageTopic": "/people/debug_image/compressed"
       }
     },
     "Image!cam3": {
@@ -49,24 +30,14 @@
         "imageTopic": "/cam2/video"
       }
     },
-    "map!gps": {
-      "foxglovePanelTitle": "GPS Map",
-      "center": {
-        "lat": 38.418,
-        "lon": -110.777
-      },
-      "zoomLevel": 18,
-      "customTileUrl": "",
-      "disabledTopics": [],
-      "followTopic": "/gps",
-      "layer": "map",
-      "topicColors": {
-        "/gps": "#f5a623",
-        "/gps/filtered": "#4a90e2"
+    "Image!zed": {
+      "foxglovePanelTitle": "Front ZED 2i + OpenPose (camera:=openpose/both)",
+      "imageMode": {
+        "imageTopic": "/people/debug_image/compressed"
       }
     },
     "3D!odometry": {
-      "foxglovePanelTitle": "Odometry",
+      "foxglovePanelTitle": "3D: odometry, ZED point cloud, OpenPose skeletons",
       "cameraState": {
         "perspective": true,
         "distance": 12,
@@ -131,6 +102,18 @@
             0.12
           ],
           "historySize": 100
+        },
+        "/zed/points": {
+          "visible": true,
+          "pointSize": 2,
+          "colorMode": "rgb",
+          "colorField": "rgb"
+        },
+        "/people/markers": {
+          "visible": true
+        },
+        "/people/gesture_marker": {
+          "visible": true
         }
       },
       "layers": {
@@ -176,6 +159,22 @@
         "poseEstimateYDeviation": 0.5,
         "poseEstimateThetaDeviation": 0.26
       }
+    },
+    "map!gps": {
+      "foxglovePanelTitle": "GPS Map",
+      "center": {
+        "lat": 38.418,
+        "lon": -110.777
+      },
+      "zoomLevel": 18,
+      "customTileUrl": "",
+      "disabledTopics": [],
+      "followTopic": "/gps",
+      "layer": "map",
+      "topicColors": {
+        "/gps": "#f5a623",
+        "/gps/filtered": "#4a90e2"
+      }
     }
   },
   "globalVariables": {},
@@ -189,9 +188,14 @@
       "direction": "column",
       "first": {
         "direction": "row",
-        "first": "Tab!front",
-        "second": "Image!cam3",
-        "splitPercentage": 50
+        "first": "Image!cam0",
+        "second": {
+          "direction": "row",
+          "first": "Image!zed",
+          "second": "Image!cam3",
+          "splitPercentage": 50
+        },
+        "splitPercentage": 33.3
       },
       "second": {
         "direction": "row",
@@ -208,9 +212,9 @@
     },
     "second": {
       "direction": "column",
-      "first": "map!gps",
-      "second": "3D!odometry",
-      "splitPercentage": 50
+      "first": "3D!odometry",
+      "second": "map!gps",
+      "splitPercentage": 60
     },
     "splitPercentage": 62
   }

@@ -283,9 +283,11 @@ class CSICompressedVideoPublisher(Node):
             else:
                 backoff = self.recheck_s
             if kind != warned:
+                doing = ("Nothing can be published here" if self._encoder_missing()
+                         else f"Publishing a placeholder on {self.video_topic}")
                 self.get_logger().warning(
-                    f"{self.label}: {reason}. Publishing a placeholder on {self.video_topic}; "
-                    f"checking again every {self.recheck_s:.0f} s.")
+                    f"{self.label}: {reason}. {doing}; checking again every "
+                    f"{self.recheck_s:.0f} s.")
                 warned = kind
             if self._encoder_missing():
                 self._stop.wait(backoff)  # nothing can be encoded, not even the placeholder
