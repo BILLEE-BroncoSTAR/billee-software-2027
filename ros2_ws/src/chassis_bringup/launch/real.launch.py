@@ -7,7 +7,7 @@ OdescSystemHardware SocketCAN plugin is loaded instead of ign_ros2_control, and
 it starts a standalone controller_manager (ros2_control_node) rather than letting
 Gazebo host it.
 
-    # real ODESC/NEO drivetrain on can3:
+    # real ODESC/NEO drivetrain on can2:
     ros2 launch chassis_bringup real.launch.py
 
     # no motor hardware — exercise the encoder feedback -> /diff_drive_controller/odom
@@ -76,8 +76,10 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "can_interface",
-        default_value="can3",
-        description="SocketCAN interface for the ODESC bus. 'mock' or 'none' runs "
+        default_value="can2",
+        description="SocketCAN interface for the ODESC bus. The USB-CAN adapter's number "
+        "can change when it is replugged or the Jetson reboots; the launch stops with the "
+        "list of CAN interfaces if this one is missing or down. 'mock' or 'none' runs "
         "OdescSystemHardware in mock mode (no CAN, gear-ratio loopback feedback) so the "
         "stack can be brought up with no motor hardware. 'vcan0' etc. for a virtual bus.",
     ),
@@ -149,7 +151,53 @@ def _write_real_controllers(context):
     return path
 
 
+def _check_can_interface(name):
+    """Stop the launch with a readable error if the CAN interface is missing or down.
+
+    Otherwise the ODESC driver can't open or use the bus, ros2_control_node aborts
+    (exit -6), the spawner waits forever, and nothing says why: no controllers, no
+    driving, no odom.
+    """
+    if name in ("mock", "none"):
+        return
+    net = "/sys/class/net"
+
+    def is_up(iface):  # IFF_UP. operstate is "unknown" on a working vcan, so not that.
+        try:
+            with open(os.path.join(net, iface, "flags")) as fh:
+                return int(fh.read().strip(), 16) & 0x1 == 0x1
+        except (OSError, ValueError):
+            return False
+
+    def is_can(iface):  # ARPHRD_CAN
+        try:
+            with open(os.path.join(net, iface, "type")) as fh:
+                return fh.read().strip() == "280"
+        except OSError:
+            return False
+
+    try:
+        cans = [i for i in sorted(os.listdir(net)) if is_can(i)]
+    except OSError:
+        return  # no sysfs here; leave it to the driver
+    listing = ", ".join(f"{i} ({'up' if is_up(i) else 'down'})" for i in cans) or "none"
+    if name not in cans:
+        up = [i for i in cans if is_up(i)]
+        hint = (f"Pass the one the ODESCs are on, e.g. can_interface:={up[-1]}" if up else
+                "Plug in the USB-CAN adapter, then on the Jetson host: tooling/can-up <iface>")
+        raise RuntimeError(
+            f"real.launch.py: CAN interface {name!r} doesn't exist. CAN interfaces here: "
+            f"{listing}. {hint}. (The USB-CAN adapter's number can change after a replug "
+            "or reboot.)")
+    if not is_up(name):
+        raise RuntimeError(
+            f"real.launch.py: CAN interface {name!r} is down. On the Jetson host: "
+            f"tooling/can-up {name}. CAN interfaces here: {listing}.")
+
+
 def _launch_setup(context):
+    _check_can_interface(LaunchConfiguration("can_interface").perform(context))
+
     description_pkg = LaunchConfiguration("description_pkg")
     xacro_file = LaunchConfiguration("xacro_file")
     can_interface = LaunchConfiguration("can_interface")

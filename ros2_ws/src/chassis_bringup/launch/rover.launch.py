@@ -64,8 +64,10 @@ declare_args = [
     ),
     DeclareLaunchArgument(
         "can_interface",
-        default_value="can3",
-        description="mode:=real only. 'mock'/'none' = no CAN (loopback feedback); "
+        default_value="can2",
+        description="mode:=real only. The drivetrain's SocketCAN bus. The launch stops and "
+        "lists the CAN interfaces if it is missing or down. 'mock'/'none' = no CAN "
+        "(loopback feedback); "
         "'vcan0' = virtual bus.",
     ),
     DeclareLaunchArgument(

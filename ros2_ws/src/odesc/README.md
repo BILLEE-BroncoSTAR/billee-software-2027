@@ -33,7 +33,7 @@ odometry (see [docs/architecture.md](../../../docs/architecture.md#odometry-and-
    ign_ros2_control (Gazebo)              OdescSystemHardware (this pkg)
                                             │ SocketCAN, motor turns / turns·s⁻¹
                                             ▼
-                                   6× ODESC V4.2 + NEO on can3
+                                   6× ODESC V4.2 + NEO on can2
 ```
 
 ## Gear-ratio conversion (the only place it lives)
@@ -94,7 +94,7 @@ inside `<xacro:unless value="${use_sim}">`:
 
 | scope | param | default | notes |
 |---|---|---|---|
-| `<hardware>` | `can_interface` | `can3` | SocketCAN interface. Overridable from the launch file: `real.launch.py can_interface:=…`. (`mock` / `none` is currently broken, see below.) |
+| `<hardware>` | `can_interface` | `can2` | SocketCAN interface. Overridable from the launch file: `real.launch.py can_interface:=…`. (`mock` / `none` is currently broken, see below.) |
 | `<hardware>` | `fault_policy` | `warn` | What happens when a wheel is unhealthy (see [Wheel health](#wheel-health-and-fault_policy)): `warn` logs it and keeps driving; `fault` stops the drivetrain. Overridable: `rover.launch.py` / `real.launch.py fault_policy:=fault`. |
 | `<hardware>` | `gear_ratio` | `48.0` | Motor-shaft turns per wheel turn. `48.0` for the ODESC V4.2 + NEO REV v1.1 drivetrain (team, 2026-09-06). One-line override (`real.launch.py gear_ratio:=…`), not a code change. Not yet confirmed on hardware: drive a measured straight distance and compare it with `/diff_drive_controller/odom`. |
 | per `<joint>` | `node_id` | *(required)* | CAN node ID 0–63 (the rover uses 2–7). Canonical map: [`config/node_map.yaml`](config/node_map.yaml). |
