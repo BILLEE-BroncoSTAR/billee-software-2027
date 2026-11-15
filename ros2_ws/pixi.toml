@@ -79,6 +79,9 @@ ros-humble-teleop-twist-keyboard = "*"
 ros-humble-navigation2 = ">=1.1.20,<2"
 ros-humble-nav2-bringup = ">=1.1.20,<2"
 ros-humble-robot-localization = ">=3.5.4,<4"
+ros-humble-nmea-msgs = ">=2.0.0,<3"
+ros2-zed-msgs = ">=5.5.0,<6"
+ros-humble-zed-description = ">=0.2.0,<0.3"
 
 [activation]
 # Pixi has already activated the selected environment (default, mac-cpu, or

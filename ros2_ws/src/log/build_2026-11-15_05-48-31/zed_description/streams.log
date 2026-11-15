@@ -1,0 +1,44 @@
+[0.008s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/zed_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --build /workspaces/URC-2027/ros2_ws/src/build/zed_description -- -j24 -l24
+[0.033s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/zed_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --build /workspaces/URC-2027/ros2_ws/src/build/zed_description -- -j24 -l24
+[0.039s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/zed_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --install /workspaces/URC-2027/ros2_ws/src/build/zed_description
+[0.043s] -- Install configuration: ""
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/urdf
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/urdf/zed_descr.urdf.xacro
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/urdf/zed_macro.urdf.xacro
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/virtual.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zed.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zed2.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zed2i.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedm.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedx.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxhdr.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxhdrmax.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxhdrmini.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxm.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxnano.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxone4k.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxonecore.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxonegs.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxonehdr.stl
+[0.043s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxones.stl
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/rviz2
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/rviz2/zed_description.rviz
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/launch
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/launch/zed_viz.launch.py
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/ament_index/resource_index/package_run_dependencies/zed_description
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/ament_index/resource_index/parent_prefix_path/zed_description
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/environment/ament_prefix_path.sh
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/environment/ament_prefix_path.dsv
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/environment/path.sh
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/environment/path.dsv
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/local_setup.bash
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/local_setup.sh
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/local_setup.zsh
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/local_setup.dsv
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/package.dsv
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/ament_index/resource_index/packages/zed_description
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/cmake/zed_descriptionConfig.cmake
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/cmake/zed_descriptionConfig-version.cmake
+[0.044s] -- Up-to-date: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/package.xml
+[0.045s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/zed_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --install /workspaces/URC-2027/ros2_ws/src/build/zed_description

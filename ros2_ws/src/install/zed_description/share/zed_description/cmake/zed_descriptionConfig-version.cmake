@@ -1,0 +1,1 @@
+/workspaces/URC-2027/ros2_ws/src/build/zed_description/ament_cmake_core/zed_descriptionConfig-version.cmake

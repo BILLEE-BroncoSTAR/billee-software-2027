@@ -4,3 +4,6 @@
 [submodule "ros2_ws/src/roboclaw_serial"]
 	path = ros2_ws/src/roboclaw_serial
 	url = https://github.com/dumbotics/roboclaw_serial.git
+[submodule "ros2_ws/src/zed-ros2-wrapper"]
+	path = ros2_ws/src/zed-ros2-wrapper
+	url = https://github.com/stereolabs/zed-ros2-wrapper

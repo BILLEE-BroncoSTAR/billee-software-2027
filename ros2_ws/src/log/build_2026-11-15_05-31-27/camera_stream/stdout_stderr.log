@@ -1,0 +1,26 @@
+running develop
+running egg_info
+creating camera_stream.egg-info
+writing camera_stream.egg-info/PKG-INFO
+writing dependency_links to camera_stream.egg-info/dependency_links.txt
+writing entry points to camera_stream.egg-info/entry_points.txt
+writing requirements to camera_stream.egg-info/requires.txt
+writing top-level names to camera_stream.egg-info/top_level.txt
+writing manifest file 'camera_stream.egg-info/SOURCES.txt'
+reading manifest file 'camera_stream.egg-info/SOURCES.txt'
+writing manifest file 'camera_stream.egg-info/SOURCES.txt'
+running build_ext
+Creating /workspaces/URC-2027/ros2_ws/src/install/camera_stream/lib/python3.14/site-packages/camera-stream.egg-link (link to .)
+Installing csi_compressed_video_pub script to /workspaces/URC-2027/ros2_ws/src/install/camera_stream/lib/camera_stream
+Installing yolov8_detector script to /workspaces/URC-2027/ros2_ws/src/install/camera_stream/lib/camera_stream
+
+Installed /workspaces/URC-2027/ros2_ws/src/build/camera_stream
+running symlink_data
+creating /workspaces/URC-2027/ros2_ws/src/install/camera_stream/share/ament_index/resource_index/packages
+symbolically linking /workspaces/URC-2027/ros2_ws/src/build/camera_stream/resource/camera_stream -> /workspaces/URC-2027/ros2_ws/src/install/camera_stream/share/ament_index/resource_index/packages
+symbolically linking /workspaces/URC-2027/ros2_ws/src/build/camera_stream/package.xml -> /workspaces/URC-2027/ros2_ws/src/install/camera_stream/share/camera_stream
+creating /workspaces/URC-2027/ros2_ws/src/install/camera_stream/share/camera_stream/launch
+symbolically linking /workspaces/URC-2027/ros2_ws/src/build/camera_stream/launch/camera_stream.launch.py -> /workspaces/URC-2027/ros2_ws/src/install/camera_stream/share/camera_stream/launch
+symbolically linking /workspaces/URC-2027/ros2_ws/src/build/camera_stream/launch/csi_cameras.launch.py -> /workspaces/URC-2027/ros2_ws/src/install/camera_stream/share/camera_stream/launch
+creating /workspaces/URC-2027/ros2_ws/src/install/camera_stream/share/camera_stream/config
+symbolically linking /workspaces/URC-2027/ros2_ws/src/build/camera_stream/config/cameras.yaml -> /workspaces/URC-2027/ros2_ws/src/install/camera_stream/share/camera_stream/config

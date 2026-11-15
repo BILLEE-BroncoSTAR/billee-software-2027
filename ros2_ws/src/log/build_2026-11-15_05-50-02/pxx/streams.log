@@ -1,0 +1,77 @@
+[0.229s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/pxx': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake /workspaces/URC-2027/ros2_ws/src/pxx -DCMAKE_BUILD_TYPE=Release -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspaces/URC-2027/ros2_ws/src/install/pxx
+[0.241s] [0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+[0.241s]   Compatibility with CMake < 3.10 will be removed from a future version of
+[0.241s]   CMake.
+[0.241s] 
+[0.241s]   Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+[0.241s]   to tell CMake that the project requires at least <min> but has been updated
+[0.241s]   to work with policies introduced by <max> or earlier.
+[0.241s] 
+[0.241s] [0m
+[0.243s] -- Found ament_cmake: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake/cmake)
+[0.373s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.376s] -- Found hardware_interface: 2.54.3 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/hardware_interface/cmake)
+[0.390s] -- Found rosidl_generator_c: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_c/cmake)
+[0.392s] -- Found rosidl_adapter: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_adapter/cmake)
+[0.395s] -- Found rosidl_generator_cpp: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_cpp/cmake)
+[0.401s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.409s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.519s] -- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+[0.561s] -- Found rmw_implementation_cmake: 6.1.4 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_implementation_cmake/cmake)
+[0.562s] -- Found rmw_fastrtps_cpp: 6.2.10 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_fastrtps_cpp/cmake)
+[0.576s] -- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+[0.597s] -- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+[0.625s] -- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+[0.651s] -- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+[0.679s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[0.761s] -- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+[0.839s] -- Added test 'cppcheck' to perform static code analysis on C / C++ code
+[0.839s] -- Configured cppcheck include dirs: $<BUILD_INTERFACE:/workspaces/URC-2027/ros2_ws/src/pxx/include>
+[0.839s] -- Configured cppcheck exclude dirs and/or files: 
+[0.839s] -- Added test 'lint_cmake' to check CMake code style
+[0.840s] -- Added test 'uncrustify' to check C / C++ code style
+[0.840s] -- Configured uncrustify additional arguments: 
+[0.840s] -- Added test 'xmllint' to check XML markup files
+[0.842s] -- Configuring done (0.6s)
+[0.860s] -- Generating done (0.0s)
+[0.862s] -- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/pxx
+[0.878s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/pxx' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake /workspaces/URC-2027/ros2_ws/src/pxx -DCMAKE_BUILD_TYPE=Release -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspaces/URC-2027/ros2_ws/src/install/pxx
+[0.880s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/pxx': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --build /workspaces/URC-2027/ros2_ws/src/build/pxx -- -j24 -l24
+[0.928s] [ 25%] [32mBuilding CXX object CMakeFiles/pxx.dir/src/mock_motor_backend.cpp.o[0m
+[0.930s] [ 75%] [32mBuilding CXX object CMakeFiles/pxx.dir/src/socketcan_motor_backend.cpp.o[0m
+[0.930s] [ 75%] [32mBuilding CXX object CMakeFiles/pxx.dir/src/pxx.cpp.o[0m
+[5.530s] [100%] [32m[1mLinking CXX shared library libpxx.so[0m
+[5.873s] [100%] Built target pxx
+[5.895s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/pxx' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --build /workspaces/URC-2027/ros2_ws/src/build/pxx -- -j24 -l24
+[5.896s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/pxx': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --install /workspaces/URC-2027/ros2_ws/src/build/pxx
+[5.914s] -- Install configuration: "Release"
+[5.914s] -- Execute custom install script
+[5.914s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx//pxx_plugin.xml
+[5.914s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/lib/libpxx.so
+[5.914s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/include/pxx/can.hpp
+[5.914s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/include/pxx/mock_motor_backend.hpp
+[5.914s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/include/pxx/motor_backend.hpp
+[5.914s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/include/pxx/pxx.hpp
+[5.914s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/include/pxx/socketcan_motor_backend.hpp
+[5.917s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/pxx_plugin.xml
+[5.920s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/config/node_map.yaml
+[5.920s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/ament_index/resource_index/package_run_dependencies/pxx
+[5.920s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/ament_index/resource_index/parent_prefix_path/pxx
+[5.920s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/environment/ament_prefix_path.sh
+[5.921s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/environment/ament_prefix_path.dsv
+[5.921s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/environment/path.sh
+[5.926s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/environment/path.dsv
+[5.926s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/local_setup.bash
+[5.926s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/local_setup.sh
+[5.926s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/local_setup.zsh
+[5.926s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/local_setup.dsv
+[5.926s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/package.dsv
+[5.941s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/ament_index/resource_index/packages/pxx
+[5.941s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/ament_index/resource_index/hardware_interface__pluginlib__plugin/pxx
+[5.941s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/cmake/ament_cmake_export_include_directories-extras.cmake
+[5.941s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/cmake/ament_cmake_export_libraries-extras.cmake
+[5.941s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/cmake/ament_cmake_export_dependencies-extras.cmake
+[5.941s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/cmake/pxxConfig.cmake
+[5.941s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/cmake/pxxConfig-version.cmake
+[5.941s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/pxx/share/pxx/package.xml
+[5.954s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/pxx' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --install /workspaces/URC-2027/ros2_ws/src/build/pxx

@@ -1,0 +1,58 @@
+[0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+[0m
+-- Found ament_cmake: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake/cmake)
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found geometry_msgs: 4.9.2 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/geometry_msgs/cmake)
+-- Found rosidl_generator_c: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_c/cmake)
+-- Found rosidl_adapter: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_adapter/cmake)
+-- Found rosidl_generator_cpp: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_cpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found nav_msgs: 4.9.2 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/nav_msgs/cmake)
+-- Found rclcpp: 16.0.21 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rclcpp/cmake)
+-- Found rmw_implementation_cmake: 6.1.4 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_implementation_cmake/cmake)
+-- Found rmw_fastrtps_cpp: 6.2.10 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_fastrtps_cpp/cmake)
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+-- Added test 'cppcheck' to perform static code analysis on C / C++ code
+-- Configured cppcheck include dirs: /workspaces/URC-2027/ros2_ws/src/perception/zed2i/include
+-- Configured cppcheck exclude dirs and/or files: 
+-- Added test 'flake8' to check Python code syntax and style conventions
+-- Added test 'lint_cmake' to check CMake code style
+-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+-- Added test 'uncrustify' to check C / C++ code style
+-- Configured uncrustify additional arguments: 
+-- Added test 'xmllint' to check XML markup files
+-- Configuring done (0.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/zed2i
+[100%] Built target synthetic_vio_node
+-- Install configuration: ""
+-- Execute custom install script
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/lib/zed2i/synthetic_vio_node
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/config/synthetic_vio.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/launch/synthetic_vio.launch.py
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/include/zed2i/geometry_utils.hpp
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/include/zed2i/synthetic_vio_constants.hpp
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/ament_index/resource_index/package_run_dependencies/zed2i
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/ament_index/resource_index/parent_prefix_path/zed2i
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/environment/ament_prefix_path.sh
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/environment/ament_prefix_path.dsv
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/environment/path.sh
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/environment/path.dsv
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/local_setup.bash
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/local_setup.sh
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/local_setup.zsh
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/local_setup.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/package.dsv
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/ament_index/resource_index/packages/zed2i
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/cmake/zed2iConfig.cmake
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/cmake/zed2iConfig-version.cmake
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed2i/share/zed2i/package.xml

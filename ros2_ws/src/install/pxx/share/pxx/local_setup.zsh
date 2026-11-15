@@ -1,0 +1,1 @@
+/workspaces/URC-2027/ros2_ws/src/build/pxx/ament_cmake_environment_hooks/local_setup.zsh

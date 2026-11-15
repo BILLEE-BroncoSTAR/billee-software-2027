@@ -1,0 +1,970 @@
+[0.029s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/people:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream:/workspaces/URC-2027/ros2_ws/install/arm_teleop:/workspaces/URC-2027/ros2_ws/install/arm_description CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --build /workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs -- -j24 -l24
+[0.163s] -- Found ros_environment: 3.2.2 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ros_environment/cmake)
+[0.163s] -- Found ament_cmake: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake/cmake)
+[0.163s] -- Found Python3: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3 (found version "3.14.10") found components: Interpreter
+[0.163s] [0mCMake Deprecation Warning at CMakeLists.txt:46 (cmake_minimum_required):
+[0.163s]   Compatibility with CMake < 3.10 will be removed from a future version of
+[0.163s]   CMake.
+[0.163s] 
+[0.163s]   Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+[0.164s]   to tell CMake that the project requires at least <min> but has been updated
+[0.164s]   to work with policies introduced by <max> or earlier.
+[0.164s] 
+[0.164s] [0m
+[0.245s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.254s] -- Found builtin_interfaces: 1.2.3 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/builtin_interfaces/cmake)
+[0.275s] -- Found rosidl_generator_c: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_c/cmake)
+[0.277s] -- Found rosidl_adapter: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_adapter/cmake)
+[0.284s] -- Found rosidl_generator_cpp: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_cpp/cmake)
+[0.294s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.309s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.328s] -- Found geometry_msgs: 4.9.2 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/geometry_msgs/cmake)
+[0.371s] -- Found rosidl_default_generators: 1.2.1 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_default_generators/cmake)
+[0.383s] -- Using msg files: msg/ArrowPrimitive.msg;msg/CameraCalibration.msg;msg/CircleAnnotation.msg;msg/Color.msg;msg/CompressedAudio.msg;msg/CompressedImage.msg;msg/CompressedPointCloud.msg;msg/CompressedVideo.msg;msg/CubePrimitive.msg;msg/CylinderPrimitive.msg;msg/Event.msg;msg/FrameTransform.msg;msg/FrameTransforms.msg;msg/GeoJSON.msg;msg/Grid.msg;msg/ImageAnnotations.msg;msg/JointState.msg;msg/JointStates.msg;msg/KeyValuePair.msg;msg/LaserScan.msg;msg/LinePrimitive.msg;msg/LocationFix.msg;msg/LocationFixes.msg;msg/Log.msg;msg/ModelPrimitive.msg;msg/Odometry.msg;msg/PackedElementField.msg;msg/Point2.msg;msg/PointCloud.msg;msg/PointsAnnotation.msg;msg/PoseInFrame.msg;msg/PosesInFrame.msg;msg/RawAudio.msg;msg/RawImage.msg;msg/SceneEntity.msg;msg/SceneEntityDeletion.msg;msg/SceneUpdate.msg;msg/SpherePrimitive.msg;msg/TextAnnotation.msg;msg/TextPrimitive.msg;msg/TriangleListPrimitive.msg;msg/Vector2.msg;msg/VoxelGrid.msg
+[1.016s] -- Found ament_cmake_cppcheck: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_cppcheck/cmake)
+[1.017s] -- Found ament_cmake_cpplint: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_cpplint/cmake)
+[1.018s] -- Found ament_cmake_uncrustify: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_uncrustify/cmake)
+[1.019s] -- Found ament_cmake_ros: 0.10.1 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_ros/cmake)
+[1.907s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[2.222s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[2.228s] -- Found python_cmake_module: 0.10.0 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/python_cmake_module/cmake)
+[2.228s] [33mCMake Warning (dev) at /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/python_cmake_module/cmake/Modules/FindPythonExtra.cmake:52 (find_package):
+[2.228s]   Policy CMP0148 is not set: The FindPythonInterp and FindPythonLibs modules
+[2.229s]   are removed.  Run "cmake --help-policy CMP0148" for policy details.  Use
+[2.229s]   the cmake_policy command to set the policy and suppress this warning.
+[2.229s] 
+[2.229s] Call Stack (most recent call first):
+[2.229s]   /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_py/cmake/rosidl_generator_py_generate_interfaces.cmake:33 (find_package)
+[2.229s]   /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_core/cmake/core/ament_execute_extensions.cmake:48 (include)
+[2.229s]   /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_cmake/cmake/rosidl_generate_interfaces.cmake:286 (ament_execute_extensions)
+[2.229s]   CMakeLists.txt:79 (rosidl_generate_interfaces)
+[2.229s] This warning is for project developers.  Use -Wno-dev to suppress it.
+[2.229s] [0m
+[2.254s] -- Found PythonInterp: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3 (found suitable version "3.14.10", minimum required is "3.6")
+[2.254s] [33mCMake Warning (dev) at /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/python_cmake_module/cmake/Modules/FindPythonExtra.cmake:140 (find_package):
+[2.254s]   Policy CMP0148 is not set: The FindPythonInterp and FindPythonLibs modules
+[2.254s]   are removed.  Run "cmake --help-policy CMP0148" for policy details.  Use
+[2.254s]   the cmake_policy command to set the policy and suppress this warning.
+[2.254s] 
+[2.254s] Call Stack (most recent call first):
+[2.254s]   /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_py/cmake/rosidl_generator_py_generate_interfaces.cmake:33 (find_package)
+[2.254s]   /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_core/cmake/core/ament_execute_extensions.cmake:48 (include)
+[2.255s]   /workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_cmake/cmake/rosidl_generate_interfaces.cmake:286 (ament_execute_extensions)
+[2.255s]   CMakeLists.txt:79 (rosidl_generate_interfaces)
+[2.255s] This warning is for project developers.  Use -Wno-dev to suppress it.
+[2.255s] [0m
+[2.257s] -- Found PythonLibs: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/libpython3.12.so (Required is at least version "3.5")
+[2.257s] -- Using PYTHON_EXECUTABLE: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3
+[2.257s] -- Using PYTHON_INCLUDE_DIRS: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/include/python3.12
+[2.257s] -- Using PYTHON_LIBRARIES: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/libpython3.12.so
+[3.046s] -- Found Python: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3.14 (found version "3.14.10") found components: Interpreter Development NumPy Development.Module Development.Embed
+[3.086s] -- Found ament_cmake_flake8: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_flake8/cmake)
+[3.086s] -- Found ament_cmake_pep257: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_pep257/cmake)
+[3.311s] -- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+[3.932s] -- Added test 'flake8' to check Python code syntax and style conventions
+[3.933s] -- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+[3.934s] -- Added test 'lint_cmake' to check CMake code style
+[3.935s] -- Added test 'xmllint' to check XML markup files
+[3.941s] -- Configuring done (3.9s)
+[4.123s] -- Generating done (0.2s)
+[4.144s] -- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs
+[4.199s] [  1%] Built target foxglove_msgs__rs
+[4.202s] [  1%] Built target foxglove_msgs__cpp
+[4.208s] [  1%] Built target ament_cmake_python_symlink_foxglove_msgs
+[4.236s] [  1%] [32m[1mLinking C shared library libfoxglove_msgs__rosidl_generator_c.so[0m
+[4.275s] [  1%] [32m[1mLinking CXX shared library libfoxglove_msgs__rosidl_typesupport_introspection_cpp.so[0m
+[4.284s] [ 13%] Built target foxglove_msgs__rosidl_generator_c
+[4.298s] [ 13%] [32m[1mLinking CXX shared library libfoxglove_msgs__rosidl_typesupport_cpp.so[0m
+[4.313s] [ 13%] [32m[1mLinking CXX shared library libfoxglove_msgs__rosidl_typesupport_fastrtps_cpp.so[0m
+[4.321s] [ 13%] [32m[1mLinking CXX shared library libfoxglove_msgs__rosidl_typesupport_c.so[0m
+[4.326s] [ 13%] [32m[1mLinking C shared library libfoxglove_msgs__rosidl_typesupport_introspection_c.so[0m
+[4.362s] [ 13%] [32m[1mLinking CXX shared library libfoxglove_msgs__rosidl_typesupport_fastrtps_c.so[0m
+[4.363s] [ 25%] Built target foxglove_msgs__rosidl_typesupport_c
+[4.364s] [ 37%] Built target foxglove_msgs__rosidl_typesupport_cpp
+[4.382s] [ 49%] Built target foxglove_msgs__rosidl_typesupport_introspection_c
+[4.422s] [ 61%] Built target foxglove_msgs__rosidl_typesupport_fastrtps_cpp
+[4.430s] [ 73%] Built target foxglove_msgs__rosidl_typesupport_introspection_cpp
+[4.451s] running egg_info
+[4.457s] [ 85%] Built target foxglove_msgs__rosidl_typesupport_fastrtps_c
+[4.457s] writing foxglove_msgs.egg-info/PKG-INFO
+[4.458s] writing dependency_links to foxglove_msgs.egg-info/dependency_links.txt
+[4.458s] writing top-level names to foxglove_msgs.egg-info/top_level.txt
+[4.472s] [ 85%] Built target foxglove_msgs
+[4.477s] reading manifest file 'foxglove_msgs.egg-info/SOURCES.txt'
+[4.477s] writing manifest file 'foxglove_msgs.egg-info/SOURCES.txt'
+[4.489s] [ 85%] Built target foxglove_msgs__py
+[4.514s] [ 85%] Built target ament_cmake_python_build_foxglove_msgs_egg
+[4.597s] [ 86%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_camera_calibration_s.c.o[0m
+[4.597s] [ 86%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_arrow_primitive_s.c.o[0m
+[4.598s] [ 86%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_color_s.c.o[0m
+[4.598s] [ 86%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_compressed_image_s.c.o[0m
+[4.598s] [ 86%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_compressed_point_cloud_s.c.o[0m
+[4.598s] [ 88%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_compressed_audio_s.c.o[0m
+[4.598s] [ 88%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_cube_primitive_s.c.o[0m
+[4.598s] [ 88%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_circle_annotation_s.c.o[0m
+[4.598s] [ 88%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_compressed_video_s.c.o[0m
+[4.600s] [ 89%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_frame_transform_s.c.o[0m
+[4.600s] [ 89%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_cylinder_primitive_s.c.o[0m
+[4.600s] [ 89%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_event_s.c.o[0m
+[4.605s] [ 89%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_frame_transforms_s.c.o[0m
+[4.619s] [ 89%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_geo_json_s.c.o[0m
+[4.619s] [ 89%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_joint_states_s.c.o[0m
+[4.619s] [ 90%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_image_annotations_s.c.o[0m
+[4.620s] [ 90%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_key_value_pair_s.c.o[0m
+[4.620s] [ 90%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_grid_s.c.o[0m
+[4.623s] [ 90%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_joint_state_s.c.o[0m
+[4.626s] [ 91%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_laser_scan_s.c.o[0m
+[4.629s] [ 91%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_line_primitive_s.c.o[0m
+[4.642s] [ 91%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_location_fix_s.c.o[0m
+[4.642s] [ 92%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_location_fixes_s.c.o[0m
+[4.642s] [ 92%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_log_s.c.o[0m
+[4.799s] [ 92%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_model_primitive_s.c.o[0m
+[4.799s] [ 92%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_odometry_s.c.o[0m
+[4.821s] [ 93%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_packed_element_field_s.c.o[0m
+[4.823s] [ 93%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_point2_s.c.o[0m
+[4.841s] [ 93%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_point_cloud_s.c.o[0m
+[4.841s] [ 93%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_points_annotation_s.c.o[0m
+[4.907s] [ 94%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_pose_in_frame_s.c.o[0m
+[4.910s] [ 94%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_poses_in_frame_s.c.o[0m
+[4.953s] [ 94%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_raw_audio_s.c.o[0m
+[4.958s] [ 95%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_raw_image_s.c.o[0m
+[4.976s] [ 95%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_scene_entity_deletion_s.c.o[0m
+[5.031s] [ 95%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_scene_entity_s.c.o[0m
+[5.042s] [ 95%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_scene_update_s.c.o[0m
+[5.046s] [ 95%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_text_primitive_s.c.o[0m
+[5.047s] [ 96%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_sphere_primitive_s.c.o[0m
+[5.051s] [ 96%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_text_annotation_s.c.o[0m
+[5.057s] [ 96%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_triangle_list_primitive_s.c.o[0m
+[5.082s] [ 97%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_voxel_grid_s.c.o[0m
+[5.082s] [ 97%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_generator_py.dir/rosidl_generator_py/foxglove_msgs/msg/_vector2_s.c.o[0m
+[5.497s] [ 97%] [32m[1mLinking C shared library rosidl_generator_py/foxglove_msgs/libfoxglove_msgs__rosidl_generator_py.so[0m
+[5.536s] [ 97%] Built target foxglove_msgs__rosidl_generator_py
+[5.556s] [ 98%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_typesupport_fastrtps_c__pyext.dir/rosidl_generator_py/foxglove_msgs/_foxglove_msgs_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[5.557s] [ 99%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_typesupport_c__pyext.dir/rosidl_generator_py/foxglove_msgs/_foxglove_msgs_s.ep.rosidl_typesupport_c.c.o[0m
+[5.557s] [100%] [32mBuilding C object CMakeFiles/foxglove_msgs__rosidl_typesupport_introspection_c__pyext.dir/rosidl_generator_py/foxglove_msgs/_foxglove_msgs_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[6.113s] [100%] [32m[1mLinking C shared module rosidl_generator_py/foxglove_msgs/foxglove_msgs_s__rosidl_typesupport_introspection_c.cpython-312-x86_64-linux-gnu.so[0m
+[6.121s] [100%] [32m[1mLinking C shared module rosidl_generator_py/foxglove_msgs/foxglove_msgs_s__rosidl_typesupport_c.cpython-312-x86_64-linux-gnu.so[0m
+[6.138s] [100%] Built target foxglove_msgs__rosidl_typesupport_introspection_c__pyext
+[6.144s] [100%] [32m[1mLinking C shared module rosidl_generator_py/foxglove_msgs/foxglove_msgs_s__rosidl_typesupport_fastrtps_c.cpython-312-x86_64-linux-gnu.so[0m
+[6.145s] [100%] Built target foxglove_msgs__rosidl_typesupport_c__pyext
+[6.170s] [100%] Built target foxglove_msgs__rosidl_typesupport_fastrtps_c__pyext
+[6.179s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/people:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream:/workspaces/URC-2027/ros2_ws/install/arm_teleop:/workspaces/URC-2027/ros2_ws/install/arm_description CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --build /workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs -- -j24 -l24
+[6.180s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/people:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream:/workspaces/URC-2027/ros2_ws/install/arm_teleop:/workspaces/URC-2027/ros2_ws/install/arm_description CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --install /workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs
+[6.186s] -- Install configuration: ""
+[6.186s] -- Execute custom install script
+[6.187s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/ament_index/resource_index/rosidl_interfaces/foxglove_msgs
+[6.194s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/arrow_primitive.h
+[6.200s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/camera_calibration.h
+[6.205s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/circle_annotation.h
+[6.211s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/color.h
+[6.216s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/compressed_audio.h
+[6.222s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/compressed_image.h
+[6.228s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/compressed_point_cloud.h
+[6.235s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/compressed_video.h
+[6.240s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/cube_primitive.h
+[6.246s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/cylinder_primitive.h
+[6.251s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__functions.h
+[6.256s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__struct.h
+[6.262s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__type_support.h
+[6.267s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__functions.h
+[6.273s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__struct.h
+[6.278s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__type_support.h
+[6.284s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__functions.h
+[6.289s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__struct.h
+[6.294s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__type_support.h
+[6.299s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__functions.h
+[6.305s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__struct.h
+[6.311s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__type_support.h
+[6.315s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__functions.h
+[6.321s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__struct.h
+[6.326s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__type_support.h
+[6.332s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__functions.h
+[6.337s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__struct.h
+[6.342s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__type_support.h
+[6.348s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__functions.h
+[6.353s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__struct.h
+[6.360s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__type_support.h
+[6.364s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__functions.h
+[6.370s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__struct.h
+[6.376s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__type_support.h
+[6.381s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__functions.h
+[6.387s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__struct.h
+[6.391s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__type_support.h
+[6.397s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__functions.h
+[6.403s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__struct.h
+[6.409s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__type_support.h
+[6.414s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__functions.h
+[6.420s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__struct.h
+[6.426s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__type_support.h
+[6.432s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__functions.h
+[6.437s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__struct.h
+[6.443s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__type_support.h
+[6.448s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__functions.h
+[6.454s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__struct.h
+[6.460s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__type_support.h
+[6.465s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__functions.h
+[6.470s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__struct.h
+[6.476s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__type_support.h
+[6.481s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__functions.h
+[6.487s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__struct.h
+[6.493s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__type_support.h
+[6.499s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__functions.h
+[6.504s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__struct.h
+[6.510s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__type_support.h
+[6.515s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__functions.h
+[6.520s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__struct.h
+[6.526s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__type_support.h
+[6.531s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__functions.h
+[6.536s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__struct.h
+[6.542s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__type_support.h
+[6.547s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__functions.h
+[6.552s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__struct.h
+[6.557s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__type_support.h
+[6.563s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__functions.h
+[6.569s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__struct.h
+[6.575s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__type_support.h
+[6.581s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__functions.h
+[6.586s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__struct.h
+[6.592s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__type_support.h
+[6.598s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__functions.h
+[6.603s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__struct.h
+[6.608s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__type_support.h
+[6.614s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__functions.h
+[6.619s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__struct.h
+[6.625s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__type_support.h
+[6.631s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__functions.h
+[6.637s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__struct.h
+[6.642s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__type_support.h
+[6.647s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__functions.h
+[6.652s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__struct.h
+[6.658s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__type_support.h
+[6.663s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__functions.h
+[6.669s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__struct.h
+[6.674s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__type_support.h
+[6.679s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__functions.h
+[6.685s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__struct.h
+[6.690s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__type_support.h
+[6.696s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__functions.h
+[6.701s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__struct.h
+[6.707s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__type_support.h
+[6.713s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__functions.h
+[6.718s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__struct.h
+[6.724s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__type_support.h
+[6.730s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__functions.h
+[6.735s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__struct.h
+[6.741s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__type_support.h
+[6.746s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__functions.h
+[6.752s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__struct.h
+[6.757s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__type_support.h
+[6.762s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__functions.h
+[6.768s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__struct.h
+[6.774s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__type_support.h
+[6.780s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__functions.h
+[6.785s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__struct.h
+[6.791s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__type_support.h
+[6.797s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__functions.h
+[6.802s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__struct.h
+[6.808s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__type_support.h
+[6.813s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__functions.h
+[6.819s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__struct.h
+[6.825s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__type_support.h
+[6.831s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__functions.h
+[6.837s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__struct.h
+[6.843s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__type_support.h
+[6.849s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__functions.h
+[6.854s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__struct.h
+[6.860s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__type_support.h
+[6.865s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__functions.h
+[6.871s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__struct.h
+[6.877s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__type_support.h
+[6.882s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__functions.h
+[6.888s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__struct.h
+[6.894s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__type_support.h
+[6.900s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__functions.h
+[6.906s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__struct.h
+[6.912s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__type_support.h
+[6.918s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__functions.h
+[6.923s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__struct.h
+[6.929s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__type_support.h
+[6.934s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__functions.h
+[6.940s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__struct.h
+[6.945s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__type_support.h
+[6.950s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__functions.h
+[6.956s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__struct.h
+[6.961s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__type_support.h
+[6.967s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/event.h
+[6.972s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/frame_transform.h
+[6.978s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/frame_transforms.h
+[6.983s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/geo_json.h
+[6.989s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/grid.h
+[6.994s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/image_annotations.h
+[7.000s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/joint_state.h
+[7.005s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/joint_states.h
+[7.011s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/key_value_pair.h
+[7.016s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/laser_scan.h
+[7.022s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/line_primitive.h
+[7.028s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/location_fix.h
+[7.033s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/location_fixes.h
+[7.039s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/log.h
+[7.045s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/model_primitive.h
+[7.050s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/odometry.h
+[7.056s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/packed_element_field.h
+[7.061s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/point2.h
+[7.067s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/point_cloud.h
+[7.072s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/points_annotation.h
+[7.078s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/pose_in_frame.h
+[7.083s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/poses_in_frame.h
+[7.089s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/raw_audio.h
+[7.094s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/raw_image.h
+[7.100s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/rosidl_generator_c__visibility_control.h
+[7.105s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/scene_entity.h
+[7.110s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/scene_entity_deletion.h
+[7.116s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/scene_update.h
+[7.121s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/sphere_primitive.h
+[7.127s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/text_annotation.h
+[7.132s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/text_primitive.h
+[7.136s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/triangle_list_primitive.h
+[7.141s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/vector2.h
+[7.145s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/voxel_grid.h
+[7.151s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__rosidl_typesupport_fastrtps_c.h
+[7.156s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__rosidl_typesupport_fastrtps_c.h
+[7.161s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__rosidl_typesupport_fastrtps_c.h
+[7.166s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__rosidl_typesupport_fastrtps_c.h
+[7.171s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__rosidl_typesupport_fastrtps_c.h
+[7.176s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__rosidl_typesupport_fastrtps_c.h
+[7.182s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__rosidl_typesupport_fastrtps_c.h
+[7.187s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__rosidl_typesupport_fastrtps_c.h
+[7.192s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__rosidl_typesupport_fastrtps_c.h
+[7.197s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__rosidl_typesupport_fastrtps_c.h
+[7.202s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__rosidl_typesupport_fastrtps_c.h
+[7.208s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__rosidl_typesupport_fastrtps_c.h
+[7.213s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__rosidl_typesupport_fastrtps_c.h
+[7.219s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__rosidl_typesupport_fastrtps_c.h
+[7.224s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__rosidl_typesupport_fastrtps_c.h
+[7.229s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__rosidl_typesupport_fastrtps_c.h
+[7.234s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__rosidl_typesupport_fastrtps_c.h
+[7.239s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__rosidl_typesupport_fastrtps_c.h
+[7.245s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__rosidl_typesupport_fastrtps_c.h
+[7.250s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__rosidl_typesupport_fastrtps_c.h
+[7.255s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__rosidl_typesupport_fastrtps_c.h
+[7.261s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__rosidl_typesupport_fastrtps_c.h
+[7.267s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__rosidl_typesupport_fastrtps_c.h
+[7.272s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__rosidl_typesupport_fastrtps_c.h
+[7.278s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__rosidl_typesupport_fastrtps_c.h
+[7.283s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__rosidl_typesupport_fastrtps_c.h
+[7.289s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__rosidl_typesupport_fastrtps_c.h
+[7.293s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__rosidl_typesupport_fastrtps_c.h
+[7.299s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__rosidl_typesupport_fastrtps_c.h
+[7.304s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__rosidl_typesupport_fastrtps_c.h
+[7.310s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__rosidl_typesupport_fastrtps_c.h
+[7.315s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__rosidl_typesupport_fastrtps_c.h
+[7.320s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__rosidl_typesupport_fastrtps_c.h
+[7.325s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__rosidl_typesupport_fastrtps_c.h
+[7.330s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__rosidl_typesupport_fastrtps_c.h
+[7.336s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__rosidl_typesupport_fastrtps_c.h
+[7.343s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__rosidl_typesupport_fastrtps_c.h
+[7.349s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__rosidl_typesupport_fastrtps_c.h
+[7.354s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__rosidl_typesupport_fastrtps_c.h
+[7.360s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__rosidl_typesupport_fastrtps_c.h
+[7.365s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__rosidl_typesupport_fastrtps_c.h
+[7.371s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__rosidl_typesupport_fastrtps_c.h
+[7.376s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__rosidl_typesupport_fastrtps_c.h
+[7.382s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[7.389s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/arrow_primitive.hpp
+[7.395s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/camera_calibration.hpp
+[7.401s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/circle_annotation.hpp
+[7.407s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/color.hpp
+[7.412s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/compressed_audio.hpp
+[7.418s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/compressed_image.hpp
+[7.423s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/compressed_point_cloud.hpp
+[7.429s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/compressed_video.hpp
+[7.434s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/cube_primitive.hpp
+[7.439s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/cylinder_primitive.hpp
+[7.444s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__builder.hpp
+[7.449s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__struct.hpp
+[7.455s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__traits.hpp
+[7.460s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__type_support.hpp
+[7.466s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__builder.hpp
+[7.471s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__struct.hpp
+[7.476s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__traits.hpp
+[7.482s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__type_support.hpp
+[7.487s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__builder.hpp
+[7.492s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__struct.hpp
+[7.497s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__traits.hpp
+[7.502s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__type_support.hpp
+[7.507s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__builder.hpp
+[7.512s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__struct.hpp
+[7.517s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__traits.hpp
+[7.523s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__type_support.hpp
+[7.528s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__builder.hpp
+[7.533s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__struct.hpp
+[7.538s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__traits.hpp
+[7.543s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__type_support.hpp
+[7.549s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__builder.hpp
+[7.554s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__struct.hpp
+[7.559s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__traits.hpp
+[7.565s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__type_support.hpp
+[7.570s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__builder.hpp
+[7.575s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__struct.hpp
+[7.581s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__traits.hpp
+[7.586s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__type_support.hpp
+[7.592s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__builder.hpp
+[7.597s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__struct.hpp
+[7.602s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__traits.hpp
+[7.607s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__type_support.hpp
+[7.612s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__builder.hpp
+[7.617s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__struct.hpp
+[7.623s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__traits.hpp
+[7.628s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__type_support.hpp
+[7.633s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__builder.hpp
+[7.639s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__struct.hpp
+[7.645s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__traits.hpp
+[7.650s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__type_support.hpp
+[7.655s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__builder.hpp
+[7.661s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__struct.hpp
+[7.666s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__traits.hpp
+[7.672s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__type_support.hpp
+[7.677s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__builder.hpp
+[7.683s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__struct.hpp
+[7.688s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__traits.hpp
+[7.694s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__type_support.hpp
+[7.699s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__builder.hpp
+[7.704s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__struct.hpp
+[7.710s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__traits.hpp
+[7.716s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__type_support.hpp
+[7.721s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__builder.hpp
+[7.727s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__struct.hpp
+[7.732s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__traits.hpp
+[7.737s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__type_support.hpp
+[7.743s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__builder.hpp
+[7.748s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__struct.hpp
+[7.753s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__traits.hpp
+[7.759s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__type_support.hpp
+[7.764s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__builder.hpp
+[7.769s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__struct.hpp
+[7.774s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__traits.hpp
+[7.779s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__type_support.hpp
+[7.785s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__builder.hpp
+[7.790s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__struct.hpp
+[7.795s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__traits.hpp
+[7.800s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__type_support.hpp
+[7.806s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__builder.hpp
+[7.811s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__struct.hpp
+[7.816s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__traits.hpp
+[7.821s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__type_support.hpp
+[7.827s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__builder.hpp
+[7.832s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__struct.hpp
+[7.838s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__traits.hpp
+[7.843s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__type_support.hpp
+[7.849s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__builder.hpp
+[7.854s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__struct.hpp
+[7.859s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__traits.hpp
+[7.865s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__type_support.hpp
+[7.871s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__builder.hpp
+[7.876s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__struct.hpp
+[7.881s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__traits.hpp
+[7.887s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__type_support.hpp
+[7.893s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__builder.hpp
+[7.898s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__struct.hpp
+[7.904s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__traits.hpp
+[7.909s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__type_support.hpp
+[7.915s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__builder.hpp
+[7.920s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__struct.hpp
+[7.926s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__traits.hpp
+[7.931s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__type_support.hpp
+[7.936s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__builder.hpp
+[7.942s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__struct.hpp
+[7.947s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__traits.hpp
+[7.952s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__type_support.hpp
+[7.957s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__builder.hpp
+[7.963s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__struct.hpp
+[7.968s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__traits.hpp
+[7.974s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__type_support.hpp
+[7.979s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__builder.hpp
+[7.984s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__struct.hpp
+[7.989s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__traits.hpp
+[7.994s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__type_support.hpp
+[8.000s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__builder.hpp
+[8.005s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__struct.hpp
+[8.011s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__traits.hpp
+[8.016s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__type_support.hpp
+[8.021s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__builder.hpp
+[8.026s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__struct.hpp
+[8.031s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__traits.hpp
+[8.037s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__type_support.hpp
+[8.042s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__builder.hpp
+[8.047s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__struct.hpp
+[8.053s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__traits.hpp
+[8.058s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__type_support.hpp
+[8.063s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__builder.hpp
+[8.069s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__struct.hpp
+[8.074s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__traits.hpp
+[8.079s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__type_support.hpp
+[8.085s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__builder.hpp
+[8.090s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__struct.hpp
+[8.095s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__traits.hpp
+[8.101s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__type_support.hpp
+[8.107s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__builder.hpp
+[8.112s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__struct.hpp
+[8.118s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__traits.hpp
+[8.124s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__type_support.hpp
+[8.130s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__builder.hpp
+[8.135s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__struct.hpp
+[8.140s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__traits.hpp
+[8.145s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__type_support.hpp
+[8.151s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__builder.hpp
+[8.156s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__struct.hpp
+[8.161s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__traits.hpp
+[8.167s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__type_support.hpp
+[8.172s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__builder.hpp
+[8.177s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__struct.hpp
+[8.183s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__traits.hpp
+[8.188s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__type_support.hpp
+[8.193s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__builder.hpp
+[8.199s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__struct.hpp
+[8.205s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__traits.hpp
+[8.210s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__type_support.hpp
+[8.216s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__builder.hpp
+[8.221s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__struct.hpp
+[8.227s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__traits.hpp
+[8.232s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__type_support.hpp
+[8.237s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__builder.hpp
+[8.243s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__struct.hpp
+[8.248s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__traits.hpp
+[8.254s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__type_support.hpp
+[8.260s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__builder.hpp
+[8.266s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__struct.hpp
+[8.271s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__traits.hpp
+[8.277s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__type_support.hpp
+[8.283s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__builder.hpp
+[8.288s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__struct.hpp
+[8.294s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__traits.hpp
+[8.300s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__type_support.hpp
+[8.305s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__builder.hpp
+[8.311s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__struct.hpp
+[8.317s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__traits.hpp
+[8.322s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__type_support.hpp
+[8.328s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__builder.hpp
+[8.333s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__struct.hpp
+[8.339s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__traits.hpp
+[8.344s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__type_support.hpp
+[8.350s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__builder.hpp
+[8.356s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__struct.hpp
+[8.361s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__traits.hpp
+[8.367s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__type_support.hpp
+[8.372s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/event.hpp
+[8.378s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/frame_transform.hpp
+[8.383s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/frame_transforms.hpp
+[8.388s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/geo_json.hpp
+[8.394s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/grid.hpp
+[8.399s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/image_annotations.hpp
+[8.404s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/joint_state.hpp
+[8.409s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/joint_states.hpp
+[8.415s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/key_value_pair.hpp
+[8.421s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/laser_scan.hpp
+[8.426s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/line_primitive.hpp
+[8.432s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/location_fix.hpp
+[8.437s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/location_fixes.hpp
+[8.443s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/log.hpp
+[8.448s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/model_primitive.hpp
+[8.453s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/odometry.hpp
+[8.459s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/packed_element_field.hpp
+[8.465s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/point2.hpp
+[8.469s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/point_cloud.hpp
+[8.474s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/points_annotation.hpp
+[8.479s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/pose_in_frame.hpp
+[8.484s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/poses_in_frame.hpp
+[8.489s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/raw_audio.hpp
+[8.493s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/raw_image.hpp
+[8.499s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/rosidl_generator_cpp__visibility_control.hpp
+[8.504s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/scene_entity.hpp
+[8.510s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/scene_entity_deletion.hpp
+[8.515s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/scene_update.hpp
+[8.520s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/sphere_primitive.hpp
+[8.526s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/text_annotation.hpp
+[8.531s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/text_primitive.hpp
+[8.536s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/triangle_list_primitive.hpp
+[8.541s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/vector2.hpp
+[8.546s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/voxel_grid.hpp
+[8.553s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__rosidl_typesupport_fastrtps_cpp.hpp
+[8.558s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__rosidl_typesupport_fastrtps_cpp.hpp
+[8.564s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__rosidl_typesupport_fastrtps_cpp.hpp
+[8.569s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__rosidl_typesupport_fastrtps_cpp.hpp
+[8.574s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__rosidl_typesupport_fastrtps_cpp.hpp
+[8.579s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__rosidl_typesupport_fastrtps_cpp.hpp
+[8.585s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__rosidl_typesupport_fastrtps_cpp.hpp
+[8.590s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__rosidl_typesupport_fastrtps_cpp.hpp
+[8.595s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__rosidl_typesupport_fastrtps_cpp.hpp
+[8.601s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__rosidl_typesupport_fastrtps_cpp.hpp
+[8.606s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__rosidl_typesupport_fastrtps_cpp.hpp
+[8.611s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__rosidl_typesupport_fastrtps_cpp.hpp
+[8.617s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__rosidl_typesupport_fastrtps_cpp.hpp
+[8.623s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__rosidl_typesupport_fastrtps_cpp.hpp
+[8.628s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__rosidl_typesupport_fastrtps_cpp.hpp
+[8.633s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__rosidl_typesupport_fastrtps_cpp.hpp
+[8.639s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__rosidl_typesupport_fastrtps_cpp.hpp
+[8.643s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__rosidl_typesupport_fastrtps_cpp.hpp
+[8.648s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__rosidl_typesupport_fastrtps_cpp.hpp
+[8.653s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__rosidl_typesupport_fastrtps_cpp.hpp
+[8.659s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__rosidl_typesupport_fastrtps_cpp.hpp
+[8.664s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__rosidl_typesupport_fastrtps_cpp.hpp
+[8.670s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__rosidl_typesupport_fastrtps_cpp.hpp
+[8.676s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__rosidl_typesupport_fastrtps_cpp.hpp
+[8.681s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__rosidl_typesupport_fastrtps_cpp.hpp
+[8.686s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__rosidl_typesupport_fastrtps_cpp.hpp
+[8.691s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__rosidl_typesupport_fastrtps_cpp.hpp
+[8.696s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__rosidl_typesupport_fastrtps_cpp.hpp
+[8.701s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__rosidl_typesupport_fastrtps_cpp.hpp
+[8.706s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__rosidl_typesupport_fastrtps_cpp.hpp
+[8.711s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__rosidl_typesupport_fastrtps_cpp.hpp
+[8.717s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__rosidl_typesupport_fastrtps_cpp.hpp
+[8.722s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__rosidl_typesupport_fastrtps_cpp.hpp
+[8.727s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__rosidl_typesupport_fastrtps_cpp.hpp
+[8.732s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__rosidl_typesupport_fastrtps_cpp.hpp
+[8.737s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__rosidl_typesupport_fastrtps_cpp.hpp
+[8.742s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__rosidl_typesupport_fastrtps_cpp.hpp
+[8.748s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__rosidl_typesupport_fastrtps_cpp.hpp
+[8.753s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__rosidl_typesupport_fastrtps_cpp.hpp
+[8.759s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__rosidl_typesupport_fastrtps_cpp.hpp
+[8.764s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__rosidl_typesupport_fastrtps_cpp.hpp
+[8.769s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__rosidl_typesupport_fastrtps_cpp.hpp
+[8.775s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__rosidl_typesupport_fastrtps_cpp.hpp
+[8.781s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[8.786s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__rosidl_typesupport_introspection_c.h
+[8.792s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__rosidl_typesupport_introspection_c.h
+[8.798s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__rosidl_typesupport_introspection_c.h
+[8.803s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__rosidl_typesupport_introspection_c.h
+[8.808s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__rosidl_typesupport_introspection_c.h
+[8.813s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__rosidl_typesupport_introspection_c.h
+[8.818s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__rosidl_typesupport_introspection_c.h
+[8.824s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__rosidl_typesupport_introspection_c.h
+[8.829s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__rosidl_typesupport_introspection_c.h
+[8.835s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__rosidl_typesupport_introspection_c.h
+[8.840s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__rosidl_typesupport_introspection_c.h
+[8.846s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__rosidl_typesupport_introspection_c.h
+[8.851s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__rosidl_typesupport_introspection_c.h
+[8.857s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__rosidl_typesupport_introspection_c.h
+[8.862s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__rosidl_typesupport_introspection_c.h
+[8.868s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__rosidl_typesupport_introspection_c.h
+[8.873s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__rosidl_typesupport_introspection_c.h
+[8.879s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__rosidl_typesupport_introspection_c.h
+[8.884s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__rosidl_typesupport_introspection_c.h
+[8.889s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__rosidl_typesupport_introspection_c.h
+[8.895s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__rosidl_typesupport_introspection_c.h
+[8.900s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__rosidl_typesupport_introspection_c.h
+[8.906s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__rosidl_typesupport_introspection_c.h
+[8.911s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__rosidl_typesupport_introspection_c.h
+[8.917s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__rosidl_typesupport_introspection_c.h
+[8.922s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__rosidl_typesupport_introspection_c.h
+[8.927s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__rosidl_typesupport_introspection_c.h
+[8.933s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__rosidl_typesupport_introspection_c.h
+[8.938s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__rosidl_typesupport_introspection_c.h
+[8.943s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__rosidl_typesupport_introspection_c.h
+[8.949s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__rosidl_typesupport_introspection_c.h
+[8.954s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__rosidl_typesupport_introspection_c.h
+[8.959s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__rosidl_typesupport_introspection_c.h
+[8.965s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__rosidl_typesupport_introspection_c.h
+[8.970s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__rosidl_typesupport_introspection_c.h
+[8.975s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__rosidl_typesupport_introspection_c.h
+[8.981s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__rosidl_typesupport_introspection_c.h
+[8.986s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__rosidl_typesupport_introspection_c.h
+[8.991s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__rosidl_typesupport_introspection_c.h
+[8.997s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__rosidl_typesupport_introspection_c.h
+[9.002s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__rosidl_typesupport_introspection_c.h
+[9.008s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__rosidl_typesupport_introspection_c.h
+[9.014s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__rosidl_typesupport_introspection_c.h
+[9.019s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[9.025s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/arrow_primitive__rosidl_typesupport_introspection_cpp.hpp
+[9.031s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/camera_calibration__rosidl_typesupport_introspection_cpp.hpp
+[9.037s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/circle_annotation__rosidl_typesupport_introspection_cpp.hpp
+[9.043s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/color__rosidl_typesupport_introspection_cpp.hpp
+[9.048s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_audio__rosidl_typesupport_introspection_cpp.hpp
+[9.054s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_image__rosidl_typesupport_introspection_cpp.hpp
+[9.060s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_point_cloud__rosidl_typesupport_introspection_cpp.hpp
+[9.065s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/compressed_video__rosidl_typesupport_introspection_cpp.hpp
+[9.070s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cube_primitive__rosidl_typesupport_introspection_cpp.hpp
+[9.076s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/cylinder_primitive__rosidl_typesupport_introspection_cpp.hpp
+[9.081s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/event__rosidl_typesupport_introspection_cpp.hpp
+[9.087s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transform__rosidl_typesupport_introspection_cpp.hpp
+[9.092s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/frame_transforms__rosidl_typesupport_introspection_cpp.hpp
+[9.098s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/geo_json__rosidl_typesupport_introspection_cpp.hpp
+[9.104s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/grid__rosidl_typesupport_introspection_cpp.hpp
+[9.109s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/image_annotations__rosidl_typesupport_introspection_cpp.hpp
+[9.115s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_state__rosidl_typesupport_introspection_cpp.hpp
+[9.120s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/joint_states__rosidl_typesupport_introspection_cpp.hpp
+[9.126s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/key_value_pair__rosidl_typesupport_introspection_cpp.hpp
+[9.131s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/laser_scan__rosidl_typesupport_introspection_cpp.hpp
+[9.137s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/line_primitive__rosidl_typesupport_introspection_cpp.hpp
+[9.142s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fix__rosidl_typesupport_introspection_cpp.hpp
+[9.147s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/location_fixes__rosidl_typesupport_introspection_cpp.hpp
+[9.153s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/log__rosidl_typesupport_introspection_cpp.hpp
+[9.158s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/model_primitive__rosidl_typesupport_introspection_cpp.hpp
+[9.163s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/odometry__rosidl_typesupport_introspection_cpp.hpp
+[9.168s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/packed_element_field__rosidl_typesupport_introspection_cpp.hpp
+[9.173s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point2__rosidl_typesupport_introspection_cpp.hpp
+[9.179s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/point_cloud__rosidl_typesupport_introspection_cpp.hpp
+[9.184s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/points_annotation__rosidl_typesupport_introspection_cpp.hpp
+[9.190s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/pose_in_frame__rosidl_typesupport_introspection_cpp.hpp
+[9.195s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/poses_in_frame__rosidl_typesupport_introspection_cpp.hpp
+[9.200s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_audio__rosidl_typesupport_introspection_cpp.hpp
+[9.206s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/raw_image__rosidl_typesupport_introspection_cpp.hpp
+[9.211s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity__rosidl_typesupport_introspection_cpp.hpp
+[9.217s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_entity_deletion__rosidl_typesupport_introspection_cpp.hpp
+[9.223s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/scene_update__rosidl_typesupport_introspection_cpp.hpp
+[9.228s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/sphere_primitive__rosidl_typesupport_introspection_cpp.hpp
+[9.233s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_annotation__rosidl_typesupport_introspection_cpp.hpp
+[9.238s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/text_primitive__rosidl_typesupport_introspection_cpp.hpp
+[9.243s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/triangle_list_primitive__rosidl_typesupport_introspection_cpp.hpp
+[9.249s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/vector2__rosidl_typesupport_introspection_cpp.hpp
+[9.254s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/include/foxglove_msgs/foxglove_msgs/msg/detail/voxel_grid__rosidl_typesupport_introspection_cpp.hpp
+[9.259s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/environment/pythonpath.sh
+[9.265s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/environment/pythonpath.dsv
+[9.270s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs-3.6.0-py3.14.egg-info/PKG-INFO
+[9.276s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs-3.6.0-py3.14.egg-info/SOURCES.txt
+[9.281s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs-3.6.0-py3.14.egg-info/dependency_links.txt
+[9.286s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs-3.6.0-py3.14.egg-info/top_level.txt
+[9.293s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/__init__.py
+[9.299s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/_foxglove_msgs_s.ep.rosidl_typesupport_c.c
+[9.304s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/_foxglove_msgs_s.ep.rosidl_typesupport_fastrtps_c.c
+[9.309s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/_foxglove_msgs_s.ep.rosidl_typesupport_introspection_c.c
+[9.314s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/foxglove_msgs_s__rosidl_typesupport_c.cpython-312-x86_64-linux-gnu.so
+[9.320s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/foxglove_msgs_s__rosidl_typesupport_fastrtps_c.cpython-312-x86_64-linux-gnu.so
+[9.325s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/foxglove_msgs_s__rosidl_typesupport_introspection_c.cpython-312-x86_64-linux-gnu.so
+[9.331s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/libfoxglove_msgs__rosidl_generator_py.so
+[9.336s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/__init__.py
+[9.342s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_arrow_primitive.py
+[9.348s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_arrow_primitive_s.c
+[9.353s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_camera_calibration.py
+[9.358s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_camera_calibration_s.c
+[9.364s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_circle_annotation.py
+[9.369s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_circle_annotation_s.c
+[9.374s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_color.py
+[9.379s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_color_s.c
+[9.384s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_compressed_audio.py
+[9.392s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_compressed_audio_s.c
+[9.394s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_compressed_image.py
+[9.399s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_compressed_image_s.c
+[9.404s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_compressed_point_cloud.py
+[9.409s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_compressed_point_cloud_s.c
+[9.415s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_compressed_video.py
+[9.420s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_compressed_video_s.c
+[9.425s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_cube_primitive.py
+[9.431s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_cube_primitive_s.c
+[9.436s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_cylinder_primitive.py
+[9.441s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_cylinder_primitive_s.c
+[9.446s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_event.py
+[9.451s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_event_s.c
+[9.456s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_frame_transform.py
+[9.461s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_frame_transform_s.c
+[9.467s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_frame_transforms.py
+[9.472s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_frame_transforms_s.c
+[9.478s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_geo_json.py
+[9.483s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_geo_json_s.c
+[9.488s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_grid.py
+[9.493s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_grid_s.c
+[9.499s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_image_annotations.py
+[9.504s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_image_annotations_s.c
+[9.510s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_joint_state.py
+[9.516s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_joint_state_s.c
+[9.521s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_joint_states.py
+[9.527s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_joint_states_s.c
+[9.532s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_key_value_pair.py
+[9.538s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_key_value_pair_s.c
+[9.543s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_laser_scan.py
+[9.548s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_laser_scan_s.c
+[9.554s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_line_primitive.py
+[9.559s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_line_primitive_s.c
+[9.564s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_location_fix.py
+[9.570s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_location_fix_s.c
+[9.576s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_location_fixes.py
+[9.581s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_location_fixes_s.c
+[9.586s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_log.py
+[9.591s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_log_s.c
+[9.597s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_model_primitive.py
+[9.602s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_model_primitive_s.c
+[9.607s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_odometry.py
+[9.612s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_odometry_s.c
+[9.617s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_packed_element_field.py
+[9.623s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_packed_element_field_s.c
+[9.628s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_point2.py
+[9.634s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_point2_s.c
+[9.639s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_point_cloud.py
+[9.645s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_point_cloud_s.c
+[9.650s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_points_annotation.py
+[9.656s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_points_annotation_s.c
+[9.661s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_pose_in_frame.py
+[9.667s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_pose_in_frame_s.c
+[9.672s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_poses_in_frame.py
+[9.678s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_poses_in_frame_s.c
+[9.683s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_raw_audio.py
+[9.689s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_raw_audio_s.c
+[9.695s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_raw_image.py
+[9.701s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_raw_image_s.c
+[9.706s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_scene_entity.py
+[9.712s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_scene_entity_deletion.py
+[9.718s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_scene_entity_deletion_s.c
+[9.723s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_scene_entity_s.c
+[9.729s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_scene_update.py
+[9.734s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_scene_update_s.c
+[9.740s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_sphere_primitive.py
+[9.745s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_sphere_primitive_s.c
+[9.750s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_text_annotation.py
+[9.756s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_text_annotation_s.c
+[9.761s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_text_primitive.py
+[9.766s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_text_primitive_s.c
+[9.772s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_triangle_list_primitive.py
+[9.777s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_triangle_list_primitive_s.c
+[9.783s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_vector2.py
+[9.788s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_vector2_s.c
+[9.794s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_voxel_grid.py
+[9.799s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/msg/_voxel_grid_s.c
+[9.805s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/foxglove_msgs_s__rosidl_typesupport_fastrtps_c.cpython-312-x86_64-linux-gnu.so
+[9.805s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/foxglove_msgs_s__rosidl_typesupport_introspection_c.cpython-312-x86_64-linux-gnu.so
+[9.805s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/python3.12/site-packages/foxglove_msgs/foxglove_msgs_s__rosidl_typesupport_c.cpython-312-x86_64-linux-gnu.so
+[9.806s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/rust/Cargo.toml
+[9.811s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/rust/build.rs
+[9.817s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/rust/src/lib.rs
+[9.822s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/rust/src/msg.rs
+[9.828s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/rust/src/msg/rmw.rs
+[9.833s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/ArrowPrimitive.idl
+[9.839s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CameraCalibration.idl
+[9.845s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CircleAnnotation.idl
+[9.850s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Color.idl
+[9.856s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CompressedAudio.idl
+[9.862s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CompressedImage.idl
+[9.867s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CompressedPointCloud.idl
+[9.873s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CompressedVideo.idl
+[9.878s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CubePrimitive.idl
+[9.883s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CylinderPrimitive.idl
+[9.889s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Event.idl
+[9.894s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/FrameTransform.idl
+[9.900s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/FrameTransforms.idl
+[9.905s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/GeoJSON.idl
+[9.911s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Grid.idl
+[9.917s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/ImageAnnotations.idl
+[9.923s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/JointState.idl
+[9.928s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/JointStates.idl
+[9.934s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/KeyValuePair.idl
+[9.940s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/LaserScan.idl
+[9.945s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/LinePrimitive.idl
+[9.951s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/LocationFix.idl
+[9.956s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/LocationFixes.idl
+[9.962s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Log.idl
+[9.967s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/ModelPrimitive.idl
+[9.973s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Odometry.idl
+[9.978s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PackedElementField.idl
+[9.984s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Point2.idl
+[9.989s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PointCloud.idl
+[9.995s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PointsAnnotation.idl
+[10.000s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PoseInFrame.idl
+[10.006s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PosesInFrame.idl
+[10.011s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/RawAudio.idl
+[10.016s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/RawImage.idl
+[10.022s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/SceneEntity.idl
+[10.027s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/SceneEntityDeletion.idl
+[10.032s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/SceneUpdate.idl
+[10.038s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/SpherePrimitive.idl
+[10.043s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/TextAnnotation.idl
+[10.048s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/TextPrimitive.idl
+[10.053s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/TriangleListPrimitive.idl
+[10.058s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Vector2.idl
+[10.063s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/VoxelGrid.idl
+[10.068s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/ArrowPrimitive.msg
+[10.073s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CameraCalibration.msg
+[10.078s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CircleAnnotation.msg
+[10.083s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Color.msg
+[10.088s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CompressedAudio.msg
+[10.093s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CompressedImage.msg
+[10.098s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CompressedPointCloud.msg
+[10.104s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CompressedVideo.msg
+[10.108s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CubePrimitive.msg
+[10.113s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/CylinderPrimitive.msg
+[10.119s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Event.msg
+[10.124s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/FrameTransform.msg
+[10.129s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/FrameTransforms.msg
+[10.134s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/GeoJSON.msg
+[10.139s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Grid.msg
+[10.144s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/ImageAnnotations.msg
+[10.150s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/JointState.msg
+[10.156s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/JointStates.msg
+[10.161s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/KeyValuePair.msg
+[10.167s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/LaserScan.msg
+[10.172s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/LinePrimitive.msg
+[10.177s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/LocationFix.msg
+[10.182s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/LocationFixes.msg
+[10.187s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Log.msg
+[10.193s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/ModelPrimitive.msg
+[10.198s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Odometry.msg
+[10.203s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PackedElementField.msg
+[10.209s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Point2.msg
+[10.214s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PointCloud.msg
+[10.219s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PointsAnnotation.msg
+[10.225s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PoseInFrame.msg
+[10.230s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/PosesInFrame.msg
+[10.235s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/RawAudio.msg
+[10.241s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/RawImage.msg
+[10.246s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/SceneEntity.msg
+[10.252s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/SceneEntityDeletion.msg
+[10.257s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/SceneUpdate.msg
+[10.263s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/SpherePrimitive.msg
+[10.268s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/TextAnnotation.msg
+[10.274s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/TextPrimitive.msg
+[10.279s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/TriangleListPrimitive.msg
+[10.285s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/Vector2.msg
+[10.291s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/msg/VoxelGrid.msg
+[10.296s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/ament_index/resource_index/package_run_dependencies/foxglove_msgs
+[10.301s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/ament_index/resource_index/parent_prefix_path/foxglove_msgs
+[10.307s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/environment/ament_prefix_path.sh
+[10.312s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/environment/ament_prefix_path.dsv
+[10.317s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/environment/path.sh
+[10.323s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/environment/path.dsv
+[10.328s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/local_setup.bash
+[10.334s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/local_setup.sh
+[10.340s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/local_setup.zsh
+[10.345s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/local_setup.dsv
+[10.350s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/package.dsv
+[10.355s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/ament_index/resource_index/packages/foxglove_msgs
+[10.361s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgs__rosidl_generator_py-extras.cmake
+[10.366s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/rosidl_cmake-extras.cmake
+[10.372s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/ament_cmake_export_dependencies-extras.cmake
+[10.377s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/ament_cmake_export_include_directories-extras.cmake
+[10.383s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/ament_cmake_export_libraries-extras.cmake
+[10.388s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/ament_cmake_export_targets-extras.cmake
+[10.392s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[10.396s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[10.402s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/rosidl_cmake_aggregate_target-extras.cmake
+[10.407s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgsConfig.cmake
+[10.413s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgsConfig-version.cmake
+[10.418s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/package.xml
+[10.423s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_generator_c.so
+[10.425s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_typesupport_fastrtps_c.so
+[10.426s] -- Set non-toolchain portion of runtime path of "/workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_typesupport_fastrtps_c.so" to ""
+[10.427s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_typesupport_fastrtps_cpp.so
+[10.427s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_typesupport_introspection_c.so
+[10.428s] -- Set non-toolchain portion of runtime path of "/workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_typesupport_introspection_c.so" to ""
+[10.429s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_typesupport_c.so
+[10.429s] -- Set non-toolchain portion of runtime path of "/workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_typesupport_c.so" to ""
+[10.429s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_typesupport_introspection_cpp.so
+[10.430s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_typesupport_cpp.so
+[10.461s] Listing 'lib/python3.12/site-packages/foxglove_msgs'...
+[10.461s] Can't list 'lib/python3.12/site-packages/foxglove_msgs'
+[10.467s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_generator_py.so
+[10.469s] -- Set non-toolchain portion of runtime path of "/workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/lib/libfoxglove_msgs__rosidl_generator_py.so" to ""
+[10.469s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/export_foxglove_msgs__rosidl_generator_pyExport.cmake
+[10.469s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/export_foxglove_msgs__rosidl_generator_pyExport-noconfig.cmake
+[10.469s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/export_foxglove_msgs__rosidl_generator_cExport.cmake
+[10.469s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/export_foxglove_msgs__rosidl_generator_cExport-noconfig.cmake
+[10.469s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/export_foxglove_msgs__rosidl_typesupport_fastrtps_cExport.cmake
+[10.469s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/export_foxglove_msgs__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/export_foxglove_msgs__rosidl_generator_cppExport.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/export_foxglove_msgs__rosidl_typesupport_fastrtps_cppExport.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/export_foxglove_msgs__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgs__rosidl_typesupport_introspection_cExport.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgs__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgs__rosidl_typesupport_cExport.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgs__rosidl_typesupport_cExport-noconfig.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgs__rosidl_typesupport_introspection_cppExport.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgs__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgs__rosidl_typesupport_cppExport.cmake
+[10.470s] -- Installing: /workspaces/URC-2027/ros2_ws/src/install/foxglove_msgs/share/foxglove_msgs/cmake/foxglove_msgs__rosidl_typesupport_cppExport-noconfig.cmake
+[10.473s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/people:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream:/workspaces/URC-2027/ros2_ws/install/arm_teleop:/workspaces/URC-2027/ros2_ws/install/arm_description CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --install /workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs

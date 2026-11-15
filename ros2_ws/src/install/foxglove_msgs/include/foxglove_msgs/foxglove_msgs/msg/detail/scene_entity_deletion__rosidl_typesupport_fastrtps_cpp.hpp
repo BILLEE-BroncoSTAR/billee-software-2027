@@ -1,0 +1,1 @@
+/workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs/rosidl_typesupport_fastrtps_cpp/foxglove_msgs/msg/detail/scene_entity_deletion__rosidl_typesupport_fastrtps_cpp.hpp

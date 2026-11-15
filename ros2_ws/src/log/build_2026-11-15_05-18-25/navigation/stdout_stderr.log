@@ -1,0 +1,69 @@
+-- The C compiler identification is GNU 14.4.0
+[0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+[0m
+-- The CXX compiler identification is GNU 14.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake/cmake)
+-- Found Python3: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3 (found version "3.12.14") found components: Interpreter
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found pluginlib: 5.1.4 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/pluginlib/cmake)
+-- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+-- Found geometry_msgs: 4.9.1 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/geometry_msgs/cmake)
+-- Found rosidl_generator_c: 3.1.8 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_c/cmake)
+-- Found rosidl_adapter: 3.1.8 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_adapter/cmake)
+-- Found rosidl_generator_cpp: 3.1.8 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_cpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found nav2_core: 1.1.20 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/nav2_core/cmake)
+-- Checking for module 'yaml-0.1'
+--   Found yaml-0.1, version 0.2.5
+-- Found rmw_implementation_cmake: 6.1.2 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_implementation_cmake/cmake)
+-- Found rmw_fastrtps_cpp: 6.2.10 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_fastrtps_cpp/cmake)
+-- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+-- Found OpenSSL: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/libcrypto.so (found version "3.6.4")
+-- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+-- Found FastRTPS: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/include
+-- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+-- Found TinyXML2 via Config file: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/tinyxml2
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - found
+-- Found Threads: TRUE
+-- Found Eigen3: TRUE (found version "3.4.0")
+-- Ensuring Eigen3 include directory is part of orocos-kdl CMake target
+-- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+-- Added test 'cppcheck' to perform static code analysis on C / C++ code
+-- Configured cppcheck include dirs: $<BUILD_INTERFACE:/workspaces/URC-2027/ros2_ws/src/navigation/include>
+-- Configured cppcheck exclude dirs and/or files: 
+-- Added test 'flake8' to check Python code syntax and style conventions
+-- Added test 'lint_cmake' to check CMake code style
+-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+-- Added test 'uncrustify' to check C / C++ code style
+-- Configured uncrustify additional arguments: 
+-- Added test 'xmllint' to check XML markup files
+-- Configuring done (2.7s)
+-- Generating done (0.1s)
+-- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/navigation
+[ 50%] [32mBuilding CXX object CMakeFiles/nav2_straightline_planner_plugin.dir/src/straight_line_planner.cpp.o[0m
+[100%] [32m[1mLinking CXX shared library libnav2_straightline_planner_plugin.so[0m
+[100%] Built target nav2_straightline_planner_plugin

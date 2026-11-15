@@ -1,0 +1,1 @@
+geometry_msgs:nav2_controller:nav2_core:nav2_costmap_2d:nav2_lifecycle_manager:nav2_regulated_pure_pursuit_controller:nav2_util:nav_msgs:pluginlib:rclcpp:rclcpp_lifecycle:robot_localization:tf2_ros

@@ -1,0 +1,48 @@
+running develop
+Removing /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot-description.egg-link (link to .)
+running egg_info
+writing ../build/robot_description/robot_description.egg-info/PKG-INFO
+writing dependency_links to ../build/robot_description/robot_description.egg-info/dependency_links.txt
+writing requirements to ../build/robot_description/robot_description.egg-info/requires.txt
+writing top-level names to ../build/robot_description/robot_description.egg-info/top_level.txt
+reading manifest file '../build/robot_description/robot_description.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file '../build/robot_description/robot_description.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /workspaces/URC-2027/ros2_ws/src/build/robot_description/build/lib/robot_description
+copying robot_description/__init__.py -> /workspaces/URC-2027/ros2_ws/src/build/robot_description/build/lib/robot_description
+running install
+running install_lib
+creating /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot_description
+copying /workspaces/URC-2027/ros2_ws/src/build/robot_description/build/lib/robot_description/__init__.py -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot_description
+byte-compiling /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot_description/__init__.py to __init__.cpython-314.pyc
+running install_data
+copying resource/robot_description -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/ament_index/resource_index/packages
+copying urdf/camera.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+copying urdf/chassis_model.gazebo -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+copying urdf/chassis_model.trans -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+copying urdf/macros.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+copying urdf/materials.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+copying urdf/robot.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+copying urdf/robot_core.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+copying urdf/robot_gz.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+copying urdf/ros2_control.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+copying config/controllers.yaml -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/config
+copying meshes/base_link.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/suspension_1_left_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/suspension_1_right_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/suspension_2_left_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/suspension_2_right_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/wheel_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/wheel_2.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/wheel_3.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/wheel_r_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/wheel_r_2.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/wheel_r_3.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying meshes/zed2i.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+copying package.xml -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description
+running install_egg_info
+Copying ../build/robot_description/robot_description.egg-info to /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot_description-0.0.0-py3.14.egg-info
+running install_scripts
+writing list of installed files to '/workspaces/URC-2027/ros2_ws/src/build/robot_description/install.log'

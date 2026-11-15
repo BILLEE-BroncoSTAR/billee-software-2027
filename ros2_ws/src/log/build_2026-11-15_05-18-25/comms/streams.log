@@ -1,0 +1,63 @@
+[0.132s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/comms': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/people:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/odesc:/workspaces/URC-2027/ros2_ws/install/camera_stream:/workspaces/URC-2027/ros2_ws/install/arm_teleop:/workspaces/URC-2027/ros2_ws/install/arm_description CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake /workspaces/URC-2027/ros2_ws/src/comms -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspaces/URC-2027/ros2_ws/src/install/comms
+[0.140s] [0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+[0.141s]   Compatibility with CMake < 3.10 will be removed from a future version of
+[0.141s]   CMake.
+[0.141s] 
+[0.141s]   Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+[0.141s]   to tell CMake that the project requires at least <min> but has been updated
+[0.141s]   to work with policies introduced by <max> or earlier.
+[0.141s] 
+[0.141s] [0m
+[0.177s] -- The C compiler identification is GNU 14.4.0
+[0.241s] -- The CXX compiler identification is GNU 14.4.0
+[0.247s] -- Detecting C compiler ABI info
+[0.312s] -- Detecting C compiler ABI info - done
+[0.332s] -- Check for working C compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-cc - skipped
+[0.332s] -- Detecting C compile features
+[0.332s] -- Detecting C compile features - done
+[0.343s] -- Detecting CXX compiler ABI info
+[0.415s] -- Detecting CXX compiler ABI info - done
+[0.427s] -- Check for working CXX compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-c++ - skipped
+[0.427s] -- Detecting CXX compile features
+[0.428s] -- Detecting CXX compile features - done
+[0.437s] -- Found ament_cmake: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake/cmake)
+[0.551s] -- Found Python3: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3 (found version "3.12.14") found components: Interpreter
+[0.629s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.701s] -- Found ament_cmake_gtest: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_gtest/cmake)
+[0.707s] -- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+[0.849s] -- Found gtest sources under '/workspaces/URC-2027/ros2_ws/.pixi/envs/default/src/gtest_vendor': C++ tests using 'Google Test' will be built
+[0.849s] [0mCMake Deprecation Warning at /workspaces/URC-2027/ros2_ws/.pixi/envs/default/src/gtest_vendor/CMakeLists.txt:2 (cmake_minimum_required):
+[0.850s]   Compatibility with CMake < 3.10 will be removed from a future version of
+[0.850s]   CMake.
+[0.850s] 
+[0.850s]   Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+[0.850s]   to tell CMake that the project requires at least <min> but has been updated
+[0.850s]   to work with policies introduced by <max> or earlier.
+[0.850s] 
+[0.850s] [0m
+[0.850s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+[0.917s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+[0.918s] -- Check if compiler accepts -pthread
+[0.986s] -- Check if compiler accepts -pthread - yes
+[0.987s] -- Found Threads: TRUE
+[0.991s] -- Added test 'cppcheck' to perform static code analysis on C / C++ code
+[0.991s] -- Configured cppcheck include dirs: /workspaces/URC-2027/ros2_ws/src/comms/include
+[0.991s] -- Configured cppcheck exclude dirs and/or files: 
+[0.991s] -- Added test 'lint_cmake' to check CMake code style
+[0.992s] -- Added test 'uncrustify' to check C / C++ code style
+[0.992s] -- Configured uncrustify additional arguments: 
+[0.992s] -- Added test 'xmllint' to check XML markup files
+[0.993s] -- Configuring done (0.9s)
+[0.998s] -- Generating done (0.0s)
+[0.999s] -- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/comms
+[1.004s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/comms' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/people:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/odesc:/workspaces/URC-2027/ros2_ws/install/camera_stream:/workspaces/URC-2027/ros2_ws/install/arm_teleop:/workspaces/URC-2027/ros2_ws/install/arm_description CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake /workspaces/URC-2027/ros2_ws/src/comms -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspaces/URC-2027/ros2_ws/src/install/comms
+[1.006s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/comms': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/people:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/odesc:/workspaces/URC-2027/ros2_ws/install/camera_stream:/workspaces/URC-2027/ros2_ws/install/arm_teleop:/workspaces/URC-2027/ros2_ws/install/arm_description CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --build /workspaces/URC-2027/ros2_ws/src/build/comms -- -j24 -l24
+[1.038s] [ 16%] [32mBuilding CXX object gtest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o[0m
+[1.040s] [ 33%] [32mBuilding CXX object gtest/CMakeFiles/gtest.dir/src/gtest-all.cc.o[0m
+[1.547s] [ 50%] [32m[1mLinking CXX static library libgtest_main.a[0m
+[1.568s] [ 50%] Built target gtest_main
+[8.374s] [ 66%] [32m[1mLinking CXX static library libgtest.a[0m
+[8.403s] [ 66%] Built target gtest
+[8.417s] [ 83%] [32mBuilding CXX object CMakeFiles/test_gps_msg_payloads.dir/test/TestGpsMsgPayloads.cpp.o[0m
+[9.328s] [100%] [32m[1mLinking CXX executable test_gps_msg_payloads[0m
+[9.406s] [100%] Built target test_gps_msg_payloads

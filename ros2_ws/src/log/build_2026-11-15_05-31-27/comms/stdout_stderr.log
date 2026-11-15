@@ -1,0 +1,45 @@
+[0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+[0m
+-- Found ament_cmake: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake/cmake)
+-- Found Python3: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3 (found version "3.14.10") found components: Interpreter
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found ament_cmake_gtest: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_gtest/cmake)
+-- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+-- Found GTest: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/cmake/GTest/GTestConfig.cmake (found version "1.18.0")
+-- Added test 'cppcheck' to perform static code analysis on C / C++ code
+-- Configured cppcheck include dirs: /workspaces/URC-2027/ros2_ws/src/comms/;/workspaces/URC-2027/ros2_ws/src/comms/include
+-- Configured cppcheck exclude dirs and/or files: 
+-- Added test 'lint_cmake' to check CMake code style
+-- Added test 'uncrustify' to check C / C++ code style
+-- Configured uncrustify additional arguments: 
+-- Added test 'xmllint' to check XML markup files
+-- Configuring done (0.4s)
+-- Generating done (0.0s)
+-- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/comms
+[ 50%] [32mBuilding CXX object CMakeFiles/test_gps_msg_payloads.dir/test/TestGpsMsgPayloads.cpp.o[0m
+[100%] [32m[1mLinking CXX executable test_gps_msg_payloads[0m
+[100%] Built target test_gps_msg_payloads
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/ament_index/resource_index/package_run_dependencies/comms
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/ament_index/resource_index/parent_prefix_path/comms
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/environment/ament_prefix_path.sh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/environment/ament_prefix_path.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/environment/path.sh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/environment/path.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/local_setup.bash
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/local_setup.sh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/local_setup.zsh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/local_setup.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/package.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/ament_index/resource_index/packages/comms
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/cmake/commsConfig.cmake
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/cmake/commsConfig-version.cmake
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/comms/share/comms/package.xml

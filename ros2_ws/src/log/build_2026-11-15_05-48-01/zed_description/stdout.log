@@ -1,0 +1,62 @@
+-- The C compiler identification is GNU 14.4.0
+-- The CXX compiler identification is GNU 14.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake_auto: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_auto/cmake)
+-- Found Python3: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3 (found version "3.14.10") found components: Interpreter
+-- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+-- Added test 'copyright' to check source files copyright and LICENSE
+-- Added test 'lint_cmake' to check CMake code style
+-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+-- Added test 'xmllint' to check XML markup files
+-- Configuring done (0.5s)
+-- Generating done (0.0s)
+-- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/zed_description
+-- Install configuration: ""
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/urdf
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/urdf/zed_descr.urdf.xacro
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/urdf/zed_macro.urdf.xacro
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/virtual.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zed.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zed2.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zed2i.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedm.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedx.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxhdr.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxhdrmax.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxhdrmini.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxm.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxnano.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxone4k.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxonecore.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxonegs.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxonehdr.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/meshes/zedxones.stl
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/rviz2
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/rviz2/zed_description.rviz
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/launch
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/launch/zed_viz.launch.py
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/ament_index/resource_index/package_run_dependencies/zed_description
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/ament_index/resource_index/parent_prefix_path/zed_description
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/environment/ament_prefix_path.sh
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/environment/ament_prefix_path.dsv
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/environment/path.sh
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/environment/path.dsv
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/local_setup.bash
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/local_setup.sh
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/local_setup.zsh
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/local_setup.dsv
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/package.dsv
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/ament_index/resource_index/packages/zed_description
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/cmake/zed_descriptionConfig.cmake
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/cmake/zed_descriptionConfig-version.cmake
+-- Installing: /workspaces/URC-2027/ros2_ws/src/install/zed_description/share/zed_description/package.xml

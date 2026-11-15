@@ -1,0 +1,52 @@
+[0.391s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/robot_description': CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ PYTHONPATH=/workspaces/URC-2027/ros2_ws/src/build/robot_description/prefix_override:/workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/python3.14/site-packages/colcon_core/task/python/colcon_distutils_commands:/workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages:${PYTHONPATH} /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3.14 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /workspaces/URC-2027/ros2_ws/src/build/robot_description/build
+[0.597s] running develop
+[0.684s] Removing /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot-description.egg-link (link to .)
+[0.722s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/robot_description' returned '0': CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ PYTHONPATH=/workspaces/URC-2027/ros2_ws/src/build/robot_description/prefix_override:/workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/python3.14/site-packages/colcon_core/task/python/colcon_distutils_commands:/workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages:${PYTHONPATH} /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3.14 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /workspaces/URC-2027/ros2_ws/src/build/robot_description/build
+[0.722s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/robot_description': CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ PYTHONPATH=/workspaces/URC-2027/ros2_ws/src/build/robot_description/prefix_override:/workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/python3.14/site-packages/colcon_core/task/python/colcon_distutils_commands:/workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages:${PYTHONPATH} /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3.14 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/robot_description build --build-base /workspaces/URC-2027/ros2_ws/src/build/robot_description/build install --record /workspaces/URC-2027/ros2_ws/src/build/robot_description/install.log --install-scripts $base/lib/robot_description --single-version-externally-managed install_data --force
+[0.887s] running egg_info
+[0.893s] writing ../build/robot_description/robot_description.egg-info/PKG-INFO
+[0.893s] writing dependency_links to ../build/robot_description/robot_description.egg-info/dependency_links.txt
+[0.893s] writing requirements to ../build/robot_description/robot_description.egg-info/requires.txt
+[0.894s] writing top-level names to ../build/robot_description/robot_description.egg-info/top_level.txt
+[0.907s] reading manifest file '../build/robot_description/robot_description.egg-info/SOURCES.txt'
+[0.907s] adding license file 'LICENSE'
+[0.908s] writing manifest file '../build/robot_description/robot_description.egg-info/SOURCES.txt'
+[0.908s] running build
+[0.908s] running build_py
+[0.908s] creating /workspaces/URC-2027/ros2_ws/src/build/robot_description/build/lib/robot_description
+[0.908s] copying robot_description/__init__.py -> /workspaces/URC-2027/ros2_ws/src/build/robot_description/build/lib/robot_description
+[0.908s] running install
+[0.912s] running install_lib
+[0.918s] creating /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot_description
+[0.918s] copying /workspaces/URC-2027/ros2_ws/src/build/robot_description/build/lib/robot_description/__init__.py -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot_description
+[0.919s] byte-compiling /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot_description/__init__.py to __init__.cpython-314.pyc
+[0.919s] running install_data
+[0.919s] copying resource/robot_description -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/ament_index/resource_index/packages
+[0.919s] copying urdf/camera.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+[0.919s] copying urdf/chassis_model.gazebo -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+[0.919s] copying urdf/chassis_model.trans -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+[0.919s] copying urdf/macros.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+[0.919s] copying urdf/materials.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+[0.919s] copying urdf/robot.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+[0.919s] copying urdf/robot_core.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+[0.919s] copying urdf/robot_gz.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+[0.919s] copying urdf/ros2_control.urdf.xacro -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/urdf
+[0.920s] copying config/controllers.yaml -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/config
+[0.920s] copying meshes/base_link.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/suspension_1_left_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/suspension_1_right_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/suspension_2_left_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/suspension_2_right_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/wheel_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/wheel_2.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/wheel_3.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/wheel_r_1.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/wheel_r_2.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/wheel_r_3.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying meshes/zed2i.stl -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description/meshes
+[0.920s] copying package.xml -> /workspaces/URC-2027/ros2_ws/src/install/robot_description/share/robot_description
+[0.920s] running install_egg_info
+[0.929s] Copying ../build/robot_description/robot_description.egg-info to /workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages/robot_description-0.0.0-py3.14.egg-info
+[0.930s] running install_scripts
+[0.978s] writing list of installed files to '/workspaces/URC-2027/ros2_ws/src/build/robot_description/install.log'
+[1.008s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/robot_description' returned '0': CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ PYTHONPATH=/workspaces/URC-2027/ros2_ws/src/build/robot_description/prefix_override:/workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/python3.14/site-packages/colcon_core/task/python/colcon_distutils_commands:/workspaces/URC-2027/ros2_ws/src/install/robot_description/lib/python3.14/site-packages:${PYTHONPATH} /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3.14 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/robot_description build --build-base /workspaces/URC-2027/ros2_ws/src/build/robot_description/build install --record /workspaces/URC-2027/ros2_ws/src/build/robot_description/install.log --install-scripts $base/lib/robot_description --single-version-externally-managed install_data --force

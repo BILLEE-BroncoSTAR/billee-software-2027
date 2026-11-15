@@ -1,0 +1,26 @@
+[0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+[0m
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/odesc/src/odesc.cpp:2[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/odesc/include/odesc/can_simple_messages.hpp:[m[K In member function '[01m[Kvoid Estop_msg_t::[01;32m[Kencode_buf[m[K(uint8_t*) const[m[K':
+[01m[K/workspaces/URC-2027/ros2_ws/src/odesc/include/odesc/can_simple_messages.hpp:119:30:[m[K [01;35m[Kwarning: [m[Kunused parameter '[01m[Kbuf[m[K' [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc-14.4.0/gcc/Warning-Options.html#index-Wno-unused-parameter-Wunused-parameter]8;;[m[K]
+  119 |     void encode_buf([01;35m[Kuint8_t* buf[m[K) const {
+      |                     [01;35m[K~~~~~~~~~^~~[m[K
+[01m[K/workspaces/URC-2027/ros2_ws/src/odesc/include/odesc/can_simple_messages.hpp:[m[K In member function '[01m[Kvoid Estop_msg_t::[01;32m[Kdecode_buf[m[K(const uint8_t*)[m[K':
+[01m[K/workspaces/URC-2027/ros2_ws/src/odesc/include/odesc/can_simple_messages.hpp:122:36:[m[K [01;35m[Kwarning: [m[Kunused parameter '[01m[Kbuf[m[K' [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc-14.4.0/gcc/Warning-Options.html#index-Wno-unused-parameter-Wunused-parameter]8;;[m[K]
+  122 |     void decode_buf([01;35m[Kconst uint8_t* buf[m[K) {
+      |                     [01;35m[K~~~~~~~~~~~~~~~^~~[m[K
+[01m[K/workspaces/URC-2027/ros2_ws/src/odesc/include/odesc/can_simple_messages.hpp:[m[K In member function '[01m[Kvoid Enter_DFU_Mode_msg_t::[01;32m[Kencode_buf[m[K(uint8_t*) const[m[K':
+[01m[K/workspaces/URC-2027/ros2_ws/src/odesc/include/odesc/can_simple_messages.hpp:875:30:[m[K [01;35m[Kwarning: [m[Kunused parameter '[01m[Kbuf[m[K' [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc-14.4.0/gcc/Warning-Options.html#index-Wno-unused-parameter-Wunused-parameter]8;;[m[K]
+  875 |     void encode_buf([01;35m[Kuint8_t* buf[m[K) const {
+      |                     [01;35m[K~~~~~~~~~^~~[m[K
+[01m[K/workspaces/URC-2027/ros2_ws/src/odesc/include/odesc/can_simple_messages.hpp:[m[K In member function '[01m[Kvoid Enter_DFU_Mode_msg_t::[01;32m[Kdecode_buf[m[K(const uint8_t*)[m[K':
+[01m[K/workspaces/URC-2027/ros2_ws/src/odesc/include/odesc/can_simple_messages.hpp:878:36:[m[K [01;35m[Kwarning: [m[Kunused parameter '[01m[Kbuf[m[K' [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc-14.4.0/gcc/Warning-Options.html#index-Wno-unused-parameter-Wunused-parameter]8;;[m[K]
+  878 |     void decode_buf([01;35m[Kconst uint8_t* buf[m[K) {
+      |                     [01;35m[K~~~~~~~~~~~~~~~^~~[m[K

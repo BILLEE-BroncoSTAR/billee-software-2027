@@ -1,0 +1,107 @@
+[0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+[0m
+-- The C compiler identification is GNU 14.4.0
+-- The CXX compiler identification is GNU 14.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Looking for sgemm_
+-- Looking for sgemm_ - not found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - found
+-- Found Threads: TRUE
+-- Looking for sgemm_
+-- Looking for sgemm_ - found
+-- Found BLAS: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/libopenblas.so
+-- Found CUDA: /usr/local/cuda (found suitable version "13.2", minimum required is "13")
+-- Found CUDAToolkit: /usr/local/cuda/targets/x86_64-linux/include;/usr/local/cuda/targets/x86_64-linux/include/cccl (found version "13.2.86")
+-- Found ament_cmake_auto: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_auto/cmake)
+-- Found Python3: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3 (found version "3.14.10") found components: Interpreter
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found rosidl_generator_c: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_c/cmake)
+-- Found rosidl_adapter: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_adapter/cmake)
+-- Found rosidl_generator_cpp: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_cpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Checking for module 'yaml-0.1'
+--   Found yaml-0.1, version 0.2.5
+-- Found rmw_implementation_cmake: 6.1.4 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_implementation_cmake/cmake)
+-- Found rmw_fastrtps_cpp: 6.2.10 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_fastrtps_cpp/cmake)
+-- Found OpenSSL: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib/libcrypto.so (found version "3.6.4")
+-- Found FastRTPS: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/include
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- Found eigen3_cmake_module: 0.1.1 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/eigen3_cmake_module/cmake)
+-- Found Eigen3: TRUE (found version "5.0.1")
+-- Ensuring Eigen3 include directory is part of orocos-kdl CMake target
+-- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+-- Added test 'copyright' to check source files copyright and LICENSE
+-- Added test 'cppcheck' to perform static code analysis on C / C++ code
+-- Configured cppcheck include dirs: 
+-- Configured cppcheck exclude dirs and/or files: 
+-- Added test 'lint_cmake' to check CMake code style
+-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+-- Added test 'uncrustify' to check C / C++ code style
+-- Configured uncrustify additional arguments: 
+-- Added test 'xmllint' to check XML markup files
+-- Configuring done (2.8s)
+-- Generating done (0.0s)
+-- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/zed_debug
+[ 50%] [32mBuilding CXX object CMakeFiles/zed_debug_proc.dir/src/zed_debug_proc.cpp.o[0m
+[100%] [32m[1mLinking CXX executable zed_debug_proc[0m
+[100%] Built target zed_debug_proc
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/lib/zed_debug/zed_debug_proc
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/launch/zed_camera_debug.launch.py
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/common_mono.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/common_stereo.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/custom_object_detection.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/object_detection.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/virtual.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zed.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zed2.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zed2i.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedm.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedx.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxhdr.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxhdrmax.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxhdrmini.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxm.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxnano.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxone4k.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxonecore.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxonegs.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxonehdr.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/ament_index/resource_index/package_run_dependencies/zed_debug
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/ament_index/resource_index/parent_prefix_path/zed_debug
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/environment/ament_prefix_path.sh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/environment/ament_prefix_path.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/environment/path.sh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/environment/path.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/local_setup.bash
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/local_setup.sh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/local_setup.zsh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/local_setup.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/package.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/ament_index/resource_index/packages/zed_debug
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/cmake/zed_debugConfig.cmake
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/cmake/zed_debugConfig-version.cmake
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/package.xml

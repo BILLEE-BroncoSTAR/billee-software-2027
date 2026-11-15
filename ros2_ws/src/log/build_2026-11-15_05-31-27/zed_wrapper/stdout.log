@@ -1,0 +1,57 @@
+-- The C compiler identification is GNU 14.4.0
+-- The CXX compiler identification is GNU 14.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/x86_64-conda-linux-gnu-c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake_auto: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_auto/cmake)
+-- Found Python3: /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/python3 (found version "3.14.10") found components: Interpreter
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Configuring done (0.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/zed_wrapper
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/common_mono.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/common_stereo.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/custom_object_detection.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/object_detection.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/virtual.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zed.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zed2.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zed2i.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedm.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedx.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedxhdr.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedxhdrmax.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedxhdrmini.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedxm.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedxnano.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedxone4k.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedxonecore.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedxonegs.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/config/zedxonehdr.yaml
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/urdf/zed_descr.urdf.xacro
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/urdf/zed_macro.urdf.xacro
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/launch/zed_camera.launch.py
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/ament_index/resource_index/package_run_dependencies/zed_wrapper
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/ament_index/resource_index/parent_prefix_path/zed_wrapper
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/environment/ament_prefix_path.sh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/environment/ament_prefix_path.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/environment/path.sh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/environment/path.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/local_setup.bash
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/local_setup.sh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/local_setup.zsh
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/local_setup.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/package.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/ament_index/resource_index/packages/zed_wrapper
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/cmake/zed_wrapperConfig.cmake
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/cmake/zed_wrapperConfig-version.cmake
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_wrapper/share/zed_wrapper/package.xml

@@ -1,0 +1,106 @@
+[0.037s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/zed_components': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake /workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components -DCMAKE_BUILD_TYPE=Release -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspaces/URC-2027/ros2_ws/src/install/zed_components
+[0.261s] -- Found ament_cmake_auto: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_auto/cmake)
+[0.261s] [0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+[0.262s]   Compatibility with CMake < 3.10 will be removed from a future version of
+[0.262s]   CMake.
+[0.262s] 
+[0.262s]   Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+[0.262s]   to tell CMake that the project requires at least <min> but has been updated
+[0.262s]   to work with policies introduced by <max> or earlier.
+[0.262s] 
+[0.262s] [0m
+[0.379s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.462s] -- Found rosidl_generator_c: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_c/cmake)
+[0.463s] -- Found rosidl_adapter: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_adapter/cmake)
+[0.467s] -- Found rosidl_generator_cpp: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_cpp/cmake)
+[0.472s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.481s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.572s] -- Found rmw_implementation_cmake: 6.1.4 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_implementation_cmake/cmake)
+[0.573s] -- Found rmw_fastrtps_cpp: 6.2.10 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_fastrtps_cpp/cmake)
+[0.686s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[0.981s] -- Found eigen3_cmake_module: 0.1.1 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/eigen3_cmake_module/cmake)
+[0.982s] -- Ensuring Eigen3 include directory is part of orocos-kdl CMake target
+[1.108s] --  * Type Adaptation for sl::Mat is enabled
+[1.108s] -- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+[1.119s] -- Added test 'copyright' to check source files copyright and LICENSE
+[1.121s] -- Added test 'cppcheck' to perform static code analysis on C / C++ code
+[1.121s] -- Configured cppcheck include dirs: /workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/include;/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera/include;/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include;/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera_one/include
+[1.121s] -- Configured cppcheck exclude dirs and/or files: 
+[1.122s] -- Added test 'lint_cmake' to check CMake code style
+[1.123s] -- Added test 'uncrustify' to check C / C++ code style
+[1.124s] -- Configured uncrustify additional arguments: 
+[1.124s] -- Added test 'xmllint' to check XML markup files
+[1.127s] -- Configuring done (1.1s)
+[1.168s] [33mCMake Warning at CMakeLists.txt:317 (add_library):
+[1.168s]   Cannot generate a safe runtime search path for target zed_camera_component
+[1.168s]   because files in some directories may conflict with libraries in implicit
+[1.168s]   directories:
+[1.168s] 
+[1.168s]     runtime library [libopenblas.so.0] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib may be hidden by files in:
+[1.168s]       /usr/lib/x86_64-linux-gnu
+[1.168s]     runtime library [librt.so.1] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/x86_64-conda-linux-gnu/sysroot/usr/lib may be hidden by files in:
+[1.168s]       /usr/lib/x86_64-linux-gnu
+[1.168s]     runtime library [libyaml-0.so.2] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib may be hidden by files in:
+[1.168s]       /usr/lib/x86_64-linux-gnu
+[1.168s] 
+[1.168s]   Some of these libraries may not be found correctly.
+[1.168s] 
+[1.168s] [0m
+[1.189s] [33mCMake Warning at CMakeLists.txt:342 (add_library):
+[1.189s]   Cannot generate a safe runtime search path for target
+[1.189s]   zed_camera_one_component because files in some directories may conflict
+[1.189s]   with libraries in implicit directories:
+[1.189s] 
+[1.189s]     runtime library [libopenblas.so.0] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib may be hidden by files in:
+[1.189s]       /usr/lib/x86_64-linux-gnu
+[1.189s]     runtime library [librt.so.1] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/x86_64-conda-linux-gnu/sysroot/usr/lib may be hidden by files in:
+[1.189s]       /usr/lib/x86_64-linux-gnu
+[1.189s]     runtime library [libyaml-0.so.2] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib may be hidden by files in:
+[1.189s]       /usr/lib/x86_64-linux-gnu
+[1.189s] 
+[1.189s]   Some of these libraries may not be found correctly.
+[1.189s] 
+[1.189s] [0m
+[1.195s] -- Generating done (0.1s)
+[1.202s] -- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/zed_components
+[1.219s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/zed_components' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake /workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components -DCMAKE_BUILD_TYPE=Release -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspaces/URC-2027/ros2_ws/src/install/zed_components
+[1.221s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/zed_components': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --build /workspaces/URC-2027/ros2_ws/src/build/zed_components -- -j24 -l24
+[1.319s] [ 47%] Built target zed_camera_one_component
+[1.320s] [100%] Built target zed_camera_component
+[1.331s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/zed_components' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --build /workspaces/URC-2027/ros2_ws/src/build/zed_components -- -j24 -l24
+[1.332s] Invoking command in '/workspaces/URC-2027/ros2_ws/src/build/zed_components': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --install /workspaces/URC-2027/ros2_ws/src/build/zed_components
+[1.342s] -- Install configuration: "Release"
+[1.342s] -- Execute custom install script
+[1.342s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/lib/libzed_camera_component.so
+[1.342s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/lib/libzed_camera_one_component.so
+[1.342s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//cost_traversability.hpp
+[1.342s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//zed_camera_component.hpp
+[1.342s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//zed_camera_one_component.hpp
+[1.343s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//gnss_replay.hpp
+[1.343s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//sl_logging.hpp
+[1.343s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//sl_tools.hpp
+[1.343s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//sl_type_adapter.hpp
+[1.343s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//sl_types.hpp
+[1.344s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//sl_win_avg.hpp
+[1.344s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//sl_version.hpp
+[1.344s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/include/zed_components//visibility_control.hpp
+[1.344s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/ament_index/resource_index/package_run_dependencies/zed_components
+[1.344s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/ament_index/resource_index/parent_prefix_path/zed_components
+[1.344s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/environment/ament_prefix_path.sh
+[1.344s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/environment/ament_prefix_path.dsv
+[1.344s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/environment/path.sh
+[1.344s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/environment/path.dsv
+[1.345s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/local_setup.bash
+[1.345s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/local_setup.sh
+[1.345s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/local_setup.zsh
+[1.345s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/local_setup.dsv
+[1.345s] -- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/package.dsv
+[1.354s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/ament_index/resource_index/packages/zed_components
+[1.354s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/ament_index/resource_index/rclcpp_components/zed_components
+[1.355s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/cmake/ament_cmake_export_include_directories-extras.cmake
+[1.355s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/cmake/ament_cmake_export_libraries-extras.cmake
+[1.355s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/cmake/ament_cmake_export_dependencies-extras.cmake
+[1.355s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/cmake/zed_componentsConfig.cmake
+[1.355s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/cmake/zed_componentsConfig-version.cmake
+[1.355s] -- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_components/share/zed_components/package.xml
+[1.359s] Invoked command in '/workspaces/URC-2027/ros2_ws/src/build/zed_components' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspaces/URC-2027/ros2_ws/install/robot_description:/workspaces/URC-2027/ros2_ws/install/camera_stream CONDA_ENV_SHLVL_2_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_3_PIXI_PROMPT=(ros2_ws) CONDA_ENV_SHLVL_4_PIXI_PROMPT=(ros2_ws) PIXI_PROMPT=(ros2_ws) PS1=(ros2_ws) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ /workspaces/URC-2027/ros2_ws/.pixi/envs/default/bin/cmake --install /workspaces/URC-2027/ros2_ws/src/build/zed_components

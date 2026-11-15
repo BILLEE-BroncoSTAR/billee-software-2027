@@ -1,0 +1,1 @@
+/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_core/cmake/environment_hooks/environment/ament_prefix_path.sh

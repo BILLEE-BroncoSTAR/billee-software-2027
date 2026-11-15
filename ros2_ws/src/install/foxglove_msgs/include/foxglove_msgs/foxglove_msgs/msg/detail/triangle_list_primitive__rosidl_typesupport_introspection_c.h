@@ -1,0 +1,1 @@
+/workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs/rosidl_typesupport_introspection_c/foxglove_msgs/msg/detail/triangle_list_primitive__rosidl_typesupport_introspection_c.h

@@ -1,0 +1,66 @@
+-- Found ament_cmake_auto: 1.3.14 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_cmake_auto/cmake)
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found rosidl_generator_c: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_c/cmake)
+-- Found rosidl_adapter: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_adapter/cmake)
+-- Found rosidl_generator_cpp: 3.1.9 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rosidl_generator_cpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found rmw_implementation_cmake: 6.1.4 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_implementation_cmake/cmake)
+-- Found rmw_fastrtps_cpp: 6.2.10 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/rmw_fastrtps_cpp/cmake)
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- Found eigen3_cmake_module: 0.1.1 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/eigen3_cmake_module/cmake)
+-- Ensuring Eigen3 include directory is part of orocos-kdl CMake target
+-- Found ament_lint_auto: 0.12.15 (/workspaces/URC-2027/ros2_ws/.pixi/envs/default/share/ament_lint_auto/cmake)
+-- Added test 'copyright' to check source files copyright and LICENSE
+-- Added test 'cppcheck' to perform static code analysis on C / C++ code
+-- Configured cppcheck include dirs: 
+-- Configured cppcheck exclude dirs and/or files: 
+-- Added test 'lint_cmake' to check CMake code style
+-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+-- Added test 'uncrustify' to check C / C++ code style
+-- Configured uncrustify additional arguments: 
+-- Added test 'xmllint' to check XML markup files
+-- Configuring done (1.5s)
+-- Generating done (0.0s)
+-- Build files have been written to: /workspaces/URC-2027/ros2_ws/src/build/zed_debug
+[ 50%] [32mBuilding CXX object CMakeFiles/zed_debug_proc.dir/src/zed_debug_proc.cpp.o[0m
+[100%] [32m[1mLinking CXX executable zed_debug_proc[0m
+[100%] Built target zed_debug_proc
+-- Install configuration: "Release"
+-- Execute custom install script
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/lib/zed_debug/zed_debug_proc
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/launch/zed_camera_debug.launch.py
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/common_mono.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/common_stereo.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/custom_object_detection.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/object_detection.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/virtual.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zed.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zed2.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zed2i.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedm.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedx.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxhdr.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxhdrmax.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxhdrmini.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxm.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxnano.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxone4k.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxonecore.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxonegs.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/config/zedxonehdr.yaml
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/ament_index/resource_index/package_run_dependencies/zed_debug
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/ament_index/resource_index/parent_prefix_path/zed_debug
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/environment/ament_prefix_path.sh
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/environment/ament_prefix_path.dsv
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/environment/path.sh
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/environment/path.dsv
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/local_setup.bash
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/local_setup.sh
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/local_setup.zsh
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/local_setup.dsv
+-- Symlinking: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/package.dsv
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/ament_index/resource_index/packages/zed_debug
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/cmake/zed_debugConfig.cmake
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/cmake/zed_debugConfig-version.cmake
+-- Up-to-date symlink: /workspaces/URC-2027/ros2_ws/src/install/zed_debug/share/zed_debug/package.xml

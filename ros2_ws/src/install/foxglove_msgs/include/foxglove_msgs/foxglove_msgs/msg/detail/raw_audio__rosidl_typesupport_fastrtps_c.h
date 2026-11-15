@@ -1,0 +1,1 @@
+/workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs/rosidl_typesupport_fastrtps_c/foxglove_msgs/msg/detail/raw_audio__rosidl_typesupport_fastrtps_c.h

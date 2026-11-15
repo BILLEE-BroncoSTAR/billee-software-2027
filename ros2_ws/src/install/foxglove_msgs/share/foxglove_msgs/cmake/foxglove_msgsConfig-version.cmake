@@ -1,0 +1,1 @@
+/workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs/ament_cmake_core/foxglove_msgsConfig-version.cmake

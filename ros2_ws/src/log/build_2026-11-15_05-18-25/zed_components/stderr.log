@@ -1,0 +1,123 @@
+[0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+[0m
+[33mCMake Warning at CMakeLists.txt:142 (find_package):
+  By not providing "Findzed_msgs.cmake" in CMAKE_MODULE_PATH this project has
+  asked CMake to find a package configuration file provided by "zed_msgs",
+  but CMake did not find one.
+
+  Could not find a package configuration file provided by "zed_msgs" with any
+  of the following names:
+
+    zed_msgsConfig.cmake
+    zed_msgs-config.cmake
+
+  Add the installation prefix of "zed_msgs" to CMAKE_PREFIX_PATH or set
+  "zed_msgs_DIR" to a directory containing one of the above files.  If
+  "zed_msgs" provides a separate development package or SDK, be sure it has
+  been installed.
+
+[0m
+[33mCMake Warning at CMakeLists.txt:317 (add_library):
+  Cannot generate a safe runtime search path for target zed_camera_component
+  because files in some directories may conflict with libraries in implicit
+  directories:
+
+    runtime library [libopenblas.so.0] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib may be hidden by files in:
+      /usr/lib/x86_64-linux-gnu
+    runtime library [librt.so.1] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/x86_64-conda-linux-gnu/sysroot/usr/lib may be hidden by files in:
+      /usr/lib/x86_64-linux-gnu
+    runtime library [libyaml-0.so.2] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib may be hidden by files in:
+      /usr/lib/x86_64-linux-gnu
+
+  Some of these libraries may not be found correctly.
+
+[0m
+[33mCMake Warning at CMakeLists.txt:342 (add_library):
+  Cannot generate a safe runtime search path for target
+  zed_camera_one_component because files in some directories may conflict
+  with libraries in implicit directories:
+
+    runtime library [libopenblas.so.0] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib may be hidden by files in:
+      /usr/lib/x86_64-linux-gnu
+    runtime library [librt.so.1] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/x86_64-conda-linux-gnu/sysroot/usr/lib may be hidden by files in:
+      /usr/lib/x86_64-linux-gnu
+    runtime library [libyaml-0.so.2] in /workspaces/URC-2027/ros2_ws/.pixi/envs/default/lib may be hidden by files in:
+      /usr/lib/x86_64-linux-gnu
+
+  Some of these libraries may not be found correctly.
+
+[0m
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera_one/include/zed_camera_one_component.hpp:25[m[K,
+                 from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera_one/src/zed_camera_one_component_main.cpp:15[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include/sl_types.hpp:52:10:[m[K [01;31m[Kfatal error: [m[Kzed_msgs/srv/set_svo_frame.hpp: No such file or directory
+   52 | #include [01;31m[K<zed_msgs/srv/set_svo_frame.hpp>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+compilation terminated.
+gmake[2]: *** [CMakeFiles/zed_camera_one_component.dir/build.make:135: CMakeFiles/zed_camera_one_component.dir/src/zed_camera_one/src/zed_camera_one_component_main.cpp.o] Error 1
+gmake[2]: *** Waiting for unfinished jobs....
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/src/sl_types.cpp:15[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include/sl_types.hpp:52:10:[m[K [01;31m[Kfatal error: [m[Kzed_msgs/srv/set_svo_frame.hpp: No such file or directory
+   52 | #include [01;31m[K<zed_msgs/srv/set_svo_frame.hpp>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+compilation terminated.
+gmake[2]: *** [CMakeFiles/zed_camera_component.dir/build.make:121: CMakeFiles/zed_camera_component.dir/src/tools/src/sl_types.cpp.o] Error 1
+gmake[2]: *** Waiting for unfinished jobs....
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera_one/include/zed_camera_one_component.hpp:25[m[K,
+                 from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera_one/src/zed_camera_one_component_video.cpp:15[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include/sl_types.hpp:52:10:[m[K [01;31m[Kfatal error: [m[Kzed_msgs/srv/set_svo_frame.hpp: No such file or directory
+   52 | #include [01;31m[K<zed_msgs/srv/set_svo_frame.hpp>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+compilation terminated.
+gmake[2]: *** [CMakeFiles/zed_camera_one_component.dir/build.make:163: CMakeFiles/zed_camera_one_component.dir/src/zed_camera_one/src/zed_camera_one_component_video.cpp.o] Error 1
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/src/sl_types.cpp:15[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include/sl_types.hpp:52:10:[m[K [01;31m[Kfatal error: [m[Kzed_msgs/srv/set_svo_frame.hpp: No such file or directory
+   52 | #include [01;31m[K<zed_msgs/srv/set_svo_frame.hpp>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+compilation terminated.
+gmake[2]: *** [CMakeFiles/zed_camera_one_component.dir/build.make:121: CMakeFiles/zed_camera_one_component.dir/src/tools/src/sl_types.cpp.o] Error 1
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera/include/zed_camera_component.hpp:28[m[K,
+                 from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera/src/zed_camera_component_main.cpp:15[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include/sl_types.hpp:52:10:[m[K [01;31m[Kfatal error: [m[Kzed_msgs/srv/set_svo_frame.hpp: No such file or directory
+   52 | #include [01;31m[K<zed_msgs/srv/set_svo_frame.hpp>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+compilation terminated.
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera/include/zed_camera_component.hpp:28[m[K,
+                 from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera/src/zed_camera_component_objdet.cpp:15[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include/sl_types.hpp:52:10:[m[K [01;31m[Kfatal error: [m[Kzed_msgs/srv/set_svo_frame.hpp: No such file or directory
+   52 | #include [01;31m[K<zed_msgs/srv/set_svo_frame.hpp>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+compilation terminated.
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera/include/zed_camera_component.hpp:28[m[K,
+                 from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera/src/zed_camera_component_video_depth.cpp:15[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include/sl_types.hpp:52:10:[m[K [01;31m[Kfatal error: [m[Kzed_msgs/srv/set_svo_frame.hpp: No such file or directory
+   52 | #include [01;31m[K<zed_msgs/srv/set_svo_frame.hpp>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+compilation terminated.
+gmake[2]: *** [CMakeFiles/zed_camera_component.dir/build.make:135: CMakeFiles/zed_camera_component.dir/src/zed_camera/src/zed_camera_component_main.cpp.o] Error 1
+gmake[2]: *** [CMakeFiles/zed_camera_component.dir/build.make:149: CMakeFiles/zed_camera_component.dir/src/zed_camera/src/zed_camera_component_video_depth.cpp.o] Error 1
+gmake[2]: *** [CMakeFiles/zed_camera_component.dir/build.make:163: CMakeFiles/zed_camera_component.dir/src/zed_camera/src/zed_camera_component_objdet.cpp.o] Error 1
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera_one/include/zed_camera_one_component.hpp:25[m[K,
+                 from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera_one/src/zed_camera_one_component_sensors.cpp:15[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include/sl_types.hpp:52:10:[m[K [01;31m[Kfatal error: [m[Kzed_msgs/srv/set_svo_frame.hpp: No such file or directory
+   52 | #include [01;31m[K<zed_msgs/srv/set_svo_frame.hpp>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+compilation terminated.
+gmake[2]: *** [CMakeFiles/zed_camera_one_component.dir/build.make:149: CMakeFiles/zed_camera_one_component.dir/src/zed_camera_one/src/zed_camera_one_component_sensors.cpp.o] Error 1
+In file included from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera/include/zed_camera_component.hpp:28[m[K,
+                 from [01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/zed_camera/src/zed_camera_component_bodytrk.cpp:15[m[K:
+[01m[K/workspaces/URC-2027/ros2_ws/src/zed-ros2-wrapper/zed_components/src/tools/include/sl_types.hpp:52:10:[m[K [01;31m[Kfatal error: [m[Kzed_msgs/srv/set_svo_frame.hpp: No such file or directory
+   52 | #include [01;31m[K<zed_msgs/srv/set_svo_frame.hpp>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+compilation terminated.
+gmake[2]: *** [CMakeFiles/zed_camera_component.dir/build.make:177: CMakeFiles/zed_camera_component.dir/src/zed_camera/src/zed_camera_component_bodytrk.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:221: CMakeFiles/zed_camera_one_component.dir/all] Error 2
+gmake[1]: *** Waiting for unfinished jobs....
+gmake[1]: *** [CMakeFiles/Makefile2:189: CMakeFiles/zed_camera_component.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

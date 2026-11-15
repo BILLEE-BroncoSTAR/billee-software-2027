@@ -1,0 +1,1 @@
+/workspaces/URC-2027/ros2_ws/src/build/foxglove_msgs/rosidl_typesupport_fastrtps_c/foxglove_msgs/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
