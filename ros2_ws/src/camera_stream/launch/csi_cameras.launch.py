@@ -1,6 +1,6 @@
 """The rover's CSI cameras: one csi_compressed_video_pub per camera.
 
-    ros2 launch camera_stream csi_cameras.launch.py                 # all five
+    ros2 launch camera_stream csi_cameras.launch.py                 # all cameras in the config
     ros2 launch camera_stream csi_cameras.launch.py cameras:=3      # cam0..cam2
     ros2 launch camera_stream csi_cameras.launch.py source:=test    # test pattern, no cameras
 
@@ -9,32 +9,45 @@ publishes
     /camN/video                     foxglove_msgs/CompressedVideo, H.264 (Foxglove Image panel)
     /camN/image_raw/compressed      sensor_msgs/CompressedImage, JPEG (RViz Image display)
 
+The camera list (name and flip for each camera) lives in config/cameras.yaml in this package.
+Index = Argus sensor-id = /camN: the first entry is cam0, the second cam1, and so on. Names
+match the Foxglove dashboard panels (chassis_bringup/foxglove/rover_dashboard.json) and the
+RViz displays. Change the file and relaunch; nothing to rebuild with a --symlink-install build.
+
 Argus numbers the cameras it found at boot 0, 1, 2... in device-tree port order, so a camera
 missing from a lower port shifts the ones after it down. A camera with nothing behind its
 sensor-id publishes a "NO CAMERA" placeholder instead and checks again every 10 s; it never
 stops the launch.
 """
 
+import os
+
+import yaml
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-# Index = Argus sensor-id = /camN. Names match the Foxglove dashboard panels
-# (chassis_bringup/foxglove/rover_dashboard.json) and the RViz displays.
-# flip: how the camera is mounted, fixed in the Jetson's video hardware before encoding, so
-# Foxglove and RViz both get the corrected image (nvvidconv flip-method):
-#   0 as is   2 rotate 180 (mounted upside down)   4 mirror left-right   6 mirror top-bottom
-#   1 / 3 rotate 90 counter-/clockwise (the stream becomes portrait, 720x1280)
-# Change it here and relaunch; nothing to rebuild with a --symlink-install build.
-CAMERAS = (
-    # name, flip
-    ("front", 2),       # mounted upside down
-    ("rear_left", 2),   # mounted upside down
-    ("rear_right", 0),
-    ("top_front", 0),
-    ("reverse", 0),
-)
+CAMERAS_CONFIG = os.path.join(
+    get_package_share_directory("camera_stream"), "config", "cameras.yaml")
+
+
+def _load_cameras():
+    """Return [(name, flip), ...] in file order. Index = Argus sensor-id = /camN."""
+    with open(CAMERAS_CONFIG) as f:
+        data = yaml.safe_load(f) or {}
+    entries = data.get("cameras")
+    if not entries:
+        raise RuntimeError(f"csi_cameras.launch.py: no 'cameras' section in {CAMERAS_CONFIG}")
+    return [
+        (str(cfg.get("name", key)), int(cfg.get("flip", 0)))
+        for key, cfg in entries.items()
+    ]
+
+
+# Index = Argus sensor-id = /camN, exactly as the old in-file CAMERAS tuple.
+CAMERAS = _load_cameras()
 
 declare_args = [
     DeclareLaunchArgument(
