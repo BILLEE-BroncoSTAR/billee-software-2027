@@ -10,12 +10,14 @@ Gazebo host it.
     # real ODESC/NEO drivetrain on can2:
     ros2 launch chassis_bringup real.launch.py
 
-    # no motor hardware — exercise the encoder feedback -> /diff_drive_controller/odom
+    # no motor hardware: the ODrive emulator on a virtual CAN bus (tooling/can-up vcan0
+    # on the host, then `ros2 run odesc odesc_vcan_emulator.py --interface vcan0`).
+    # Exercises the CAN frames and the encoder feedback -> /diff_drive_controller/odom
     # + odom TF + /joint_states -> viewer path (fixed frame odom):
-    ros2 launch chassis_bringup real.launch.py can_interface:=mock rviz:=true
+    ros2 launch chassis_bringup real.launch.py can_interface:=vcan0 rviz:=true
 
-    # protocol-level test against a virtual CAN bus (see tooling/can-up):
-    ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
+    # can_interface:=mock (no CAN, loopback) is currently broken: the driver has no mock
+    # path and fails in on_configure. See docs/odesc.md.
 
 WHY THIS FILE PATCHES controllers.yaml
 --------------------------------------
@@ -79,9 +81,9 @@ declare_args = [
         default_value="can2",
         description="SocketCAN interface for the ODESC bus. The USB-CAN adapter's number "
         "can change when it is replugged or the Jetson reboots; the launch stops with the "
-        "list of CAN interfaces if this one is missing or down. 'mock' or 'none' runs "
-        "OdescSystemHardware in mock mode (no CAN, gear-ratio loopback feedback) so the "
-        "stack can be brought up with no motor hardware. 'vcan0' etc. for a virtual bus.",
+        "list of CAN interfaces if this one is missing or down. 'vcan0' etc. for a virtual "
+        "bus (with odesc_vcan_emulator.py, no motor hardware). 'mock'/'none' (no CAN) is "
+        "currently broken: the driver has no mock path.",
     ),
     DeclareLaunchArgument(
         "gear_ratio",

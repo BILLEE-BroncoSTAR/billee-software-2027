@@ -4,7 +4,7 @@ Wraps the existing backends and always starts the foxglove bridge:
 
     ros2 launch chassis_bringup rover.launch.py                       # sim, no ODESC
     ros2 launch chassis_bringup rover.launch.py mode:=real            # ODESC over CAN
-    ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=mock
+    ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=vcan0  # emulator, no motors
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud     # + ZED point cloud
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose  # + OpenPose
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + both
@@ -74,9 +74,8 @@ declare_args = [
         "can_interface",
         default_value="can2",
         description="mode:=real only. The drivetrain's SocketCAN bus. The launch stops and "
-        "lists the CAN interfaces if it is missing or down. 'mock'/'none' = no CAN "
-        "(loopback feedback); "
-        "'vcan0' = virtual bus.",
+        "lists the CAN interfaces if it is missing or down. 'vcan0' = virtual bus "
+        "(with odesc_vcan_emulator.py, no motors). 'mock'/'none' is currently broken.",
     ),
     DeclareLaunchArgument(
         "gear_ratio",

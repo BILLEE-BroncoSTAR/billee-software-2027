@@ -6,8 +6,8 @@
 #   sudo systemctl enable --now can2.service
 #   systemctl status can2.service
 #
-# Bitrate 500000 matches BILLEE_NEO_ODESC_Hardware_Integration_Guide.md §3.4.
-# Change it here if the ODESC firmware is configured differently, then
+# Bitrate 500000 matches the ODESC boards' can.config.baud_rate
+# (configs/odesc/motor_*.json). Change it here if the boards are reconfigured, then
 # `sudo systemctl restart can2.service`.
 #
 # This only configures an interface the kernel already exposes (Tegra mttcan or a

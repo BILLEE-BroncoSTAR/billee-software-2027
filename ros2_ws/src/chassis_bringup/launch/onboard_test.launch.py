@@ -6,7 +6,7 @@ short field tests only; normal operations should run the joystick and viewers
 on the separate ground station.
 
     ros2 launch chassis_bringup onboard_test.launch.py
-    ros2 launch chassis_bringup onboard_test.launch.py can_interface:=mock
+    ros2 launch chassis_bringup onboard_test.launch.py can_interface:=vcan0   # emulator, no motors
 """
 
 from launch import LaunchDescription

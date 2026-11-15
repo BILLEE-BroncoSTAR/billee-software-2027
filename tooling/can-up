@@ -8,9 +8,8 @@
 #   tooling/can-up down [iface]    # take the interface down (vcanN is also deleted)
 #   tooling/can-up status [iface]  # show state
 #
-# Bitrate default is 500000 to match BILLEE_NEO_ODESC_Hardware_Integration_Guide.md
-# §3.4 (odrv0.can.config.baud_rate = 500000). Confirm against the actual ODESC
-# firmware config before trusting it on real hardware.
+# Bitrate default is 500000 to match the ODESC boards' can.config.baud_rate
+# (configs/odesc/motor_*.json).
 #
 # Uses sudo for the `ip` calls. Idempotent: re-running on an already-up interface
 # just reports state. Real `canN` interfaces must already exist in the kernel

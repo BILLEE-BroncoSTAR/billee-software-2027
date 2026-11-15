@@ -8,7 +8,7 @@ Alongside a running sim or real bring-up you usually just pass the flags to that
 launch instead:
 
     ros2 launch chassis_bringup sim_gz.launch.py rviz:=true foxglove:=true
-    ros2 launch chassis_bringup real.launch.py  can_interface:=mock rviz:=true
+    ros2 launch chassis_bringup real.launch.py  rviz:=true
 
 Both readers show the same thing: the robot model + TF tree + wheel odometry,
 fixed frame `odom`. `odom` comes from the sim EKF (sim_gz navigation:=true, the default)
