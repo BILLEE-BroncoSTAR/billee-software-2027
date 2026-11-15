@@ -101,7 +101,7 @@ Everything renders on the CPU, so the sim is slower than on an NVIDIA machine.
    make setup linux-aarch64
    ```
 2. **Run:** `make sim` opens Gazebo and **RViz** and also serves Foxglove on :8765.
-   Plug in a gamepad to drive (hold RB; RT forward, LT reverse, left stick steers). For the ODESC
+   Plug in a gamepad to drive (hold LB; RT forward, LT reverse, left stick steers). For the ODESC
    shadow, run `tooling/can-up vcan0` first and `make sim` picks it up.
 3. **Without make:** `cd ros2_ws && pixi shell -e linux-aarch64` gives a ROS 2 terminal for
    every command in [docs/RUN_MODES.md](RUN_MODES.md).

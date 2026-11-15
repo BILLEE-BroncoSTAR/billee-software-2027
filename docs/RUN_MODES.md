@@ -230,13 +230,14 @@ sim uses too):
 
 | Input | Action |
 |---|---|
-| **Hold RB / R1** (button 5) | deadman — nothing moves unless held; release = stop |
+| **Hold LB / L1** (button 4) | deadman — nothing moves unless held; release = stop |
 | **Right trigger RT / R2** (axis 5) | forward, proportional to how far it's pulled |
 | **Left trigger LT / L2** (axis 2) | reverse |
 | **Left stick, horizontal** (axis 0) | steer left / right |
 
-`linear.x = (RT − LT) · speed_scale` (2.0 m/s at full trigger), `angular.z = stick · steer_scale`
-(1.5 rad/s at full stick); all zero while RB is released. Triggers read as released until
+`linear.x = (RT − LT) · max_vel` (1.0 m/s at full trigger), `angular.z = stick · steer_scale`
+(1.5 rad/s at full stick); all zero while LB is released. That's the default arcade scheme;
+`drive_scheme:=tank` drives each side with its own stick ([teleop.md](teleop.md)). Triggers read as released until
 they are first pulled (some drivers report 0 before that). Every index, scale and the
 trigger rest/pressed values are parameters — check with `ros2 topic echo /joy` when
 using a different pad, and set `invert_steer: true` if steering is mirrored.
@@ -254,8 +255,8 @@ Check the pad before driving:
 
 ```bash
 ls /dev/input/js*                        # host: the pad must show up (js0)
-ros2 topic echo /joy                     # buttons[5] = 1 with RB held; axes[0/2/5] move with stick/LT/RT
-ros2 topic echo /diff_drive_controller/cmd_vel_unstamped   # non-zero only with RB held
+ros2 topic echo /joy                     # buttons[4] = 1 with LB held; axes[0/2/5] move with stick/LT/RT
+ros2 topic echo /diff_drive_controller/cmd_vel_unstamped   # non-zero only with LB held
 ```
 
 Works on Linux (x86 container, ARM64 Linux, Jetson). Not in the Mac container (Docker
@@ -364,7 +365,7 @@ for that machine.
 ### Develop on a Linux machine (sim + gamepad + RViz)
 
 1. ROS 2 terminal: `ros2 launch chassis_bringup rover.launch.py rviz:=true`
-2. Hold RB, pull RT to drive, steer with the left stick. No pad? Second ROS 2 terminal
+2. Hold LB, pull RT to drive, steer with the left stick. No pad? Second ROS 2 terminal
    with [T3](#t3--keyboard).
 
 ### Develop on a Mac (headless sim + Foxglove)
@@ -396,7 +397,7 @@ For the fastest loop without Gazebo, step 1 can be the mock:
 2. Jetson ROS 2 terminal: `ros2 launch chassis_bringup rover.launch.py mode:=real`
 3. Ground station ROS 2 terminal: `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false`
    (over a radio link, add `rviz:=false` and use Foxglove at `ws://<rover-ip>:8765`)
-4. Hold RB on the ground-station pad and drive. Keep a Foxglove Teleop panel as backup.
+4. Hold LB on the ground-station pad and drive. Keep a Foxglove Teleop panel as backup.
 
 ### Simulated rover with a remote operator
 
@@ -427,7 +428,7 @@ and, where needed, runs inside its container:
 |---|---|---|---|---|
 | C1 Simulation | ✅ GPU | ✅ CPU (slower) | ✅ headless, `xvfb-run` | ✅ headless, `xvfb-run` |
 | C2 Sim + shadow / C5 vCAN | ✅ | ✅ | ❌ no host `vcan0` | ✅ |
-| C3 Real drivetrain | with a USB-CAN adapter | with a USB-CAN adapter | ❌ | ✅ `can0` |
+| C3 Real drivetrain | with a USB-CAN adapter | with a USB-CAN adapter | ❌ | ✅ `can2` |
 | C4 Mock | ✅ | ✅ | ✅ | ✅ |
 | T1 Gamepad | ✅ | ✅ | ❌ | ✅ |
 | T2 Ground station (DDS) | ✅ | ✅ (VM: bridged net) | ❌ | — (it's the rover) |
@@ -446,7 +447,7 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 |---|---|---|
 | `mode` | `sim` | `sim` → `sim_gz.launch.py`, `real` → `real.launch.py` |
 | `rviz` | `false` | also open RViz here |
-| `can_interface` | `can0` | `mode:=real` only: `can0`, `vcan0`, or `mock`/`none` |
+| `can_interface` | `can2` | `mode:=real` only: `can2`, `vcan0`, or `mock`/`none` |
 | `gear_ratio` | `48.0` | `mode:=real` only: motor turns per wheel turn |
 
 **`sim_gz.launch.py`** — Gazebo backend, bridges, spawn, controllers, joystick teleop.
@@ -465,7 +466,7 @@ All in `chassis_bringup/launch/` except `teleop.launch.py`. Pass as `name:=value
 
 | Argument | Default | Meaning |
 |---|---|---|
-| `can_interface` | `can0` | `can0`, `vcan0`, or `mock`/`none` (no CAN) |
+| `can_interface` | `can2` | `can2`, `vcan0`, or `mock`/`none` (no CAN) |
 | `gear_ratio` | `48.0` | motor turns per wheel turn |
 | `rviz` | `false` | also open RViz |
 | `foxglove` | `false` | also start the Foxglove bridge |

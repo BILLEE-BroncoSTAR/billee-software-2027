@@ -8,11 +8,12 @@ Alongside a running sim or real bring-up you usually just pass the flags to that
 launch instead:
 
     ros2 launch chassis_bringup sim_gz.launch.py rviz:=true foxglove:=true
-    ros2 launch chassis_bringup real.launch.py  can_interface:=mock rviz:=true
+    ros2 launch chassis_bringup real.launch.py  rviz:=true
 
 Both readers show the same thing: the robot model + TF tree + wheel odometry,
-fixed frame `odom`. Only the sim EKF (sim_gz navigation:=true, the default) publishes
-`odom`; on the real path switch the fixed frame to `base_link`. RViz needs a display (use `xvfb-run -a` for headless checks);
+fixed frame `odom`. `odom` comes from the sim EKF (sim_gz navigation:=true, the default)
+or, on real hardware, from the wheel odometry (real.launch.py odom_tf:=true, the default).
+RViz needs a display (use `xvfb-run -a` for headless checks);
 Foxglove Studio connects from a laptop to `ws://<jetson-ip>:8765` and needs none.
 """
 

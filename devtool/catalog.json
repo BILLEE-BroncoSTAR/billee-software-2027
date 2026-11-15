@@ -592,6 +592,13 @@
             "both"
           ],
           "help": "ZED 2i point cloud, OpenPose, or both. OpenPose needs the Jetson; elsewhere cloud/both use zed_usb (USB video + CPU stereo)"
+        },
+        {
+          "name": "csi_cameras",
+          "type": "number",
+          "default": 5,
+          "style": "ros",
+          "help": "CSI cameras to start (cam0 front, cam1 rear_left, cam2 rear_right, cam3 top_front, cam4 reverse); 0 = none. Skipped off the Jetson"
         }
       ],
       "uses": [
@@ -604,7 +611,7 @@
       "ready": "Configured and activated .*joint_state_broadcaster",
       "status": "verified",
       "verified": "controllers active in under 1 s; odom and joint_states at 30 Hz; bridge on :8765",
-      "notes": "The real (non-Gazebo) stack with a software loopback in the ODESC plugin. No CAN, motors, Gazebo or GPU. Fastest loop. Wall-clock time (use_sim_time:=false for separate viewers). Starts no teleop. camera:=cloud|openpose|both adds the ZED 2i on the Jetson (PoseDev measured /zed/points 8.5 Hz, /people/skeletons 5.0 Hz with the mock drivetrain). The new ODESC driver (Prerelease-PoseDev) had lost its mock path and aborted with \"failed to initialize SocketCAN on mock\"; restored in odesc.cpp (smoke test passes 2026-11-13).",
+      "notes": "The real (non-Gazebo) stack with a software loopback in the ODESC plugin. No CAN, motors, Gazebo or GPU. Fastest loop. Wall-clock time (use_sim_time:=false for separate viewers). Starts no teleop. camera:=cloud|openpose|both adds the ZED 2i on the Jetson (PoseDev measured /zed/points 8.5 Hz, /people/skeletons 5.0 Hz with the mock drivetrain). Prerelease-PoseDev's rewritten ODESC driver has no mock path upstream (it aborts with \"failed to initialize SocketCAN on mock\"); this branch adds it back on top of the rewrite.",
       "needsWhen": [
         {
           "arg": "camera",
@@ -896,6 +903,24 @@
           "type": "bool",
           "default": false,
           "style": "ros"
+        },
+        {
+          "name": "fault_policy",
+          "type": "enum",
+          "default": "warn",
+          "style": "ros",
+          "choices": [
+            "warn",
+            "fault"
+          ],
+          "help": "Unhealthy wheel (no encoder reply 0.25 s, no heartbeat 0.5 s, axis error, not closed loop): warn = log and keep driving; fault = stop the drivetrain"
+        },
+        {
+          "name": "csi_cameras",
+          "type": "number",
+          "default": 5,
+          "style": "ros",
+          "help": "CSI cameras to start (cam0 front, cam1 rear_left, cam2 rear_right, cam3 top_front, cam4 reverse); 0 = none. Skipped off the Jetson"
         }
       ],
       "needs": [
@@ -910,7 +935,7 @@
       ],
       "ready": "Configured and activated .*joint_state_broadcaster",
       "status": "untested",
-      "notes": "The real ODESC driver talking to a virtual bus. Pair with addons.emulator for feedback, and can.dump to watch frames (six 0x07 on activate, 0x0D per command)."
+      "notes": "The real ODESC driver talking to a virtual bus. Pair with addons.emulator (or the wheels report no heartbeat), and can.dump to watch frames: on activate 0x18 Clear_Errors, 0x0B controller mode, 0x0D zero, 0x07 closed loop per node; then every cycle 0x0D Set_Input_Vel and an RTR 0x09 encoder poll per node."
     },
     {
       "id": "drivetrain.real",
@@ -956,6 +981,31 @@
             "both"
           ],
           "help": "ZED 2i point cloud, OpenPose, or both. OpenPose needs the Jetson; elsewhere cloud/both use zed_usb (USB video + CPU stereo)"
+        },
+        {
+          "name": "fault_policy",
+          "type": "enum",
+          "default": "warn",
+          "style": "ros",
+          "choices": [
+            "warn",
+            "fault"
+          ],
+          "help": "Unhealthy wheel (no encoder reply 0.25 s, no heartbeat 0.5 s, axis error, not closed loop): warn = log and keep driving; fault = stop the drivetrain"
+        },
+        {
+          "name": "vio",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "ZED visual-inertial odometry + an EKF (ekf_real.yaml) for odom -> base_footprint. Jetson only"
+        },
+        {
+          "name": "csi_cameras",
+          "type": "number",
+          "default": 5,
+          "style": "ros",
+          "help": "CSI cameras to start (cam0 front, cam1 rear_left, cam2 rear_right, cam3 top_front, cam4 reverse); 0 = none. Skipped off the Jetson"
         }
       ],
       "needs": [
@@ -971,7 +1021,7 @@
       ],
       "ready": "Configured and activated .*joint_state_broadcaster",
       "status": "untested",
-      "notes": "6× ODESC V4.2 + NEO over can2 at 500 kbit/s. Motion only with a command stream; wheels stop 0.25 s after the last command. First runs on blocks.",
+      "notes": "6× ODESC V4.2 + NEO over can2 at 500 kbit/s. Motion only with a command stream; wheels stop 0.25 s after the last command. First runs on blocks. Drive from the ground station (hold LB). If a wheel reports an error, CAN bus → Clear ODESC faults. vio:=true needs the ZED and the Jetson.",
       "needsWhen": [
         {
           "arg": "camera",
@@ -1074,6 +1124,35 @@
           "default": true,
           "style": "ros",
           "help": "Gamepad plugged into the Jetson"
+        },
+        {
+          "name": "fault_policy",
+          "type": "enum",
+          "default": "warn",
+          "style": "ros",
+          "choices": [
+            "warn",
+            "fault"
+          ],
+          "help": "Unhealthy wheel (no encoder reply 0.25 s, no heartbeat 0.5 s, axis error, not closed loop): warn = log and keep driving; fault = stop the drivetrain"
+        },
+        {
+          "name": "csi_cameras",
+          "type": "number",
+          "default": 5,
+          "style": "ros",
+          "help": "CSI cameras to start (cam0 front, cam1 rear_left, cam2 rear_right, cam3 top_front, cam4 reverse); 0 = none. Skipped off the Jetson"
+        },
+        {
+          "name": "drive_scheme",
+          "type": "enum",
+          "default": "arcade",
+          "style": "ros",
+          "choices": [
+            "arcade",
+            "tank"
+          ],
+          "help": "arcade: hold LB, RT forward, LT reverse, left stick steers. tank: hold LB, each stick drives its side"
         }
       ],
       "needs": [
@@ -1117,7 +1196,7 @@
       ],
       "status": "untested",
       "verified": "ros2 run finds it (--help works); not run against vcan0 yet.",
-      "notes": "Answers as nodes 0–5 with 0x09 encoder frames at 100 Hz."
+      "notes": "Answers as the wheel nodes 2–7 (node_map.yaml): heartbeats at 10 Hz (axis state follows Set_Axis_State) and encoder replies to the driver's RTR polls."
     },
     {
       "id": "addons.bridge",
@@ -1217,6 +1296,17 @@
           "help": "RViz layout: match the rover's camera:="
         },
         {
+          "name": "fixed_frame",
+          "type": "enum",
+          "default": "odom",
+          "style": "ros",
+          "choices": [
+            "odom",
+            "base_link"
+          ],
+          "help": "base_link if the rover runs without an odom frame (odom_tf:=false and no EKF)"
+        },
+        {
           "name": "fprime_gds",
           "type": "bool",
           "default": false,
@@ -1228,6 +1318,17 @@
           "type": "string",
           "default": "http://192.168.4.73:5000",
           "style": "ros"
+        },
+        {
+          "name": "drive_scheme",
+          "type": "enum",
+          "default": "arcade",
+          "style": "ros",
+          "choices": [
+            "arcade",
+            "tank"
+          ],
+          "help": "arcade: hold LB, RT forward, LT reverse, left stick steers. tank: hold LB, each stick drives its side"
         }
       ],
       "needs": [
@@ -1238,7 +1339,7 @@
         8765
       ],
       "status": "untested",
-      "notes": "Meant for a second machine on the rover's LAN. On one machine, only rviz is useful (the rest duplicates what the drivetrain launch already runs). view:= picks the RViz layout to match the rover's camera:=. RViz's fixed frame is odom on sim time, base_link otherwise.",
+      "notes": "Meant for a second machine on the rover's LAN. On one machine, only rviz is useful (the rest duplicates what the drivetrain launch already runs). view:= picks the RViz layout to match the rover's camera:=. RViz's fixed frame is odom (the sim's EKF, or the real rover's wheel odometry). drive_scheme picks the gamepad scheme; either way hold LB to drive.",
       "usesWhen": {
         "foxglove": [
           "port-8765"
@@ -1386,6 +1487,13 @@
           "type": "bool",
           "default": false,
           "style": "ros"
+        },
+        {
+          "name": "vio",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Also publish ZED visual-inertial odometry (/zed/vio/odom)"
         }
       ],
       "needs": [
@@ -1452,6 +1560,13 @@
           "type": "bool",
           "default": false,
           "style": "ros"
+        },
+        {
+          "name": "vio",
+          "type": "bool",
+          "default": false,
+          "style": "ros",
+          "help": "Also publish ZED visual-inertial odometry (/zed/vio/odom)"
         }
       ],
       "needs": [
@@ -1472,11 +1587,29 @@
     {
       "id": "perception.csi-cameras",
       "group": "perception",
-      "label": "CSI camera streams (H.264, 6 cameras)",
+      "label": "CSI camera streams (5 cameras)",
       "kind": "service",
       "runner": "ros",
       "cmd": "ros2 launch camera_stream camera_stream.launch.py",
       "args": [
+        {
+          "name": "cameras",
+          "type": "number",
+          "default": 5,
+          "style": "ros",
+          "help": "How many, cam0 upwards (0-5)"
+        },
+        {
+          "name": "source",
+          "type": "enum",
+          "default": "argus",
+          "style": "ros",
+          "choices": [
+            "argus",
+            "test"
+          ],
+          "help": "test = a moving test pattern through the same encoders"
+        },
         {
           "name": "width",
           "type": "number",
@@ -1499,7 +1632,15 @@
           "name": "bitrate",
           "type": "number",
           "default": 3000000,
-          "style": "ros"
+          "style": "ros",
+          "help": "H.264 bits/s per camera; 5 × 3 Mbit/s fits on Wi-Fi"
+        },
+        {
+          "name": "jpeg_fps",
+          "type": "number",
+          "default": 10,
+          "style": "ros",
+          "help": "JPEG rate for RViz; 0 = no JPEG topics"
         }
       ],
       "needs": [
@@ -1512,7 +1653,7 @@
         8765
       ],
       "status": "untested",
-      "notes": "Six CSI cameras on the Jetson, GStreamer hardware-encoded H.264 on /cam0/video ... /cam5/video, plus its own Foxglove bridge (so not next to a drivetrain on the same machine)."
+      "notes": "The five CSI cameras alone, plus their own Foxglove bridge: /camN/video (H.264, Foxglove) and /camN/image_raw/compressed (JPEG, RViz) for cam0 front, cam1 rear_left, cam2 rear_right, cam3 top_front, cam4 reverse. A missing camera publishes a NO CAMERA placeholder. rover.launch.py already starts them (csi_cameras:=5), so not next to a drivetrain on the same machine."
     },
     {
       "id": "pose.estimator",
@@ -1729,7 +1870,20 @@
         "cmd-vel"
       ],
       "status": "untested",
-      "notes": "Hold RB (deadman); RT forward, LT reverse, left stick steers. Don't add it next to a sim: the sim already runs these nodes."
+      "notes": "Hold LB (deadman; RB broke on the team's pad). Arcade (default): RT forward, LT reverse, left stick steers. Tank: left stick Y drives the left wheels, right stick Y the right. Top speed 1.0 m/s (max_vel in teleop/config/joystick.yaml). Don't add it next to a sim: the sim already runs these nodes.",
+      "args": [
+        {
+          "name": "drive_scheme",
+          "type": "enum",
+          "default": "arcade",
+          "style": "ros",
+          "choices": [
+            "arcade",
+            "tank"
+          ],
+          "help": "arcade: hold LB, RT forward, LT reverse, left stick steers. tank: hold LB, each stick drives its side"
+        }
+      ]
     },
     {
       "id": "drive.joy-list",
@@ -1752,7 +1906,7 @@
         "gamepad"
       ],
       "status": "untested",
-      "notes": "buttons[5] = RB deadman, axes[0] steer, axes[5] RT, axes[2] LT."
+      "notes": "buttons[4] = LB deadman. Arcade: axes[0] steer, axes[5] RT, axes[2] LT. Tank: axes[1] left stick Y, axes[4] right stick Y."
     },
     {
       "id": "can.vcan-up",
@@ -1808,6 +1962,44 @@
       "notes": "The interface must already exist (Jetson mttcan or a USB-CAN adapter). Already-up interfaces are left alone: take them down first to change the bitrate."
     },
     {
+      "id": "can.clear-faults",
+      "group": "can",
+      "label": "Clear ODESC faults",
+      "kind": "task",
+      "runner": "host",
+      "confirm": true,
+      "cmd": "tooling/can-clear-faults --iface {{iface}}",
+      "args": [
+        {
+          "name": "iface",
+          "type": "string",
+          "default": "can2",
+          "style": "template"
+        },
+        {
+          "name": "status",
+          "type": "bool",
+          "default": false,
+          "style": "flag",
+          "flag": "--status",
+          "help": "Only report each wheel's heartbeat and error; send nothing"
+        },
+        {
+          "name": "reboot",
+          "type": "bool",
+          "default": false,
+          "style": "flag",
+          "flag": "--reboot",
+          "help": "Reboot boards whose error a clear can't fix (e.g. BrakeResistorDisarmed). The motor turns briefly while it recalibrates"
+        }
+      ],
+      "needs": [
+        "can"
+      ],
+      "status": "untested",
+      "notes": "Reads each wheel node's heartbeat, sends Clear_Errors (0x18), then reads again to show whether an error latches straight back. Clearing doesn't arm or move a motor; --reboot does (encoder calibration, then closed loop): wheels off the ground. Exit 1 = an error remains or a node didn't answer."
+    },
+    {
       "id": "can.status",
       "group": "can",
       "label": "CAN interface status",
@@ -1844,7 +2036,7 @@
         "vcan0"
       ],
       "status": "untested",
-      "notes": "Expect 0x07 Set_Axis_Requested_State ×6 when the controller activates, then 0x0D Set_Input_Vel per command. ID = (node_id << 5) | cmd."
+      "notes": "On activate, per node: 0x18 Clear_Errors, 0x0B controller mode, 0x0D zero velocity, 0x07 closed loop. Then every cycle 0x0D Set_Input_Vel and an RTR 0x09 encoder poll per node; the boards send 0x01 heartbeats. ID = (node_id << 5) | cmd."
     },
     {
       "id": "can.send",

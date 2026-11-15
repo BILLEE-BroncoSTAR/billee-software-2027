@@ -37,7 +37,7 @@ on a normal connection, longer on the Jetson; later runs start in seconds.
    with no Gazebo and no motors).
 2. **External → Foxglove Studio**: connect to `ws://localhost:8765` and import
    `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json`.
-3. **Drive it → Scripted drive**, **Keyboard teleop**, or **Gamepad teleop** (hold RB, then RT
+3. **Drive it → Scripted drive**, **Keyboard teleop**, or **Gamepad teleop** (hold LB, then RT
    forward, LT reverse, left stick steers).
 
 **Setup doesn't cover these, do them once by hand:**
@@ -133,16 +133,19 @@ setup of both machines (clone, container, build, OpenPose models) is in
 
 | Where | Command |
 |---|---|
-| Jetson host, once per boot | `cd ~/billee-software-2027 && tooling/can-up` |
+| Jetson host (not the container), once per boot | `cd ~/billee-software-2027 && tooling/can-up` |
 | Jetson container | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=<none\|cloud\|openpose\|both>` |
 | Ground-station container | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=<drivetrain\|cloud\|openpose\|both>` |
 
 - `camera:=cloud` adds the ZED point cloud, `camera:=openpose` OpenPose, `camera:=both` both. Use
   the ground station's `view:=` with the same name (`camera:=none` ↔ `view:=drivetrain`).
-- No motors connected: add `can_interface:=mock` on the Jetson and skip `can-up`.
+- No motors connected: use the virtual bus instead ([docs/running.md → CAN testing without motors](docs/running.md#can-testing-without-motors)),
+  or `can_interface:=mock` for no CAN at all (the driver loops the commanded speed back).
 - On the ground-station **host**, open Foxglove Studio, connect to `ws://localhost:8765`, and
   import the layout for the camera mode ([docs/running.md → Foxglove](docs/running.md#foxglove)).
-- To drive, hold **RB / R1** on the gamepad, then **RT** forward, **LT** reverse, **left stick** steers.
+- To drive, hold **LB / L1** on the gamepad, then **RT** forward, **LT** reverse, **left stick**
+  steers (arcade, the default). For the two-stick tank drive, add `drive_scheme:=tank` to the
+  ground-station launch ([docs/teleop.md](docs/teleop.md)).
 
 Every combination written out (sim or real, with or without ODESCs, each camera mode), the
 simulator, a bench test, CAN testing and troubleshooting are in
@@ -150,41 +153,53 @@ simulator, a bench test, CAN testing and troubleshooting are in
 
 ## Documentation
 
+Everything the rover runs is documented in [`docs/`](docs):
+
 | Doc | Covers |
 |---|---|
-| [docs/setup.md](docs/setup.md) | `make setup <platform>` per machine (Mac, ARM64 Linux, x86, Jetson) and how it works |
-| [docs/RUN_MODES.md](docs/RUN_MODES.md) | Every chassis / teleop / viewer mode as plain `ros2` commands, per platform |
-| [docs/running.md](docs/running.md) | First-time setup, and every command per machine: sim, real drivetrain, camera modes, Foxglove, CAN, troubleshooting |
-| [docs/architecture.md](docs/architecture.md) | How the drivetrain control stack fits together |
-| [docs/people-pose.md](docs/people-pose.md) | ZED 2i point cloud, and OpenPose person and gesture detection (Jetson) |
-| [docs/gazebo.md](docs/gazebo.md) | Gazebo rendering, GPU, and model notes |
-| [docs/cheatsheet.md](docs/cheatsheet.md) | pixi and ROS 2 CLI commands |
-
-Package docs: [chassis_bringup](ros2_ws/src/chassis_bringup/README.md) ·
-[odesc](ros2_ws/src/odesc/README.md) · [teleop](ros2_ws/src/teleop/README.md) ·
-[robot_description](ros2_ws/src/robot_description/README.md) ·
-[zed2i](ros2_ws/src/perception/zed2i/README.md) ·
-[zed_usb](ros2_ws/src/perception/zed_usb/README.md) (ZED without an NVIDIA GPU)
+| [setup.md](docs/setup.md) | `make setup <platform>` per machine (Mac, ARM64 Linux, x86, Jetson) and how it works; `./starthere` runs it |
+| [running.md](docs/running.md) | First-time setup, and every command per machine: sim, real drivetrain, camera modes, Foxglove, CAN, troubleshooting |
+| [RUN_MODES.md](docs/RUN_MODES.md) | Every chassis / teleop / viewer mode as plain `ros2` commands, per platform |
+| [architecture.md](docs/architecture.md) | How the drivetrain control stack, odometry and TF fit together |
+| [launch.md](docs/launch.md) | `chassis_bringup`: every launch file, what it starts, its arguments and configs |
+| [odesc.md](docs/odesc.md) | `odesc`: the ODESC `ros2_control` driver, CAN protocol, wheel health, vCAN emulator, mock mode, board configs (`configs/odesc/`) |
+| [robot-model.md](docs/robot-model.md) | `robot_description`: URDF/xacro, meshes, `controllers.yaml` |
+| [teleop.md](docs/teleop.md) | `teleop`: gamepad arcade or tank drive |
+| [navigation.md](docs/navigation.md) | `navigation`: the EKFs and the Nav2 controller/planner servers |
+| [people-pose.md](docs/people-pose.md) | `zed_openpose`, `people`, `people_msgs`: ZED 2i point cloud, VIO, OpenPose and gestures (Jetson) |
+| [zed_usb](ros2_ws/src/perception/zed_usb/README.md) | `zed_usb`: the ZED 2i point cloud on a machine without an NVIDIA GPU (USB video + CPU stereo) |
+| [cameras.md](docs/cameras.md) | `camera_stream`: the five CSI cameras; vendored `foxglove_msgs` |
+| [synthetic-vio.md](docs/synthetic-vio.md) | `zed2i`: synthetic VIO for the sim's EKF |
+| [gazebo.md](docs/gazebo.md) | Gazebo rendering, GPU, and model notes |
+| [containers.md](docs/containers.md) | Dev containers, Docker images, pixi environments, ZED calibration (`configs/zed/`) |
+| [tooling.md](docs/tooling.md) | `tooling/`: `can-up`, `can2.service`, `can-clear-faults`, `sim-up`, `zed-usb`, `desktop-ros2` / `rover-ros2` |
+| [devtool/README.md](devtool/README.md) | The control panel (`./starthere`, `devtool/billee-dev`) |
+| [cheatsheet.md](docs/cheatsheet.md) | pixi and ROS 2 CLI commands |
 
 ## Repository layout
 
 ```
-.devcontainer/     dev container configs (x86 default, l4t/, mac/)
-docker/            Dockerfiles and container entrypoint/setup scripts
-starthere          first run on a new machine: control panel + machine setup
-tooling/           can-up (CAN bring-up, host), sim-up (one-command sim), zed-usb (ZED, no GPU),
-                   desktop-ros2 / rover-ros2 (run the images without VS Code),
-                   billee-env.sh (platform + Pixi env lookup for make and the scripts)
-devtool/           billee-dev: browser control panel for the repo's commands
-Makefile           make setup/build/shell/sim
+starthere          first run on a new machine: control panel + machine setup     README.md
+devtool/           billee-dev: browser control panel for the repo's commands    devtool/README.md
+Makefile           make setup/build/shell/sim                                   docs/setup.md
+.devcontainer/     dev container configs (x86 default, cpu/, l4t/, mac/)        docs/containers.md
+docker/            Dockerfiles and container setup scripts                      docs/containers.md
+configs/odesc/     ODESC board configs (odrivetool backups)                     docs/odesc.md
+configs/zed/       ZED factory calibration                                      docs/containers.md
+tooling/           CAN bring-up and fault clearing, sim-up, zed-usb, runners    docs/tooling.md
 ros2_ws/pixi.toml  dependencies, environments, `build` task, ROS_DOMAIN_ID
 ros2_ws/src/
-  chassis_bringup/   launch files: sim, real, rover, ground station, viewers
-  robot_description/ URDF/xacro, meshes, controllers.yaml
-  odesc/             ros2_control hardware plugin for the ODESC motor controllers (SocketCAN)
-  teleop/            gamepad → cmd_vel
-  navigation/        EKF pose estimate + Nav2 controller/planner servers (sim)
-  perception/        zed_openpose, people, people_msgs, zed2i (synthetic VIO)
-  comms/, pxx/       in progress
-  roboclaw_*         git submodules (upstream RoboClaw drivers)
+  chassis_bringup/   launch files: sim, real, rover, ground station, viewers   docs/launch.md
+  robot_description/ URDF/xacro, meshes, controllers.yaml                      docs/robot-model.md
+  odesc/             ros2_control plugin for the ODESC motor controllers       docs/odesc.md
+  teleop/            gamepad → cmd_vel                                         docs/teleop.md
+  navigation/        EKF pose estimate + Nav2 controller/planner servers       docs/navigation.md
+  camera_stream/     CSI cameras → H.264 + JPEG                                docs/cameras.md
+  perception/        zed_openpose, people, people_msgs                         docs/people-pose.md
+                     zed2i (synthetic VIO)                                     docs/synthetic-vio.md
+  third_party/       foxglove_msgs, vendored (VENDORED.md)                     docs/cameras.md
 ```
+
+Not part of the running rover (no launch file starts them): `ros2_ws/src/comms/` (a GPS node, in
+progress), `ros2_ws/src/pxx/` (a motor hardware plugin, in progress), and the `roboclaw_*` git submodules (upstream
+RoboClaw drivers, unused by the ODESC drivetrain).

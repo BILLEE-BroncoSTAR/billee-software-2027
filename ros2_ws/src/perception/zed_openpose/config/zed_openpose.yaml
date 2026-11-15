@@ -29,3 +29,13 @@ zed_openpose:
     target_frame: base_link      # frame of /people/skeletons and /people/markers
     cloud_step: 4                # keep every Nth pixel in /zed/points
     jpeg_quality: 80             # /people/debug_image/compressed
+
+    # VIO: the SDK's positional tracking -> base_frame's pose in odom_frame, for the EKF
+    # (navigation/config/ekf_real.yaml). Same format as the synthetic VIO (zed2i).
+    publish_odom: false          # launch arg vio:= overrides
+    odom_topic: /zed/vio/odom
+    odom_frame: odom
+    base_frame: base_footprint
+    tracking_mode: GEN_1         # GEN_1 (SDK default, uses depth) or GEN_3
+    min_position_var: 9.0e-4     # floor on the reported x/y variance (0.03 m std)
+    min_yaw_var: 4.0e-4          # floor on the reported yaw variance (0.02 rad std)

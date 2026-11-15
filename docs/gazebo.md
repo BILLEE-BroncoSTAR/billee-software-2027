@@ -12,8 +12,8 @@ and QML paths Gazebo needs to find the meshes and `ign_ros2_control`.
   PPA.
 - **Mac / CI (no GPU):** run under `xvfb-run -a`. The Mac container sets
   `LIBGL_ALWAYS_SOFTWARE=1` and `GALLIUM_DRIVER=llvmpipe`. If `ogre2` still fails, set
-  `export IGN_GAZEBO_RENDER_ENGINE=ogre`, or skip Gazebo with
-  `real.launch.py can_interface:=mock`.
+  `export IGN_GAZEBO_RENDER_ENGINE=ogre`, or skip Gazebo with the virtual CAN bus
+  ([running.md → CAN testing without motors](running.md#can-testing-without-motors)).
 - If textures don't load, the QML/GUI plugin paths are wrong. `sim_gz.launch.py` finds them from
   the active pixi env.
 

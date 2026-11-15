@@ -8,18 +8,35 @@
 #   tooling/can-up down [iface]    # take the interface down (vcanN is also deleted)
 #   tooling/can-up status [iface]  # show state
 #
-# Bitrate default is 500000 to match BILLEE_NEO_ODESC_Hardware_Integration_Guide.md
-# §3.4 (odrv0.can.config.baud_rate = 500000). Confirm against the actual ODESC
-# firmware config before trusting it on real hardware.
+# Bitrate default is 500000 to match the ODESC boards' can.config.baud_rate
+# (configs/odesc/motor_*.json).
 #
 # Uses sudo for the `ip` calls. Idempotent: re-running on an already-up interface
 # just reports state. Real `canN` interfaces must already exist in the kernel
 # (Tegra mttcan, or a plugged-in USB-CAN adapter); this script does not create
 # them, only configures them. `vcanN` interfaces are created on demand.
+#
+# Real interfaces also get txqueuelen 100 (the kernel default for CAN is 10). The ODESC
+# driver queues 12 frames per control cycle (6 velocity commands + 6 encoder requests);
+# a 10-frame queue overflows into ENOBUFS.
+
+# Sourcing would run `set -e` and `exit` in the caller's shell and close it (and the
+# container, when that shell is the container's main process). Execute it instead.
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  echo "can-up: execute this script, don't source it:  ${BASH_SOURCE[0]} $*" >&2
+  return 1
+fi
+
 set -euo pipefail
+
+if ! command -v ip &>/dev/null; then
+  echo "ERROR: 'ip' (iproute2) not found. Run can-up on the Jetson host, not in the container." >&2
+  exit 1
+fi
 
 BITRATE_DEFAULT=500000
 RESTART_MS=100
+TXQUEUELEN=100
 
 arg1="${1:-can2}"
 arg2="${2:-}"
@@ -86,14 +103,17 @@ if ! ip link show "$ifc" &>/dev/null; then
   exit 1
 fi
 
+# Safe while the interface is up, so it is applied on both paths below.
+sudo ip link set "$ifc" txqueuelen "$TXQUEUELEN"
+
 state="$(ip -brief link show "$ifc" | awk '{print $2}')"
 if [[ "$state" == "UP" ]]; then
-  echo ">> $ifc already UP; leaving it. (down first to re-set the bitrate)"
+  echo ">> $ifc already UP; leaving it (txqueuelen set to ${TXQUEUELEN}). (down first to re-set the bitrate)"
   _status "$ifc"
   exit 0
 fi
 
-echo ">> bringing $ifc up @ ${bitrate} bit/s (restart-ms ${RESTART_MS})"
+echo ">> bringing $ifc up @ ${bitrate} bit/s (restart-ms ${RESTART_MS}, txqueuelen ${TXQUEUELEN})"
 sudo ip link set "$ifc" up type can bitrate "$bitrate" restart-ms "$RESTART_MS"
 _status "$ifc"
 echo ">> tip: 'candump $ifc' should show ODESC heartbeat frames (cmd 0x01) once nodes are powered."

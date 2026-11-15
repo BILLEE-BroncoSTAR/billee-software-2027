@@ -17,20 +17,20 @@ from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 ARGS = [
-    ("standalone", "true", "Also start robot_state_publisher (rover model TF) and the Foxglove "
-     "bridge on :8765. false next to a drivetrain launch, which runs both."),
+    ("standalone", "true", ("Also start robot_state_publisher (rover model TF) and the Foxglove "
+      "bridge on :8765. false next to a drivetrain launch, which runs both.")),
     ("point_cloud", "true", "Publish /zed/points."),
     ("cloud_max_hz", "10.0", "Cap on the /zed/points rate; 0 = every frame."),
     ("cloud_step", "4", "Keep every Nth pixel in /zed/points."),
-    ("resolution", "VGA", "VGA, HD720, HD1080 or HD2K. USB 2 only carries VGA; CPU depth is "
-     "~60 ms/frame at VGA, 4x that at HD720."),
+    ("resolution", "VGA", ("VGA, HD720, HD1080 or HD2K. USB 2 only carries VGA; CPU depth is "
+      "~60 ms/frame at VGA, 4x that at HD720.")),
     ("fps", "30", "Capture rate asked of the camera."),
     ("flip", "false", "true if the camera is mounted upside down."),
     ("min_depth", "0.3", "Nearest depth kept (m); also sets the disparity search range."),
     ("max_depth", "10.0", "Farthest depth kept (m)."),
     ("device", "", "/dev/videoN; empty = the first ZED found."),
-    ("calib_dir", "", "Folder with SN<serial>.conf; empty = configs/zed, /usr/local/zed/settings, "
-     "then ~/.local/share/zed/settings (downloads go there)."),
+    ("calib_dir", "", ("Folder with SN<serial>.conf; empty = configs/zed, /usr/local/zed/settings, "
+      "then ~/.local/share/zed/settings (downloads go there).")),
     ("use_sim_time", "false", "true next to the Gazebo sim."),
     ("force", "false", "Run even where the ZED SDK is installed (normally refused)."),
 ]

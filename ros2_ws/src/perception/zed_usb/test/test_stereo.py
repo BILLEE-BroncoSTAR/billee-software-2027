@@ -5,7 +5,6 @@ import struct
 import cv2
 import numpy as np
 import pytest
-
 from zed_usb import stereo
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -103,7 +102,7 @@ def test_depth_to_cloud_step():
 @needs_conf
 @pytest.mark.parametrize('res,w,h', [('VGA', 672, 376), ('HD', 1280, 720)])
 def test_team_calibration_loads(res, w, h):
-    Kl, Dl, Kr, Dr, R, T = stereo.load_calibration(TEAM_CONF, res)
+    Kl, Dl, _Kr, _Dr, _R, T = stereo.load_calibration(TEAM_CONF, res)
     assert Dl.size == 8  # ZED 2i: rational model from [LEFT_DISTO]
     assert 0.11 < abs(T[0]) < 0.13  # ZED 2i baseline is 120 mm
     assert Kl[0, 2] < w and Kl[1, 2] < h
@@ -119,7 +118,7 @@ def test_rectified_synthetic_scene_gives_its_depth():
                          interpolation=cv2.INTER_NEAREST)
     # Rectified views of a fronto-parallel plane at Z differ by a disparity of fx*B/Z pixels:
     # right[x] = left[x + d].
-    d = int(round(rect.fx_baseline / 2.0))
+    d = round(rect.fx_baseline / 2.0)
     left = cv2.cvtColor(np.ascontiguousarray(texture[:, :w]), cv2.COLOR_GRAY2BGR)
     right = cv2.cvtColor(np.ascontiguousarray(texture[:, d:d + w]), cv2.COLOR_GRAY2BGR)
     depth = rect.depth(left, right)[:, rect.num_disp:]  # SGBM leaves the left margin empty

@@ -1,20 +1,34 @@
 joy_node:
   ros__parameters:
     device_id: 0
-    deadzone: 0.05
+    # Stick travel ignored around centre (0-1). The Xbox One S pad drifted ~0.09 at rest.
+    deadzone: 0.15
     autorepeat_rate: 20.0
 
-joy_tank_drive:                 # historical name; the scheme is arcade steer + throttle
+joy_tank_drive:                 # historical name; both schemes below
   ros__parameters:
-    # Xbox and PlayStation pads share these indices through joy_node on Linux.
-    # Verify with:  ros2 topic echo /joy   while moving each control.
-    # (If you run game_controller_node instead: triggers are axes 4/5, RB is button 10.)
-    deadman_button: 5            # RB (Xbox) / R1 (PS) - hold to move; release = stop
+    # arcade = left stick steers, RT forward, LT reverse
+    # tank   = left stick Y drives the left wheels, right stick Y the right wheels
+    # Override per launch: teleop.launch.py / ground_station.launch.py drive_scheme:=tank
+    scheme: arcade
+    # Deadman: hold to drive, release = stop. 4 = LB / L1 (RB, button 5, broke on the
+    # Xbox One S pad). Indices are the same for Xbox and PlayStation pads through joy_node;
+    # `ros2 topic echo /joy` to check another pad.
+    deadman_button: 4
+    # Top speed in m/s at full trigger (arcade) or full stick (tank). The NEO + 48:1
+    # drivetrain tops out near 1.36 m/s.
+    max_vel: 1.0
+
+    # arcade
     steer_axis: 0               # left stick X  (push right -> turn right)
     steer_scale: 1.5            # rad/s at full stick
     invert_steer: false         # set true if your pad reports stick-right as +1
-    throttle_axis: 5           # RT / R2  (analog) - forward
-    reverse_axis: 2            # LT / L2  (analog) - reverse
-    speed_scale: 2.0           # m/s at full trigger
-    trigger_rest: 1.0          # /joy axis value with the trigger released
-    trigger_press: -1.0        # /joy axis value with the trigger fully pressed
+    throttle_axis: 5            # RT / R2 (analog) - forward
+    reverse_axis: 2             # LT / L2 (analog) - reverse
+    trigger_rest: 1.0           # /joy axis value with the trigger released
+    trigger_press: -1.0         # /joy axis value with the trigger fully pressed
+
+    # tank
+    left_axis: 1                # left stick Y
+    right_axis: 4               # right stick Y
+    track_width: 0.67           # m; turn rate = (right - left) / track_width * max_vel

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """zed_usb_node: a ZED 2i over plain USB, for machines without an NVIDIA GPU.
 
 The ZED SDK needs CUDA, so zed_openpose_node only exists in the Jetson image. This node reads the
@@ -64,7 +63,7 @@ class ZedUsb(Node):
         self.declare_parameter('camera_frame', 'camera_link')  # URDF frame of the ZED's centre
         self.declare_parameter('zed_frame', 'zed_left_camera_frame')
         self.declare_parameter('force', False)  # run even where the ZED SDK could
-        p = lambda n: self.get_parameter(n).value  # noqa: E731
+        p = lambda n: self.get_parameter(n).value
         self.preflight(p('force'))
         self.flip, self.point_cloud = p('flip'), p('point_cloud')
         self.cloud_period = 1.0 / p('cloud_max_hz') if p('cloud_max_hz') > 0 else 0.0

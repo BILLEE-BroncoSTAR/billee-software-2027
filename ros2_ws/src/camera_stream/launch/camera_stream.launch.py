@@ -1,72 +1,33 @@
+"""CSI cameras + a Foxglove bridge on :8765, without the rest of the rover.
+
+    ros2 launch camera_stream camera_stream.launch.py                # all five cameras
+    ros2 launch camera_stream camera_stream.launch.py source:=test   # test pattern
+
+rover.launch.py already starts the cameras and a bridge; use this only to look at the cameras
+alone. Every argument of csi_cameras.launch.py passes through (see its --show-args).
+"""
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.launch_description_sources import AnyLaunchDescriptionSource, PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    # --- Launch arguments ---
-    bitrate = LaunchConfiguration("bitrate")
-    width = LaunchConfiguration("width")
-    height = LaunchConfiguration("height")
-    fps = LaunchConfiguration("fps")
-
-    declare_args = [
-        DeclareLaunchArgument(
-            "bitrate",
-            default_value="3000000",
-            description="Per-camera bitrate in bits/sec.",
-        ),
-        DeclareLaunchArgument(
-            "width",
-            default_value="1280",
-            description="Video width in pixels.",
-        ),
-        DeclareLaunchArgument(
-            "height",
-            default_value="720",
-            description="Video height in pixels.",
-        ),
-        DeclareLaunchArgument(
-            "fps",
-            default_value="30",
-            description="Frames per second.",
-        ),
-    ]
-
-    # --- Foxglove Bridge ---
-    foxglove_bridge = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource(
-            PathJoinSubstitution([
-                FindPackageShare("foxglove_bridge"),
-                "launch",
-                "foxglove_bridge_launch.xml",
-            ])
-        )
-    )
-
-    # --- Six CSI Compressed Videos ---
-    six_csi = IncludeLaunchDescription(
+    cameras = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            PathJoinSubstitution([
-                FindPackageShare("camera_stream"),
-                "launch",
-                "six_csi_compressed_videos.launch.py",
-            ])
-        ),
-        launch_arguments={
-            "bitrate": bitrate,
-            "width": width,
-            "height": height,
-            "fps": fps,
-        }.items(),
+            PathJoinSubstitution([FindPackageShare("camera_stream"), "launch",
+                                  "csi_cameras.launch.py"])))
+    # Launched directly, as in chassis_bringup/launch/viz.launch.py: the bridge's own launch
+    # file only sets defaults and pulls in the launch_xml frontend.
+    bridge = Node(
+        package="foxglove_bridge",
+        executable="foxglove_bridge",
+        name="foxglove_bridge",
+        parameters=[{"port": 8765, "address": "0.0.0.0", "topic_whitelist": [".*"],
+                     "send_buffer_limit": 10000000}],
+        output="screen",
     )
-
-    return LaunchDescription(
-        declare_args
-        + [
-            foxglove_bridge,
-            six_csi,
-        ]
-    )
+    return LaunchDescription([cameras, bridge])

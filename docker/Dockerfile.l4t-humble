@@ -134,6 +134,14 @@ RUN wget -q -O /tmp/virtualgl.deb \
     rm -rf /tmp/virtualgl.deb /var/lib/apt/lists/*
 ENV PATH=/opt/VirtualGL/bin:${PATH}
 
+# CSI cameras (ros2_ws/src/camera_stream): its node runs gst-launch-1.0 for each camera's
+# Argus -> NVENC pipeline, since the pixi Python has no GStreamer bindings. NVIDIA's own plugins
+# (nvarguscamerasrc, nvv4l2h264enc, nvjpegenc) come from the nvidia runtime. gstreamer1.0-x adds
+# textoverlay (pango) for the "NO CAMERA" placeholder. The Argus socket is mounted by
+# .devcontainer/l4t/devcontainer.json. After the OpenPose layers so changing it doesn't rebuild them.
+RUN apt-get update && apt-get install -y --no-install-recommends gstreamer1.0-tools gstreamer1.0-x && \
+    rm -rf /var/lib/apt/lists/*
+
 # pixi -> provides ROS 2 Humble + colcon via the `l4t` environment in ros2_ws/pixi.toml
 ENV PIXI_HOME=/opt/pixi
 ENV PATH=${PIXI_HOME}/bin:${PATH}

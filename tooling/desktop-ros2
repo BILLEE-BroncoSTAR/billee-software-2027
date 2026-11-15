@@ -43,6 +43,8 @@ if [[ $# -gt 0 ]]; then
 fi
 
 repo_mount="/workspaces/$(basename "$repo_root")"
+# Extra container-start steps (before `pixi install`), per platform.
+start_prelude=""
 # Host-integration flags shared by the Linux-host devcontainers.
 linux_host_args=(
   --privileged
@@ -93,11 +95,20 @@ case "$BILLEE_PLATFORM" in
     platform_args=(
       "${linux_host_args[@]}"
       --hostname rover
+      --add-host rover:127.0.1.1
       --runtime nvidia
       --env NVIDIA_VISIBLE_DEVICES=all
       --env NVIDIA_DRIVER_CAPABILITIES=all
       --mount "type=bind,source=$repo_root,target=$repo_mount"
+      # CSI cameras: nvargus-daemon runs on the host and listens on /tmp/argus_socket. Mount the
+      # host's /tmp and link the socket at start, as .devcontainer/l4t does (a mounted socket
+      # file goes stale when nvargus-daemon restarts).
+      --volume /tmp:/host/tmp
     )
+    # Argus socket link, and the ZED's factory calibration so the SDK doesn't need internet to
+    # download it on first open (same as the devcontainer's postStartCommand).
+    start_prelude='ln -sfn /host/tmp/argus_socket /tmp/argus_socket; \
+      cp -n ../configs/zed/SN*.conf /usr/local/zed/settings/ 2>/dev/null; '
     ;;
   linux-aarch64)
     echo "desktop-ros2: linux-aarch64 runs natively, not in a container." >&2
@@ -155,7 +166,7 @@ case "$action" in
       --env "BILLEE_PLATFORM=$BILLEE_PLATFORM" \
       --workdir "$container_ws" \
       "$image" \
-      bash -c 'pixi install --environment "$0" && exec "$@"' "$BILLEE_PIXI_ENV" "${cmd[@]}"
+      bash -c "${start_prelude}"'pixi install --environment "$0" && exec "$@"' "$BILLEE_PIXI_ENV" "${cmd[@]}"
     ;;
   -h|--help|help)
     usage
