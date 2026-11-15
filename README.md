@@ -1,183 +1,142 @@
-# URC-2027
+# BILLEE rover software (URC 2027)
 
-## General Usage
+ROS 2 Humble workspace for the BILLEE rover: a six-wheel differential drive on ODESC motor
+controllers over CAN, a Gazebo simulation of it, gamepad teleop, and ZED 2i perception.
+Dependencies are managed by [pixi](https://pixi.sh) and everything runs in a dev container.
 
+## 1. Open the dev container
 
-### System Requirements
+Pick the configuration for your machine (VS Code: **Dev Containers: Reopen in Container**):
 
-for full support:
+| Machine | Container | Pixi env |
+|---|---|---|
+| x86 Linux with an NVIDIA GPU (dev box, ground station) | `desktop-roshumble_dev-x862` (`.devcontainer/devcontainer.json`) | `default` |
+| Jetson Orin, JetPack 6.2 / L4T r36.4 (the rover) | `rover-roshumble_l4t-aarch64` (`.devcontainer/l4t/`) | `l4t` |
+| Apple-Silicon Mac (headless sim and viewer, no GPU) | `desktop-roshumble-mac-cpu` (`.devcontainer/mac/`) | `mac-cpu` |
 
-1. Ubuntu 24+ base OS on device 
-2. CUDA v13 (13.2)
-3. Docker Engine 
-4. VScode with Remote Development Extension group installed
+Host requirements:
 
-### Pixi
+- **x86:** Docker, NVIDIA driver, NVIDIA Container Toolkit, an X session (the container runs
+  `xhost +local:` on start). Check the driver with `nvidia-smi`, then install the toolkit once:
 
-This project uses pixi as the package manager, please make sure that the python interpreter is configured to point to `.pixi/envs/default/bin/python3` in the devcontainer 
+  ```sh
+  curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+    | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+  curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+    | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+    | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+  sudo apt update && sudo apt install -y nvidia-container-toolkit
+  sudo nvidia-ctk runtime configure --runtime=docker
+  sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml   # re-run after a driver upgrade
+  sudo systemctl restart docker
+  docker run --rm --gpus all ubuntu:22.04 nvidia-smi           # should list your GPU
+  ```
 
-For more information about pixi please look at:
-1. [Pixi Cheatsheet](docs/PixiCheatSheet.md)
-2. [Pixi in VSCode](https://pixi.prefix.dev/latest/integration/editor/vscode/#python-extension)
+  Without this, the image builds but the container fails to start with
+  `failed to discover GPU vendor from CDI: no known GPU vendor found`.
+- **Mac:** Docker Desktop.
+- **Jetson:** Docker with the `nvidia` runtime. Do this once, and again after every reflash:
 
-### Running the drivetrain
+  ```sh
+  # nvidia-container installs Docker CE + the nvidia runtime in the background (1-2 min).
+  # Don't install Docker yourself first; a leftover docker.sources file breaks that step.
+  sudo rm -f /etc/apt/sources.list.d/docker.sources /etc/apt/keyrings/docker.asc
+  sudo apt install -y nvidia-container
+  journalctl -fu nv-install-docker        # wait for "Docker service installed", then Ctrl-C
+  sudo usermod -aG docker "$USER"         # log out and back in
+  docker run --rm --runtime nvidia -e NVIDIA_VISIBLE_DEVICES=all ubuntu:22.04 nvidia-smi
+  ```
 
-See **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)** — step-by-step for the simulation (no
-hardware) and the real ODESC drivetrain, followed by a full breakdown of how each launch
-file works.
+  Without this, the container fails to start with `unknown or invalid runtime name: nvidia`.
+  The first image build pulls a ~12.6 GB base and compiles OpenPose.
 
-## Drivetrain architecture
+Without VS Code, `tooling/desktop-ros2` (x86) and `tooling/rover-ros2` (Jetson) take
+`build|run|shell` to build and run the same images.
 
-One control stack, three interchangeable backends. `diff_drive_controller` only ever
-sees wheel-joint `position`/`velocity` interfaces, so the **same controller, topics,
-odometry and TF** work whether the numbers come from Gazebo physics, a real Hall
-encoder over CAN, or a hardware-free loopback. The backend is chosen by the
-`use_sim` xacro arg (`sim_gz.launch.py` → Gazebo; `real.launch.py` → CAN) and, for
-the real path, the `can_interface` launch arg (`can0` real / `vcan0` virtual bus /
-`mock` loopback).
+## 2. Build (on every machine you use)
 
-```mermaid
-flowchart TB
-    subgraph OP["Operator / ground station"]
-        PAD["Xbox controller<br/>/dev/input/js0"]
-        FGS["Foxglove Studio<br/>(laptop, ws://rover:8765)"]
-        RVIZ_UI["RViz2 window<br/>(display / xvfb)"]
-    end
+Each machine builds its own workspace: the Jetson, the ground station, or both. Everything runs
+from `ros2_ws`. Enter the environment once per terminal, then use plain `colcon` and `ros2`
+commands:
 
-    subgraph TELE["teleop  (teleop pkg)"]
-        JOY["joy_node<br/>joystick.yaml"]
-        TANK["joy_tank_drive<br/>tank mix + button-5 deadman"]
-    end
-    PAD -->|USB| JOY
-    JOY -->|"/joy  sensor_msgs/Joy"| TANK
-    TANK -->|"/diff_drive_controller/cmd_vel_unstamped<br/>geometry_msgs/Twist"| DDC
-
-    subgraph CTRL["ros2_control  (controller_manager)"]
-        direction TB
-        DDC["diff_drive_controller<br/>DiffDriveController"]
-        JSB["joint_state_broadcaster"]
-        RM["resource_manager<br/>loads ONE &lt;hardware&gt; plugin"]
-        DDC <-->|"6× wheel joint<br/>vel cmd / pos+vel state (rad, rad/s)"| RM
-        JSB -->|"/joint_states"| RSP
-        DDC -->|"/diff_drive_controller/odom + odom→base_link TF"| TF
-    end
-    CFG["robot_description/config/controllers.yaml<br/>wheel lists · 0.67 m sep · 0.11 m radius"] -.-> DDC
-    URDF["robot_description URDF (xacro)<br/>use_sim · ros2_control.urdf.xacro"] -.-> RM
-
-    subgraph BE["swappable hardware backend  (resource_manager plugin)"]
-        direction TB
-        subgraph SIMB["use_sim:=true — sim_gz.launch.py"]
-            IGN["ign_ros2_control/IgnitionSystem"]
-            GZ["Gazebo Fortress · empty.sdf<br/>physics + wheel actuators"]
-            BR["ros_gz_bridge → /clock"]
-            IGN <--> GZ
-            GZ --> BR
-        end
-        subgraph REALB["use_sim:=false — real.launch.py"]
-            ODESC["odesc/OdescSystemHardware<br/>gear_ratio 48:1 · SocketCAN"]
-            subgraph CANMODE["can_interface"]
-                CAN0["can0 → 6× ODESC V4.2 + NEO<br/>ODrive CANSimple 0.5.x @ 500 kbit/s"]
-                VCAN["vcan0 → virtual bus (candump/cansend)"]
-                MOCK["mock/none → gear-ratio loopback<br/>(no CAN, no motors)"]
-            end
-            ODESC --> CANMODE
-        end
-    end
-    RM --- SIMB
-    RM --- REALB
-
-    ODESC -->|"TX 0x0D Set_Input_Vel (write)<br/>0x07 Set_Axis_Requested_State (activate/deactivate)"| CAN0
-    CAN0 -->|"RX 0x09 Get_Encoder_Estimates<br/>motor turns / turns·s⁻¹"| ODESC
-
-    subgraph STATE["state / TF"]
-        RSP["robot_state_publisher<br/>URDF kinematics"]
-        TF["/tf · /tf_static"]
-        RSP --> TF
-    end
-
-    subgraph VIZ["visualization  (chassis_bringup/viz.launch.py)"]
-        FB["foxglove_bridge  :8765"]
-        RVIZ["rviz2  -d drivetrain.rviz"]
-    end
-    TF --> FB
-    TF --> RVIZ
-    RSP -->|"/robot_description"| FB
-    RSP -->|"/robot_description"| RVIZ
-    DDC -->|"/diff_drive_controller/odom"| FB
-    DDC -->|"/diff_drive_controller/odom"| RVIZ
-    FB <-->|WebSocket| FGS
-    RVIZ --> RVIZ_UI
-```
-
-**Layers, bottom to top:** physical/OS (`can0` via `tooling/can-up`, Tegra `mttcan`
-@ 500 kbit/s) → driver (`odesc/OdescSystemHardware`, ODrive CANSimple subset, the
-only place the **48:1** motor↔wheel gear ratio is applied) → `ros2_control`
-(`resource_manager` + `diff_drive_controller` + `joint_state_broadcaster`, config in
-`controllers.yaml`) → ROS graph (`/…/cmd_vel_unstamped`, `/…/odom`, `/joint_states`,
-`/tf`) → teleop (`joy_node` → `joy_tank_drive`) and visualization
-(`foxglove_bridge` :8765 for the remote ground station, `rviz2` for a local
-display). Canonical CAN node-ID ↔ wheel map: `ros2_ws/src/odesc/config/node_map.yaml`.
-
-
-## Apple-Silicon Mac — headless ground station
-
-The default devcontainer is for Linux hosts with an NVIDIA GPU and a ZED camera.
-On an Apple-Silicon Mac, use the `Mac` configuration in
-`.devcontainer/mac/devcontainer.json` (VS Code: **Dev Containers: Reopen in
-Container**, then **desktop-roshumble-mac-cpu**). It uses the `mac-cpu` Pixi
-environment (shared `aarch64-cpu` feature — same package set as the Jetson `l4t`
-env, so the build behaves the same).
-
-```sh
+```bash
 cd ros2_ws
-pixi install --environment mac-cpu
-pixi run --environment mac-cpu build
+pixi shell -e default        # x86 ground station / dev box. Jetson: -e l4t. Mac: -e mac-cpu
+pixi run build               # inside the shell: builds with the active env
 ```
 
-## Running 
+After the **first** build, or any build that adds a package, run
+`source install/local_setup.bash` in every shell that was already open, or reopen it.
+Otherwise `ros2 launch` fails with `Package 'chassis_bringup' not found`. To run a single command without entering the shell, use `pixi run -e <env> <cmd>`.
 
-Two ways to use it:
+On an 8 GB Jetson, a full build can run out of RAM. Use
+`pixi run build --parallel-workers 2 --executor sequential`.
 
-1. **Self-contained sim** — one container runs sim + control + bridge; Foxglove
-   Studio on the host connects to `ws://localhost:8765`; drive with keyboard teleop.
-2. **Remote viewer** — just point Foxglove Studio at the rover's `ws://<rover-ip>:8765`.
+## 3. Run
 
-See [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → "Mac (Apple Silicon)" for the commands.
+The rover's real drivetrain on the **Jetson**, driven from the **ground station**. First-time
+setup of both machines (clone, container, build, OpenPose models) is in
+[docs/running.md → First-time setup](docs/running.md#first-time-setup).
 
-## NVIDIA Jetson (L4T) rover devcontainer
+| Where | Command |
+|---|---|
+| Jetson host (not the container), once per boot | `cd ~/billee-software-2027 && tooling/can-up` |
+| Jetson container | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=<none\|cloud\|openpose\|both>` |
+| Ground-station container | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=<drivetrain\|cloud\|openpose\|both>` |
 
-For the rover itself — an NVIDIA Jetson (Orin-family or Thor) flashed with
-**JetPack 6.0 / L4T r36.3.x** — use the `l4t` configuration in
-`.devcontainer/l4t/devcontainer.json` (VS Code: **Dev Containers: Reopen in
-Container**, then select **rover-roshumble_l4t-aarch64**).
+- `camera:=cloud` adds the ZED point cloud, `camera:=openpose` OpenPose, `camera:=both` both. Use
+  the ground station's `view:=` with the same name (`camera:=none` ↔ `view:=drivetrain`).
+- No motors connected: use the virtual bus instead ([docs/running.md → CAN testing without motors](docs/running.md#can-testing-without-motors)).
+- On the ground-station **host**, open Foxglove Studio, connect to `ws://localhost:8765`, and
+  import the layout for the camera mode ([docs/running.md → Foxglove](docs/running.md#foxglove)).
+- To drive, hold **LB / L1** on the gamepad and move the two sticks up and down.
 
-Host prep on the Jetson (one-time — **already done on the current BILLEE Orin Nano**):
+Every combination written out (sim or real, with or without ODESCs, each camera mode), the
+simulator, a bench test, CAN testing and troubleshooting are in
+**[docs/running.md](docs/running.md)**.
 
-```sh
-sudo apt install -y nvidia-container curl   # JetPack 7.2: pulls nvidia-container-toolkit
-                                            # and runs nv-install-docker.service (installs
-                                            # Docker CE + wires the nvidia runtime)
-# then, for GPU access at build time too:
-#   /etc/docker/daemon.json -> "default-runtime": "nvidia"
-sudo usermod -aG docker "$USER"   # then log out / back in
-docker run --rm --runtime nvidia ubuntu:24.04 nvidia-smi   # smoke test
+## Documentation
+
+Everything the rover runs is documented in [`docs/`](docs):
+
+| Doc | Covers |
+|---|---|
+| [running.md](docs/running.md) | First-time setup, and every command per machine: sim, real drivetrain, camera modes, Foxglove, CAN, troubleshooting |
+| [architecture.md](docs/architecture.md) | How the drivetrain control stack, odometry and TF fit together |
+| [launch.md](docs/launch.md) | `chassis_bringup`: every launch file, what it starts, its arguments and configs |
+| [odesc.md](docs/odesc.md) | `odesc`: the ODESC `ros2_control` driver, CAN protocol, wheel health, vCAN emulator, board configs (`configs/odesc/`) |
+| [robot-model.md](docs/robot-model.md) | `robot_description`: URDF/xacro, meshes, `controllers.yaml` |
+| [teleop.md](docs/teleop.md) | `teleop`: gamepad tank drive |
+| [navigation.md](docs/navigation.md) | `navigation`: the EKFs and the Nav2 controller/planner servers |
+| [people-pose.md](docs/people-pose.md) | `zed_openpose`, `people`, `people_msgs`: ZED 2i point cloud, VIO, OpenPose and gestures (Jetson) |
+| [cameras.md](docs/cameras.md) | `camera_stream`: the five CSI cameras; vendored `foxglove_msgs` |
+| [synthetic-vio.md](docs/synthetic-vio.md) | `zed2i`: synthetic VIO for the sim's EKF |
+| [gazebo.md](docs/gazebo.md) | Gazebo rendering, GPU, and model notes |
+| [containers.md](docs/containers.md) | Dev containers, Docker images, pixi environments, ZED calibration (`configs/zed/`) |
+| [tooling.md](docs/tooling.md) | `tooling/`: `can-up`, `can2.service`, `can-clear-faults`, `sim-up`, `desktop-ros2` / `rover-ros2` |
+| [cheatsheet.md](docs/cheatsheet.md) | pixi and ROS 2 CLI commands |
+
+## Repository layout
+
+```
+.devcontainer/     dev container configs (x86 default, l4t/, mac/)          docs/containers.md
+docker/            Dockerfiles and container setup scripts                  docs/containers.md
+configs/odesc/     ODESC board configs (odrivetool backups)                 docs/odesc.md
+configs/zed/       ZED factory calibration                                  docs/containers.md
+tooling/           CAN bring-up and fault clearing, sim-up, image runners   docs/tooling.md
+ros2_ws/pixi.toml  dependencies, environments, `build` task, ROS_DOMAIN_ID
+ros2_ws/src/
+  chassis_bringup/   launch files: sim, real, rover, ground station, viewers   docs/launch.md
+  robot_description/ URDF/xacro, meshes, controllers.yaml                      docs/robot-model.md
+  odesc/             ros2_control plugin for the ODESC motor controllers       docs/odesc.md
+  teleop/            gamepad → cmd_vel                                         docs/teleop.md
+  navigation/        EKF pose estimate + Nav2 controller/planner servers       docs/navigation.md
+  camera_stream/     CSI cameras → H.264 + JPEG                                docs/cameras.md
+  perception/        zed_openpose, people, people_msgs                         docs/people-pose.md
+                     zed2i (synthetic VIO)                                     docs/synthetic-vio.md
+  third_party/       foxglove_msgs, vendored (VENDORED.md)                     docs/cameras.md
 ```
 
-
-```sh
-cd ros2_ws
-pixi run --environment l4t -- colcon build --symlink-install \
-  --parallel-workers 2 --executor sequential \
-  --event-handlers console_direct+ --base-paths src \
-  --cmake-args ' -DCMAKE_BUILD_TYPE=Release'
-pixi run --environment l4t build            # later incremental builds
-pixi run --environment l4t ros2 launch chassis_bringup real.launch.py            # real ODESC/CAN
-pixi run --environment l4t ros2 launch chassis_bringup real.launch.py can_interface:=mock  # no motors
-pixi run --environment l4t ros2 launch chassis_bringup viz.launch.py            # rviz + foxglove :8765
-```
-
-Set the VS Code Python interpreter to `.pixi/envs/l4t/bin/python3`.
-On the ground station (x86 laptop, default devcontainer) open Foxglove Studio and
-connect to `ws://<rover-ip>:8765`.
-
-Without VS Code, `tooling/rover-ros2 build|run|shell` builds and runs the same image.
+Not part of the running rover (no launch file starts them): `ros2_ws/src/comms/` (a GPS node, in
+progress), `ros2_ws/src/pxx/` (a motor hardware plugin, in progress), and the `roboclaw_*` git submodules (upstream
+RoboClaw drivers, unused by the ODESC drivetrain).

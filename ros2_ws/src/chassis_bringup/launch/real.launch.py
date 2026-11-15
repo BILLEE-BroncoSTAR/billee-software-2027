@@ -7,22 +7,42 @@ OdescSystemHardware SocketCAN plugin is loaded instead of ign_ros2_control, and
 it starts a standalone controller_manager (ros2_control_node) rather than letting
 Gazebo host it.
 
-    # real ODESC/NEO drivetrain on can0:
+    # real ODESC/NEO drivetrain on can2:
     ros2 launch chassis_bringup real.launch.py
 
-    # no motor hardware — exercise the full feedback -> odom -> TF -> viewer path:
-    ros2 launch chassis_bringup real.launch.py can_interface:=mock rviz:=true
+    # no motor hardware: the ODrive emulator on a virtual CAN bus (tooling/can-up vcan0
+    # on the host, then `ros2 run odesc odesc_vcan_emulator.py --interface vcan0`).
+    # Exercises the CAN frames and the encoder feedback -> /diff_drive_controller/odom
+    # + odom TF + /joint_states -> viewer path (fixed frame odom):
+    ros2 launch chassis_bringup real.launch.py can_interface:=vcan0 rviz:=true
 
-    # protocol-level test against a virtual CAN bus (see tooling/can-up):
-    ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
+    # can_interface:=mock (no CAN, loopback) is currently broken: the driver has no mock
+    # path and fails in on_configure. See docs/odesc.md.
 
-WHY THIS FILE PATCHES use_sim_time
-----------------------------------
-`controllers.yaml` carries `use_sim_time: true` for the Gazebo path. A *standalone*
-`ros2_control_node` (this launch) started with `use_sim_time:=true` but no `/clock`
-publisher has a frozen RT update loop, and `load_controller` then blocks forever.
-So this launch writes a temp copy of `controllers.yaml` with `use_sim_time: false`
+WHY THIS FILE PATCHES controllers.yaml
+--------------------------------------
+This launch writes a temp copy of `controllers.yaml` with three real-hardware overrides
 and hands the controller_manager that. `controllers.yaml` itself is untouched.
+
+1. `use_sim_time: false`. `controllers.yaml` carries `use_sim_time: true` for the Gazebo
+   path. A *standalone* `ros2_control_node` (this launch) started with
+   `use_sim_time:=true` but no `/clock` publisher has a frozen RT update loop, and
+   `load_controller` then blocks forever.
+
+2. The wheel-odometry TF (`odom_tf:=true`, the default). In the sim the EKF
+   (navigation/pose_estim.launch.py) owns `odom -> base_footprint`, so `controllers.yaml`
+   keeps `enable_odom_tf: false`. Without the real EKF (`rover.launch.py vio:=true`) nothing
+   else publishes the `odom` frame, and the viewers' fixed frame `odom` doesn't exist. This turns
+   on `enable_odom_tf` and sets `base_frame_id: base_footprint`, the URDF root. It can't stay
+   `base_link`: robot_state_publisher already publishes `base_footprint -> base_link`, and
+   `odom -> base_link` would give base_link two parents and split the TF tree.
+   base_footprint is directly below base_link (same x/y/yaw), so the odometry is unchanged.
+   `odom_tf:=false` when an EKF publishes `odom -> base_footprint`; `rover.launch.py vio:=true`
+   passes it.
+
+3. The wheel-odometry covariance (`WHEEL_ODOM_COVARIANCE`). diff_drive_controller defaults
+   both covariance diagonals to zeros, which the EKF would read as an exact measurement,
+   even for the yaw rate, which the skidding wheels get most wrong.
 """
 
 import os
@@ -59,15 +79,32 @@ declare_args = [
     DeclareLaunchArgument(
         "can_interface",
         default_value="can2",
-        description="SocketCAN interface for the ODESC bus. 'mock' or 'none' runs "
-        "OdescSystemHardware in mock mode (no CAN, gear-ratio loopback feedback) so the "
-        "stack can be brought up with no motor hardware. 'vcan0' etc. for a virtual bus.",
+        description="SocketCAN interface for the ODESC bus. The USB-CAN adapter's number "
+        "can change when it is replugged or the Jetson reboots; the launch stops with the "
+        "list of CAN interfaces if this one is missing or down. 'vcan0' etc. for a virtual "
+        "bus (with odesc_vcan_emulator.py, no motor hardware). 'mock'/'none' (no CAN) is "
+        "currently broken: the driver has no mock path.",
     ),
     DeclareLaunchArgument(
         "gear_ratio",
         default_value="48.0",
         description="Motor-shaft turns per wheel turn. Default 48.0 (ODESC V4.2 + NEO "
         "REV v1.1). Canonical copy in odesc/config/node_map.yaml.",
+    ),
+    DeclareLaunchArgument(
+        "fault_policy",
+        default_value="warn",
+        choices=["warn", "fault"],
+        description="What the ODESC driver does when a wheel stops answering, reports an "
+        "axis error or leaves closed loop: warn = log it and keep driving; fault = stop "
+        "the drivetrain (zero velocity, IDLE, controllers deactivate).",
+    ),
+    DeclareLaunchArgument(
+        "odom_tf",
+        default_value="true",
+        description="Publish odom -> base_footprint TF from the wheel odometry "
+        "(diff_drive_controller), so the viewers' fixed frame odom exists and the rover "
+        "moves in it. Set false once an EKF on the rover publishes that transform.",
     ),
     DeclareLaunchArgument(
         "rviz",
@@ -82,9 +119,18 @@ declare_args = [
     ),
 ]
 
+# Override 3 (module docstring). Order: x, y, z, roll, pitch, yaw. Starting values, to tune.
+WHEEL_ODOM_COVARIANCE = {
+    # vx: 0.05 m/s std. vyaw: 0.3 rad/s std, since skid steer misreads turns the most.
+    # vy, vz, roll and pitch rates can't be measured by a diff drive.
+    "twist_covariance_diagonal": [0.0025, 1e3, 1e3, 1e3, 1e3, 0.09],
+    # The integrated pose isn't fused (ekf_real.yaml takes velocity only).
+    "pose_covariance_diagonal": [0.01, 0.01, 1e3, 1e3, 1e3, 0.1],
+}
 
-def _write_wallclock_controllers(context):
-    """Copy the controllers YAML with controller_manager.use_sim_time forced false."""
+
+def _write_real_controllers(context):
+    """Copy the controllers YAML with the real-hardware overrides (see module docstring)."""
     desc_pkg = LaunchConfiguration("description_pkg").perform(context)
     rel = LaunchConfiguration("controllers_file").perform(context)
     src = os.path.join(get_package_share_directory(desc_pkg), *rel.split("/"))
@@ -94,22 +140,76 @@ def _write_wallclock_controllers(context):
     cm = cfg.setdefault("controller_manager", {}).setdefault("ros__parameters", {})
     cm["use_sim_time"] = False
 
+    ddc = cfg.setdefault("diff_drive_controller", {}).setdefault("ros__parameters", {})
+    ddc.update(WHEEL_ODOM_COVARIANCE)
+
+    if LaunchConfiguration("odom_tf").perform(context).lower() in ("true", "1"):
+        ddc["enable_odom_tf"] = True
+        ddc["base_frame_id"] = "base_footprint"
+
     fd, path = tempfile.mkstemp(prefix="controllers_real_", suffix=".yaml")
     with os.fdopen(fd, "w") as fh:
         yaml.safe_dump(cfg, fh, default_flow_style=False)
     return path
 
 
+def _check_can_interface(name):
+    """Stop the launch with a readable error if the CAN interface is missing or down.
+
+    Otherwise the ODESC driver can't open or use the bus, ros2_control_node aborts
+    (exit -6), the spawner waits forever, and nothing says why: no controllers, no
+    driving, no odom.
+    """
+    if name in ("mock", "none"):
+        return
+    net = "/sys/class/net"
+
+    def is_up(iface):  # IFF_UP. operstate is "unknown" on a working vcan, so not that.
+        try:
+            with open(os.path.join(net, iface, "flags")) as fh:
+                return int(fh.read().strip(), 16) & 0x1 == 0x1
+        except (OSError, ValueError):
+            return False
+
+    def is_can(iface):  # ARPHRD_CAN
+        try:
+            with open(os.path.join(net, iface, "type")) as fh:
+                return fh.read().strip() == "280"
+        except OSError:
+            return False
+
+    try:
+        cans = [i for i in sorted(os.listdir(net)) if is_can(i)]
+    except OSError:
+        return  # no sysfs here; leave it to the driver
+    listing = ", ".join(f"{i} ({'up' if is_up(i) else 'down'})" for i in cans) or "none"
+    if name not in cans:
+        up = [i for i in cans if is_up(i)]
+        hint = (f"Pass the one the ODESCs are on, e.g. can_interface:={up[-1]}" if up else
+                "Plug in the USB-CAN adapter, then on the Jetson host: tooling/can-up <iface>")
+        raise RuntimeError(
+            f"real.launch.py: CAN interface {name!r} doesn't exist. CAN interfaces here: "
+            f"{listing}. {hint}. (The USB-CAN adapter's number can change after a replug "
+            "or reboot.)")
+    if not is_up(name):
+        raise RuntimeError(
+            f"real.launch.py: CAN interface {name!r} is down. On the Jetson host: "
+            f"tooling/can-up {name}. CAN interfaces here: {listing}.")
+
+
 def _launch_setup(context):
+    _check_can_interface(LaunchConfiguration("can_interface").perform(context))
+
     description_pkg = LaunchConfiguration("description_pkg")
     xacro_file = LaunchConfiguration("xacro_file")
     can_interface = LaunchConfiguration("can_interface")
     gear_ratio = LaunchConfiguration("gear_ratio")
+    fault_policy = LaunchConfiguration("fault_policy")
 
     xacro_path = PathJoinSubstitution([FindPackageShare(description_pkg), xacro_file])
 
     # use_sim:=false -> ros2_control.urdf.xacro loads odesc/OdescSystemHardware.
-    # can_interface / gear_ratio are forwarded into the <hardware> block.
+    # can_interface / gear_ratio / fault_policy are forwarded into the <hardware> block.
     robot_description = ParameterValue(
         Command(
             [
@@ -117,12 +217,13 @@ def _launch_setup(context):
                 " ", "use_sim:=false",
                 " ", "can_interface:=", can_interface,
                 " ", "gear_ratio:=", gear_ratio,
+                " ", "fault_policy:=", fault_policy,
             ]
         ),
         value_type=str,
     )
 
-    controllers_path = _write_wallclock_controllers(context)
+    controllers_path = _write_real_controllers(context)
 
     robot_state_publisher = Node(
         package="robot_state_publisher",

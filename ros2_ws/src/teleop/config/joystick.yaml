@@ -1,12 +1,17 @@
 joy_node:
   ros__parameters:
     device_id: 0
-    deadzone: 0.05
+    # Stick travel ignored around centre (0-1). The Xbox One S pad drifted ~0.09 at rest.
+    deadzone: 0.15
     autorepeat_rate: 20.0
 
 joy_tank_drive:
   ros__parameters:
     left_axis: 1
     right_axis: 4
-    max_vel: 2.0
+    # Deadman: hold to drive. 4 = LB / L1 (RB, button 5, broke). `ros2 topic echo /joy` to find others.
+    safety_button: 4
+    # Top wheel speed in m/s at full stick; turn rate scales with it. The NEO + 48:1 drivetrain
+    # tops out near 1.36 m/s.
+    max_vel: 1.0
     track_width: 0.67

@@ -6,7 +6,7 @@ short field tests only; normal operations should run the joystick and viewers
 on the separate ground station.
 
     ros2 launch chassis_bringup onboard_test.launch.py
-    ros2 launch chassis_bringup onboard_test.launch.py can_interface:=mock
+    ros2 launch chassis_bringup onboard_test.launch.py can_interface:=vcan0   # emulator, no motors
 """
 
 from launch import LaunchDescription
@@ -19,7 +19,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     can_interface = DeclareLaunchArgument(
         "can_interface",
-        default_value="can0",
+        default_value="can2",
         description="SocketCAN interface passed to the ODESC hardware backend.",
     )
     gear_ratio = DeclareLaunchArgument(
@@ -27,8 +27,19 @@ def generate_launch_description():
         default_value="48.0",
         description="Motor-shaft turns per wheel turn.",
     )
+    fault_policy = DeclareLaunchArgument(
+        "fault_policy",
+        default_value="warn",
+        choices=["warn", "fault"],
+        description="Unhealthy wheel: warn = log and keep driving; fault = stop the drivetrain.",
+    )
     rviz = DeclareLaunchArgument(
         "rviz", default_value="true", description="Start RViz locally."
+    )
+    csi_cameras = DeclareLaunchArgument(
+        "csi_cameras",
+        default_value="5",
+        description="CSI cameras to start (cam0..cam4); 0 = none. See rover.launch.py.",
     )
     joy_control = DeclareLaunchArgument(
         "joy_control",
@@ -46,9 +57,12 @@ def generate_launch_description():
             "mode": "real",
             "can_interface": LaunchConfiguration("can_interface"),
             "gear_ratio": LaunchConfiguration("gear_ratio"),
+            "fault_policy": LaunchConfiguration("fault_policy"),
             "rviz": LaunchConfiguration("rviz"),
             "joy_control": LaunchConfiguration("joy_control"),
+            "csi_cameras": LaunchConfiguration("csi_cameras"),
         }.items(),
     )
 
-    return LaunchDescription([can_interface, gear_ratio, rviz, joy_control, rover])
+    return LaunchDescription(
+        [can_interface, gear_ratio, fault_policy, rviz, joy_control, csi_cameras, rover])

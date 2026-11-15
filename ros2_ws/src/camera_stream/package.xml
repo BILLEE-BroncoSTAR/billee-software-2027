@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>camera_stream</name>
+  <version>0.0.0</version>
+  <description>The rover's CSI cameras (Argus) as hardware-encoded H.264 (foxglove_msgs/CompressedVideo, for Foxglove) and JPEG (sensor_msgs/CompressedImage, for RViz).</description>
+  <maintainer email="adpoitras@gmail.com">ros_user</maintainer>
+  <license>TODO: License declaration</license>
+
+  <depend>rclpy</depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <!-- Vendored in src/third_party/foxglove_msgs. Optional at run time: without it the
+       node publishes JPEG only. -->
+  <exec_depend>foxglove_msgs</exec_depend>
+  <exec_depend>foxglove_bridge</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
