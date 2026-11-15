@@ -22,6 +22,8 @@ from urllib.parse import parse_qs, urlparse
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent
 WEB_DIR = HERE / "web"
+SETUP_DIR = Path(__file__).resolve().parent / ".setup"  # written by ./starthere (gitignored)
+SETUP_LOG_TAIL_MAX = 400
 CATALOG_PATH = HERE / "catalog.json"
 
 PLATFORMS = ("x86-native", "x86-docker", "mac", "linux-aarch64", "l4t")
@@ -232,6 +234,50 @@ def zed_connected() -> bool:
         except OSError:
             pass
     return False
+
+
+def workspace_built(repo_root: Path = None) -> bool:
+    """Same test as devtool/billee-dev and ./starthere: a colcon overlay exists, or the Mac image
+    (make setup mac bakes the build into billee-mac-cpu instead of ros2_ws/install)."""
+    ws = (repo_root or REPO_ROOT) / "ros2_ws"
+    if (ws / "install" / "local_setup.sh").is_file():
+        return True
+    marker = ws / ".billee-platform"
+    return marker.is_file() and marker.read_text(errors="ignore").strip() == "mac"
+
+
+def setup_status(setup_dir: Path = None, repo_root: Path = None) -> dict:
+    """What ./starthere's setup is doing: state idle|running|done|failed|reboot|interrupted."""
+    setup_dir = setup_dir or SETUP_DIR
+    status = {"built": workspace_built(repo_root), "state": "idle"}
+    try:
+        recorded = json.loads((setup_dir / "state.json").read_text())
+    except (OSError, ValueError):
+        recorded = {}
+    if isinstance(recorded, dict) and recorded.get("state"):
+        status.update({k: recorded[k] for k in ("state", "exit", "started", "finished") if k in recorded})
+        if status["state"] == "running":
+            try:
+                os.kill(int(recorded.get("pid", -1)), 0)
+            except (OSError, ValueError, TypeError):
+                status["state"] = "interrupted"  # starthere was closed mid-setup
+    status["log"] = "devtool/.setup/setup.log" if (setup_dir / "setup.log").exists() else None
+    return status
+
+
+def setup_log_tail(lines: int, setup_dir: Path = None) -> list:
+    lines = max(1, min(SETUP_LOG_TAIL_MAX, lines))
+    try:
+        data = ((setup_dir or SETUP_DIR) / "setup.log").read_bytes()[-256 * 1024:]
+    except OSError:
+        return []
+    out = []
+    for raw in data.decode("utf-8", "replace").replace("\r\n", "\n").split("\n"):
+        text = ANSI.sub("", raw.rsplit("\r", 1)[-1])  # progress bars redraw with \r: keep the last
+        out.append(text)
+    while out and not out[-1].strip():
+        out.pop()
+    return out[-lines:]
 
 
 def pixi_ok() -> bool:
@@ -579,7 +625,14 @@ def make_handler(app: App):
                     "platformDescription": app.catalog.data["platforms"].get(app.platform, ""),
                     "repoRoot": str(REPO_ROOT),
                     "needs": app.needs_status(),
+                    "setup": setup_status(),
                 })
+            if path == "/api/setup/log":
+                try:
+                    lines = int(parse_qs(url.query).get("lines", ["40"])[0])
+                except ValueError:
+                    lines = 40
+                return self.send_json(200, {"lines": setup_log_tail(lines)})
             if path == "/api/catalog":
                 return self.send_json(200, app.catalog.data)
             if path == "/api/runs":

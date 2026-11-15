@@ -70,3 +70,5 @@ ros2_ws/models/
 
 # Python bytecode (a launch/__pycache__ breaks setup.py globs like launch/*)
 __pycache__/
+# Setup progress written by ./starthere for the control panel
+devtool/.setup/

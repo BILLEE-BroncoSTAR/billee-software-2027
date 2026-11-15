@@ -132,6 +132,13 @@ reason="$(misfit "$platform")"
 [[ -z "$reason" ]] || die "$reason"
 [[ "$DRY_RUN" == 1 ]] && say "DRY_RUN=1: showing what would be installed; nothing is changed."
 
+# A plain `git clone` leaves the submodules (ros2_ws/src/roboclaw_*) empty.
+if [[ -d "$repo_root/.git" || -f "$repo_root/.git" ]] && command -v git >/dev/null &&
+  git -C "$repo_root" submodule status 2>/dev/null | grep -q '^-'; then
+  say "Git submodules: fetching (git submodule update --init --recursive)"
+  run git -C "$repo_root" submodule update --init --recursive
+fi
+
 case "$platform" in
   x86-cpu) setup_x86_cpu ;;
   x86)

@@ -3,11 +3,15 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: billee-dev [--port N] [--no-browser]
+Usage: billee-dev [--port N] [--no-browser] [--setup | --no-setup]
 
   --port N       serve on port N (default 7700)
   --no-browser   start the server without opening a browser
+  --setup        run devtool/setup-machine first, without asking
+  --no-setup     never offer the first-time setup
 
+The first time (workspace not built yet) it offers to run devtool/setup-machine,
+which installs what this machine is missing and builds the workspace.
 Ctrl-C stops the tool and everything it started.
 EOF
 }
@@ -15,16 +19,50 @@ EOF
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 port=7700
 open_browser=1
+setup=ask
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --port) port="$2"; shift 2 ;;
     --no-browser) open_browser=0; shift ;;
+    --setup) setup=yes; shift ;;
+    --no-setup) setup=no; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "billee-dev: unknown option $1 (try --help)" >&2; exit 2 ;;
   esac
 done
 
 command -v python3 >/dev/null || { echo "billee-dev: python3 not found" >&2; exit 1; }
+
+# First run on this machine: nothing is built yet, so almost every item would fail. Offer the
+# setup here, in this terminal, where its sudo prompts can be answered.
+repo_root="$(cd "$here/.." && pwd -P)"
+set_up=0
+[[ -f "$repo_root/ros2_ws/install/local_setup.sh" ]] && set_up=1
+# make setup mac bakes the build into the billee-mac-cpu image instead of ros2_ws/install.
+grep -qsx mac "$repo_root/ros2_ws/.billee-platform" && set_up=1
+if [[ "$set_up" == 0 && "$setup" != no ]]; then
+  if [[ "$setup" == ask ]]; then
+    if [[ -t 0 && -t 1 ]]; then
+      echo "billee-dev: this machine isn't set up yet (ros2_ws isn't built)."
+      echo "  devtool/setup-machine detects the machine, installs what's missing (asks for your"
+      echo "  sudo password) and builds the workspace. Preview it first: DRY_RUN=1 devtool/setup-machine"
+      read -r -p "Run it now? [Y/n] " answer
+      [[ "$answer" =~ ^[Nn] ]] || setup=yes
+    else
+      echo "billee-dev: ros2_ws isn't built yet: run ./starthere (or devtool/setup-machine)" >&2
+    fi
+  fi
+  if [[ "$setup" == yes ]]; then
+    status=0
+    "$here/setup-machine" || status=$?
+    if [[ $status -eq 3 ]]; then
+      echo "billee-dev: setup needs a reboot or a new login first; then run devtool/billee-dev again." >&2
+      exit 3
+    elif [[ $status -ne 0 ]]; then
+      echo "billee-dev: setup failed (exit $status); starting the control panel anyway." >&2
+    fi
+  fi
+fi
 
 python3 "$here/server.py" --port "$port" &
 server=$!

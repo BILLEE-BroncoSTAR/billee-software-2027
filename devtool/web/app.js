@@ -119,7 +119,65 @@ async function refreshInfo() {
   );
   for (const card of state.cards) card.paintNeeds();
   applyFilters();
+  renderSetup(r.data.setup);
 }
+
+// ./starthere runs the machine setup in its terminal and records its progress in
+// devtool/.setup/; this banner mirrors it so the page explains why items can't run yet.
+const SETUP_TEXT = {
+  running: ["Setting up this machine…",
+    "Installing what this machine is missing and building the workspace. If it asks for your password, answer in the terminal where you ran ./starthere. The buttons below work once it finishes."],
+  done: ["This machine is set up",
+    "Start with Drivetrain → Gazebo simulation (or Mock drivetrain), then External → Foxglove Studio, then Drive it."],
+  failed: ["Setup stopped with an error",
+    "The last lines are below (full log: devtool/.setup/setup.log). Fix what it reports, then run ./starthere again."],
+  interrupted: ["Setup was interrupted",
+    "./starthere was closed before setup finished. Run ./starthere again to continue."],
+  reboot: ["Reboot or log in again",
+    "Setup installed drivers or group memberships that need a fresh login. Do that, then run ./starthere again to finish."],
+  needed: ["This machine isn't set up yet",
+    "Run ./starthere in a terminal at the repo root: it installs what's missing (it asks for your sudo password) and builds the workspace. Machine setup → Set up this machine does the same."],
+};
+let setupTimer = null;
+let setupLast = null;
+
+async function renderSetup(setup) {
+  if (!setup) return;
+  const box = $("#setup");
+  let st = setup.state;
+  if (st === "idle") st = setup.built ? null : "needed";
+  if (st === "done" && store.get("setupDismissed") === String(setup.finished)) st = null;
+  if (st !== setupLast && setupLast === "running") {
+    for (const card of state.cards) card.schedulePreview();
+    if (st === "done") toast("Setup finished: this machine is ready");
+  }
+  setupLast = st;
+  box.hidden = !st;
+  clearTimeout(setupTimer);
+  if (!st) return;
+  box.dataset.state = st;
+  const [title, body] = SETUP_TEXT[st];
+  $("#setup-title").textContent = title;
+  $("#setup-body").textContent = body;
+  $("#setup-dismiss").hidden = st !== "done";
+  const log = $("#setup-log");
+  const showLog = ["running", "failed", "interrupted"].includes(st) && setup.log;
+  log.hidden = !showLog;
+  if (showLog) {
+    const r = await api(`/api/setup/log?lines=${st === "running" ? 14 : 30}`);
+    if (r.ok) {
+      const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+      log.textContent = r.data.lines.join("\n") || "…";
+      if (stick) log.scrollTop = log.scrollHeight;
+    }
+  }
+  if (st === "running") setupTimer = setTimeout(refreshInfo, 2000);
+}
+
+$("#setup-dismiss").addEventListener("click", () => {
+  store.set("setupDismissed", String(state.info?.setup?.finished ?? ""));
+  $("#setup").hidden = true;
+});
 
 $("#recheck").addEventListener("click", async () => {
   await refreshInfo();

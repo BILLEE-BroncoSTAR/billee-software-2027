@@ -226,5 +226,57 @@ class Machine(unittest.TestCase):
         self.assertFalse(server.port_in_use(port))
 
 
+class SetupStatus(unittest.TestCase):
+    """What ./starthere records in devtool/.setup/ and the page's banner reads back."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.repo, self.dir = root / "repo", root / "repo" / "devtool" / ".setup"
+        (self.repo / "ros2_ws").mkdir(parents=True)
+        self.dir.mkdir(parents=True)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def status(self):
+        return server.setup_status(self.dir, self.repo)
+
+    def test_unbuilt_and_idle(self):
+        self.assertEqual(self.status(), {"built": False, "state": "idle", "log": None})
+
+    def test_built_by_colcon_or_mac_image(self):
+        (self.repo / "ros2_ws" / ".billee-platform").write_text("mac\n")
+        self.assertTrue(self.status()["built"])
+        (self.repo / "ros2_ws" / ".billee-platform").write_text("x86\n")
+        self.assertFalse(self.status()["built"])
+        (self.repo / "ros2_ws" / "install").mkdir()
+        (self.repo / "ros2_ws" / "install" / "local_setup.sh").write_text("")
+        self.assertTrue(self.status()["built"])
+
+    def test_running_while_starthere_lives_else_interrupted(self):
+        (self.dir / "state.json").write_text(json.dumps({"state": "running", "pid": os.getpid()}))
+        self.assertEqual(self.status()["state"], "running")
+        (self.dir / "state.json").write_text(json.dumps({"state": "running", "pid": 2 ** 30}))
+        self.assertEqual(self.status()["state"], "interrupted")
+
+    def test_finished_states_pass_through(self):
+        (self.dir / "state.json").write_text(json.dumps({"state": "failed", "exit": 2, "finished": 5.0, "pid": 1}))
+        status = self.status()
+        self.assertEqual((status["state"], status["exit"], status["finished"]), ("failed", 2, 5.0))
+        (self.dir / "state.json").write_text("not json")
+        self.assertEqual(self.status()["state"], "idle")
+
+    def test_log_tail_strips_colour_and_progress_redraws(self):
+        (self.dir / "setup.log").write_bytes(
+            b"\x1b[1;34m[setup]\x1b[0m 1/4 Host packages\r\nfetch 10%\rfetch 90%\rfetch done\nlast\n\n")
+        self.assertEqual(server.setup_log_tail(10, self.dir), ["[setup] 1/4 Host packages", "fetch done", "last"])
+        self.assertEqual(server.setup_log_tail(1, self.dir), ["last"])
+        self.assertEqual(self.status()["log"], "devtool/.setup/setup.log")
+
+    def test_log_tail_without_a_log(self):
+        self.assertEqual(server.setup_log_tail(10, self.dir), [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# starthere — the first thing to run on a new machine.
+#
+# Opens the BILLEE control panel in your browser and, if this machine isn't set up yet, sets it
+# up: detects the machine, installs what's missing, fetches the git submodules and builds the
+# workspace (devtool/setup-machine). Setup runs in this terminal, so you can answer its sudo
+# password prompt; the control panel shows its progress and unlocks when it's done.
+#
+#   ./starthere                # open the panel, set up the machine if needed
+#   ./starthere --preview      # show what setup would install; change nothing
+#   ./starthere --reinstall    # run the setup again even though the workspace is built
+#   ./starthere --no-browser   # don't open a browser (over ssh: ssh -L 7700:localhost:7700 <host>)
+#   ./starthere --port 7701    # if port 7700 is taken
+#
+# Leave this terminal open while you use the panel; Ctrl-C stops the panel and everything it started.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+cd "$repo_root"
+
+port=7700
+open_browser=1
+mode=auto
+usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --port) port="${2:?--port needs a number}"; shift 2 ;;
+    --no-browser) open_browser=0; shift ;;
+    --preview) mode=preview; shift ;;
+    --reinstall) mode=reinstall; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "starthere: unknown option $1 (try --help)" >&2; exit 2 ;;
+  esac
+done
+
+bold() { printf '\033[1m%s\033[0m\n' "$*"; }
+note() { printf '\033[1;34m[starthere]\033[0m %s\n' "$*"; }
+fail() { printf '\033[1;31m[starthere]\033[0m %s\n' "$*" >&2; exit 1; }
+
+# The control panel needs only python3; the setup needs git (submodules) and curl (Pixi).
+missing=()
+for tool in python3 git curl; do command -v "$tool" >/dev/null || missing+=("$tool"); done
+if [[ ${#missing[@]} -gt 0 ]]; then
+  case "$(uname -s)" in
+    Darwin) fail "missing ${missing[*]}: run  xcode-select --install  then ./starthere again." ;;
+    *) fail "missing ${missing[*]}: run  sudo apt install -y ${missing[*]}  then ./starthere again." ;;
+  esac
+fi
+if [[ $EUID -eq 0 ]]; then
+  fail "run this as your normal user, not with sudo: setup asks for your password when it needs it."
+fi
+
+set_up() {
+  [[ -f ros2_ws/install/local_setup.sh ]] || grep -qsx mac ros2_ws/.billee-platform
+}
+
+url="http://localhost:$port"
+if python3 -c "import socket,sys; s=socket.socket(); sys.exit(s.connect_ex(('127.0.0.1', int(sys.argv[1]))) != 0)" "$port"; then
+  fail "port $port is already in use (another control panel?). Close it, or use ./starthere --port 7701."
+fi
+
+state_dir="$repo_root/devtool/.setup"
+mkdir -p "$state_dir"
+log="$state_dir/setup.log"
+write_state() {  # write_state <state> [exit code]
+  python3 - "$state_dir/state.json" "$1" "${2:-}" "$$" <<'EOF'
+import json, os, sys, time
+path, state, code, pid = sys.argv[1:5]
+try:
+    data = json.load(open(path))
+except (OSError, ValueError):
+    data = {}
+if state == "running":
+    data = {"started": time.time()}
+data.update(state=state, pid=int(pid))
+if code:
+    data.update(exit=int(code), finished=time.time())
+tmp = path + ".tmp"
+with open(tmp, "w") as f:
+    json.dump(data, f)
+os.replace(tmp, path)
+EOF
+}
+
+# 1. The control panel, in the background for as long as this terminal stays open.
+bold "BILLEE control panel"
+devtool/billee-dev --no-setup --no-browser --port "$port" &
+panel=$!
+cleanup() {
+  trap - EXIT INT TERM
+  if [[ -f "$state_dir/state.json" ]] && grep -q '"state": "running"' "$state_dir/state.json"; then
+    write_state interrupted 130 || true
+  fi
+  kill -TERM "$panel" 2>/dev/null || true
+  wait "$panel" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+for _ in $(seq 1 100); do
+  kill -0 "$panel" 2>/dev/null || fail "the control panel didn't start (see the lines above)."
+  python3 -c "import urllib.request,sys; urllib.request.urlopen(sys.argv[1], timeout=1)" "$url/api/info" \
+    2>/dev/null && break
+  sleep 0.1
+done
+if [[ "$open_browser" == 1 ]]; then
+  if command -v xdg-open >/dev/null; then xdg-open "$url" >/dev/null 2>&1 || true
+  elif command -v open >/dev/null; then open "$url" || true
+  fi
+fi
+note "Control panel: $url"
+
+# 2. The machine setup, here in the foreground so its sudo prompts can be answered.
+status=0
+if [[ "$mode" == preview ]]; then
+  note "Preview of the setup (nothing is changed):"
+  DRY_RUN=1 devtool/setup-machine || status=$?
+elif [[ "$mode" == reinstall ]] || ! set_up; then
+  if [[ "$mode" == reinstall ]]; then
+    note "Running the machine setup again."
+  else
+    note "This machine isn't set up yet. Setting it up now: this takes 10-30 minutes the first time"
+    note "(about 10 GB of downloads). Answer the sudo password prompt here when it appears."
+  fi
+  echo
+  : > "$log"
+  write_state running
+  set +e
+  devtool/setup-machine 2>&1 | tee -a "$log"
+  status=${PIPESTATUS[0]}
+  set -e
+  echo
+  case "$status" in
+    0) write_state done 0; note "Setup finished: this machine is ready." ;;
+    3) write_state reboot 3
+       note "Setup needs a reboot or a new login (new drivers or group membership)."
+       note "Do that, then run ./starthere again to finish."
+       exit 3 ;;
+    *) write_state failed "$status"
+       note "Setup stopped with exit code $status. Full log: devtool/.setup/setup.log"
+       note "Fix what it reports above, then run ./starthere again. The panel stays open meanwhile." ;;
+  esac
+else
+  note "This machine is already set up (./starthere --reinstall runs the setup again)."
+fi
+
+echo
+bold "Control panel: $url"
+echo "  First drive: Drivetrain -> Gazebo simulation -> Start, then External -> Foxglove Studio."
+echo "  Leave this terminal open while you use it. Ctrl-C stops the panel and everything it started."
+wait "$panel"

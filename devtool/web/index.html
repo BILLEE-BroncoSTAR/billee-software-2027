@@ -213,6 +213,23 @@ button, input, select { font: inherit; color: inherit; }
 .group-head p { margin: 0; color: var(--muted); font-size: 13px; }
 .cards { display: grid; gap: 8px; }
 .empty-state { text-align: center; color: var(--muted); padding: 60px 20px; }
+.setup { margin: 0 0 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.setup-head { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; }
+.setup-dot { flex: none; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--muted); }
+.setup-text { flex: 1; min-width: 0; }
+.setup-text strong { display: block; font-size: 14.5px; margin-bottom: 2px; }
+.setup-text p { margin: 0; color: var(--text-2); font-size: 13.5px; max-width: 80ch; }
+.setup-log { margin: 0; max-height: 260px; overflow: auto; padding: 10px 16px 12px; background: var(--term-bg); color: var(--term-text); font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; }
+.setup[data-state="running"] { border-color: var(--info); background: var(--info-soft); }
+.setup[data-state="running"] .setup-dot { background: var(--info); animation: setup-pulse 1.2s ease-in-out infinite; }
+.setup[data-state="done"] { border-color: var(--ok); background: var(--ok-soft); }
+.setup[data-state="done"] .setup-dot { background: var(--ok); }
+.setup[data-state="needed"], .setup[data-state="reboot"] { border-color: var(--warn); background: var(--warn-soft); }
+.setup[data-state="needed"] .setup-dot, .setup[data-state="reboot"] .setup-dot { background: var(--warn); }
+.setup[data-state="failed"], .setup[data-state="interrupted"] { border-color: var(--err); background: var(--err-soft); }
+.setup[data-state="failed"] .setup-dot, .setup[data-state="interrupted"] .setup-dot { background: var(--err); }
+@keyframes setup-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .setup[data-state="running"] .setup-dot { animation: none; } }
 .empty-state strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); transition: border-color .15s; }
@@ -392,6 +409,14 @@ dialog::backdrop { background: rgb(0 0 0 / 40%); }
 
   <main class="main" id="main">
     <nav class="mobile-nav" id="mobile-nav" aria-label="Groups"></nav>
+    <section class="setup" id="setup" aria-live="polite" hidden>
+      <div class="setup-head">
+        <span class="setup-dot" aria-hidden="true"></span>
+        <div class="setup-text"><strong id="setup-title"></strong><p id="setup-body"></p></div>
+        <button class="btn sm ghost" id="setup-dismiss" type="button" hidden>Dismiss</button>
+      </div>
+      <pre class="setup-log" id="setup-log" hidden></pre>
+    </section>
     <div id="groups"></div>
     <div class="empty-state" id="empty" hidden><strong>Nothing matches</strong>Try another search, or turn off "Runnable here".</div>
   </main>

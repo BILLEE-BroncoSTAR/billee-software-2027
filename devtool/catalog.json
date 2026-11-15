@@ -286,7 +286,7 @@
       "blockedHint": "Pick auto: it chooses the setup that fits this machine.",
       "status": "untested",
       "notes": "Installs what this machine is missing, then builds the workspace. auto picks x86 (NVIDIA driver, Docker, billee-desktop image) on x86-64 + NVIDIA, x86-cpu (apt packages, Pixi, the default env built natively) on x86-64 without an NVIDIA GPU, l4t on a Jetson, linux-aarch64 on other ARM64 Linux and mac on an Apple-Silicon Mac. x86 exits with code 3 when a reboot or re-login is needed; run it again afterwards.",
-      "docs": "README.md#setup"
+      "docs": "README.md#start-here-new-machine"
     },
     {
       "id": "setup.preview",

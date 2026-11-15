@@ -10,9 +10,15 @@ devtool/billee-dev --port 7701     # if 7700 is taken
 devtool/billee-dev --no-browser    # server only (e.g. on the Jetson: ssh -L 7700:localhost:7700 <rover>)
 ```
 
+New to the repo? Run `./starthere` from the repo root instead: it opens this panel and sets the
+machine up in the same go, with the setup's progress shown in the page.
+
 Ctrl-C in that terminal stops the tool **and everything it started**. Needs only `python3`
-(3.8+, standard library). On a new machine, run **Machine setup > Set up this machine** first
-(or `devtool/setup-machine` in a terminal): it installs what's missing and builds the workspace.
+(3.8+, standard library). On a new machine `billee-dev` notices the workspace isn't built and
+offers to run `devtool/setup-machine` first, in the same terminal so its sudo prompts work
+(`--setup` runs it without asking, `--no-setup` never offers). It installs what's missing,
+fetches the git submodules and builds the workspace; **Machine setup > Set up this machine** in
+the page does the same later.
 
 ## Setting up a machine
 

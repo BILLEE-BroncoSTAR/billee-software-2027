@@ -4,9 +4,57 @@ ROS 2 Humble workspace for the BILLEE rover: a six-wheel differential drive on O
 controllers over CAN, a Gazebo simulation of it, gamepad teleop, and ZED 2i perception.
 Dependencies are managed by [pixi](https://pixi.sh) and everything runs in a dev container.
 
+## Start here (new machine)
+
+```bash
+git clone https://github.com/BILLEE-BroncoSTAR/billee-software-2027.git
+cd billee-software-2027
+./starthere
+```
+
+`./starthere` opens the **control panel** in your browser (<http://localhost:7700>), where every
+sim, drivetrain, viewer and check is a button, and sets this machine up if it isn't yet: it works
+out what kind of machine this is, installs what's missing, fetches the git submodules and builds
+the workspace. Setup runs in the terminal, so answer its **sudo password prompt** there; the panel
+shows its progress and says when the machine is ready. Leave the terminal open while you use the
+panel (Ctrl-C stops it). Later, `./starthere` (or `devtool/billee-dev`) just opens the panel.
+`./starthere --preview` shows what setup would install without changing anything.
+
+| Your machine | What setup does | Before you start |
+|---|---|---|
+| x86-64 Linux, no NVIDIA GPU (most laptops) | apt packages, Pixi, the ROS 2 environment, native build. No Docker. | `git`, `curl`, `python3` (`./starthere` tells you if one is missing) |
+| x86-64 Linux + NVIDIA GPU (ground station) | NVIDIA driver, Docker, NVIDIA Container Toolkit, the desktop image, build | If it asks for a reboot or a new login, do that and run `./starthere` again |
+| Apple-Silicon Mac | The `mac-cpu` image with the workspace built in | Docker Desktop running; `xcode-select --install` for `git`, `make`, `python3` |
+| NVIDIA Jetson (the rover) | The rover image (pulls a ~12.6 GB base, compiles OpenPose in ~21 min), build | Docker with the `nvidia` runtime: the Jetson host steps in [1. Open the dev container](#1-open-the-dev-container) |
+| Other ARM64 Linux | Pixi and a native build | `git`, `curl`, `python3` |
+
+The first setup downloads the ROS 2 environment (about 10 GB on disk) and takes 10–30 minutes
+on a normal connection, longer on the Jetson; later runs start in seconds.
+
+**First drive, in the control panel:**
+
+1. **Drivetrain → Gazebo simulation → Start** (or **Mock drivetrain** for the real control stack
+   with no Gazebo and no motors).
+2. **External → Foxglove Studio**: connect to `ws://localhost:8765` and import
+   `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json`.
+3. **Drive it → Scripted drive**, **Keyboard teleop**, or **Gamepad teleop** (hold RB, then RT
+   forward, LT reverse, left stick steers).
+
+**Setup doesn't cover these, do them once by hand:**
+
+- Install the [Foxglove Studio](https://foxglove.dev/download) desktop app on the machine you view from.
+- On the Jetson: **Perception & pose → Download OpenPose models**, and for the real motors
+  **CAN bus → Bring up a real CAN bus** (or **Persist can2 across reboots**).
+- A ZED 2i on a machine without an NVIDIA GPU: plug it into a USB 3 port, then
+  **Perception & pose → ZED over USB**.
+
+Prefer the terminal or VS Code? Everything above is also plain commands: `make setup <platform>`
+([docs/setup.md](docs/setup.md)), or the dev containers below.
+
 ## 1. Open the dev container
 
-Pick the configuration for your machine (VS Code: **Dev Containers: Reopen in Container**):
+The manual route, e.g. for VS Code. Pick the configuration for your machine
+(VS Code: **Dev Containers: Reopen in Container**):
 
 | Machine | Container | Pixi env |
 |---|---|---|
@@ -55,8 +103,8 @@ Without VS Code, `tooling/desktop-ros2` (x86) and `tooling/rover-ros2` (Jetson) 
 
 **Or with `make`:** `make setup <mac|linux-aarch64|l4t|x86>` once per machine, then
 `make build`, `make shell` and `make sim` (`make help` lists them). Per-platform walkthrough:
-[docs/setup.md](docs/setup.md). The same commands, plus every run mode, are buttons in a
-browser control panel: `devtool/billee-dev` ([devtool/README.md](devtool/README.md)).
+[docs/setup.md](docs/setup.md). `./starthere` ([Start here](#start-here-new-machine)) does the same through the
+control panel ([devtool/README.md](devtool/README.md)).
 
 ## 2. Build (on every machine you use)
 
@@ -123,6 +171,7 @@ Package docs: [chassis_bringup](ros2_ws/src/chassis_bringup/README.md) ·
 ```
 .devcontainer/     dev container configs (x86 default, l4t/, mac/)
 docker/            Dockerfiles and container entrypoint/setup scripts
+starthere          first run on a new machine: control panel + machine setup
 tooling/           can-up (CAN bring-up, host), sim-up (one-command sim), zed-usb (ZED, no GPU),
                    desktop-ros2 / rover-ros2 (run the images without VS Code),
                    billee-env.sh (platform + Pixi env lookup for make and the scripts)
