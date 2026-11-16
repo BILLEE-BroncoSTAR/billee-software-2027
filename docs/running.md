@@ -35,8 +35,9 @@ on the machine named above it. The only exceptions are marked **host** (outside 
 
    Every process in the container, VS Code's terminals included, gets the GPU device groups
    (`--group-add` in `.devcontainer/l4t/devcontainer.json`). Every container start then runs
-   `postStartCommand` (about 1 min the first time): the ZED udev rule on the host
-   (`docker/zed_udev.sh`), the ZED's calibration from `configs/zed/`, and `pixi install`.
+   `postStartCommand` (about 1 min the first time): the ZED and RealSense udev rules on the host
+   (`docker/zed_udev.sh`, `docker/realsense_udev.sh`), the ZED's calibration from `configs/zed/`,
+   and `pixi install`.
 4. **Jetson container:**
    ```bash
    cd ros2_ws
@@ -354,6 +355,7 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 | | `camera` | `none` | `cloud` (ZED point cloud), `openpose` (OpenPose) or `both`. Jetson container only. |
 | | `csi_cameras` | `5` | [CSI cameras](#csi-cameras) to start, cam0 upwards; `0` = none. Both modes. Jetson container only. |
 | | `vio` | `false` | `mode:=real` only: ZED visual-inertial odometry (`/zed/vio/odom`) + the EKF, which then publishes `odom → base_footprint` (forces `odom_tf:=false`). Jetson container only. |
+| | `arm_camera` | `auto` | The arm's RealSense D435i + ArUco (`/arm_cam/*`, [arm-camera.md](arm-camera.md)): `auto` = if a RealSense is on USB at launch, `true` = always (waits for it), `false` = never. Both modes. |
 | `ground_station.launch.py` | `use_sim_time` | `true` | `false` when the Jetson runs `mode:=real` |
 | | `view` | `drivetrain` | RViz layout: `drivetrain`, `cloud`, `openpose` or `both` (match the Jetson's `camera:=`) |
 | | `fixed_frame` | `odom` | RViz fixed frame. `base_link` rides along with the rover. |

@@ -2,9 +2,11 @@
 authors = ["Vernonicuhhh <Vernonicuhhh@protonmail.com>"]
 channels = ["https://prefix.dev/robostack-humble", "https://prefix.dev/conda-forge"]
 name = "ros2_ws"
+# glibc: every container here is Ubuntu 22.04 (glibc 2.35); pixi assumes 2.28 otherwise. 2.34 is
+# needed by libudev1 >= 260, which RoboStack's librealsense2 build for this lock requires.
 platforms = [
-  { name = "linux-64-cuda", platform = "linux-64", cuda = "13" },
-  "linux-aarch64",
+  { name = "linux-64-cuda", platform = "linux-64", cuda = "13", glibc = "2.34" },
+  { name = "linux-aarch64-glibc234", platform = "linux-aarch64", glibc = "2.34" },
 ]
 version = "0.1.0"
 
@@ -32,7 +34,7 @@ lark = "*"
 #   - `mac-cpu` : Apple-Silicon Docker Desktop containers
 #   - `l4t`     : NVIDIA Jetson (L4T / JetPack) rover, see .devcontainer/l4t/
 [feature.aarch64-cpu]
-platforms = ["linux-aarch64"]
+platforms = ["linux-aarch64-glibc234"]
 
 [feature.aarch64-cpu.tasks]
 build = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release'"
@@ -79,6 +81,25 @@ ros-humble-teleop-twist-keyboard = "*"
 ros-humble-navigation2 = ">=1.1.20,<2"
 ros-humble-nav2-bringup = ">=1.1.20,<2"
 ros-humble-robot-localization = ">=3.5.4,<4"
+# Keeps ROS on the lock's RoboStack build (0.9 = build 18, Python 3.12). Without it, adding any
+# package lets the solver move all of ROS to a newer build (Python 3.14) in the same `pixi lock`.
+ros2-distro-mutex = "0.9.*"
+# Intel RealSense D435i on the arm's end effector (perception/arm_vision, docs/arm-camera.md).
+# realsense2_camera is the ROS driver; it pulls in librealsense, the SDK (with pyrealsense2 and the
+# rs-enumerate-devices / rs-fw-update tools). 4.57.7 is the newest release built for RoboStack
+# build 18: a newer one needs a newer ros2-distro-mutex, i.e. all of ROS upgraded.
+ros-humble-realsense2-camera = "4.57.7.*"
+ros-humble-realsense2-description = "4.57.7.*"
+# conda-forge builds librealsense with FORCE_RSUSB_BACKEND (libusb, no kernel patches: what Intel
+# recommends on a Jetson). The CPU build everywhere: its CUDA builds need CUDA >= 12.9, newer than
+# JetPack 6's 12.6, and CUDA only speeds up colour conversion / alignment, which 640x480 doesn't need.
+# py312: each build bundles pyrealsense2 for one Python, and the builds don't declare which, so the
+# solver would otherwise pick a py314 one for this Python 3.12 environment.
+librealsense = { version = "2.57.7.*", build = "cpu_py312*" }
+# compressed / compressedDepth image_transport plugins: the RealSense topics reach the ground
+# station as JPEG / PNG instead of raw images. cv_bridge: arm_vision's ArUco node.
+ros-humble-image-transport-plugins = "*"
+ros-humble-cv-bridge = "*"
 
 [activation]
 # Pixi has already activated the selected environment (default, mac-cpu, or

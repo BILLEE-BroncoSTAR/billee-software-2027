@@ -1,0 +1,42 @@
+# aruco_node parameters (arm_camera.launch.py; launch arguments override the first few).
+/**:
+  ros__parameters:
+    # ArUco dictionary: any cv2.aruco DICT_* name (arm_vision/aruco.py DICTIONARIES). Print markers
+    # with `ros2 run arm_vision aruco_generate --dictionary <name> --ids ...`.
+    dictionary: DICT_5X5_50
+    # Side of the printed black square in metres, edge to edge, without the white margin. Wrong =
+    # wrong orientation and wrong PnP distance (depth-based positions are unaffected).
+    # 0 = unknown: positions from depth only, no orientation.
+    marker_size: 0.05
+    # Only these ids; [-1] = every id in the dictionary.
+    marker_ids: [-1]
+
+    # Position: auto = aligned depth when valid, else solvePnP; depth = depth only; pnp = PnP only.
+    position_source: auto
+    # Depth accepted from a marker (m). The D435i measures from about 0.2-0.3 m at 848x480.
+    min_depth: 0.1
+    max_depth: 6.0
+    # Corner refinement: none | subpix | contour | apriltag. subpix steadies the PnP orientation.
+    corner_refinement: subpix
+
+    # Inputs, relative to the node's namespace (/arm_cam).
+    color_topic: color/image_raw
+    camera_info_topic: color/camera_info
+    depth_topic: aligned_depth_to_color/image_raw
+    use_depth: true
+    # s; a colour image pairs only with the depth image stamped this close to it (realsense2_camera
+    # gives a synced pair the same stamp). It waits at most one frame for it (arm_vision/rgbd.py).
+    depth_sync_slop: 0.02
+
+    # OpenCV threads for this node. 1: the Jetson's cores are busy with the other cameras, and a
+    # contended thread pool made detection 10x slower. 2-4 for 1280x720 on a quiet CPU.
+    opencv_threads: 1
+
+    # TF: <colour optical frame> -> <tf_prefix><id> per located marker.
+    publish_tf: true
+    tf_prefix: aruco_
+
+    # Annotated JPEG for the ground station (aruco/image/compressed), only while subscribed.
+    debug_image_rate: 15.0     # Hz; 0 = never
+    debug_image_quality: 75    # JPEG 1-100
+    debug_image_width: 640     # px, scaled down to this if wider; 0 = as captured

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>arm_vision</name>
+  <version>0.0.0</version>
+  <description>The arm's Intel RealSense D435i: driver launch, an RGB-D input layer for CV nodes, and ArUco marker detection with 3D poses (after zptang1210/RealsenseArUcoTracking), plus a Foxglove layout for the ground station.</description>
+  <maintainer email="luquilanzi@gmail.com">LucaLanzi</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>arm_vision_msgs</exec_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <!-- arm_camera.launch.py -->
+  <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>image_transport_plugins</exec_depend>
+  <exec_depend>foxglove_bridge</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
