@@ -1,0 +1,123 @@
+{
+  "configById": {
+    "Image!zed-color": {
+      "foxglovePanelTitle": "ZED 2i color",
+      "imageMode": {
+        "imageTopic": "/zed/zed_node/rgb/color/rect/image/compressed"
+      }
+    },
+    "Image!zed-depth": {
+      "foxglovePanelTitle": "ZED 2i registered depth",
+      "imageMode": {
+        "imageTopic": "/zed/zed_node/depth/depth_registered"
+      }
+    },
+    "Image!pose-overlay": {
+      "foxglovePanelTitle": "ZED BODY_18 skeleton overlay",
+      "imageMode": {
+        "imageTopic": "/zed/zed_node/body_trk/overlay"
+      }
+    },
+    "3D!zed-cloud-and-skeletons": {
+      "foxglovePanelTitle": "ZED 2i registered point cloud",
+      "cameraState": {
+        "perspective": true,
+        "distance": 4,
+        "phi": 35,
+        "thetaOffset": 45,
+        "target": [
+          0,
+          0,
+          1
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.01,
+        "far": 100
+      },
+      "scene": {
+        "transforms": {
+          "showLabel": true,
+          "labelSize": 0.06,
+          "axisScale": 0.2
+        },
+        "backgroundColor": "#202124",
+        "meshUpAxis": "z_up"
+      },
+      "transforms": {},
+      "topics": {
+        "/zed/zed_node/point_cloud/cloud_registered": {
+          "visible": true,
+          "pointSize": 2,
+          "colorMode": "rgb",
+          "colorField": "rgb"
+        }
+      },
+      "layers": {
+        "grid": {
+          "layerId": "foxglove.Grid",
+          "instanceId": "grid",
+          "label": "Grid",
+          "visible": true,
+          "frameLocked": true,
+          "order": 1,
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#80868bff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "RawMessages!zed-body-skeletons": {
+      "foxglovePanelTitle": "ZED body skeleton data",
+      "topicPath": "/zed/zed_node/body_trk/skeletons",
+      "defaultExpanded": false
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "direction": "column",
+      "first": "Image!zed-color",
+      "second": "Image!zed-depth",
+      "splitPercentage": 50
+    },
+    "second": {
+      "direction": "column",
+      "first": "Image!pose-overlay",
+      "second": {
+        "direction": "column",
+        "first": "3D!zed-cloud-and-skeletons",
+        "second": "RawMessages!zed-body-skeletons",
+        "splitPercentage": 75
+      },
+      "splitPercentage": 35
+    },
+    "splitPercentage": 50
+  }
+}

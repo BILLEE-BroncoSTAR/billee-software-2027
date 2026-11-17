@@ -81,9 +81,12 @@ Jetson-only.
 
 The dev container runs `xhost +local:` on the host first, passes `--gpus all` and the X socket,
 allows USB (189) and video4linux (81) devices (`--device-cgroup-rule`), and runs
-`pixi install` as its `updateContentCommand`. The pixi cache is a bind mount of
-`~/.cache/urc-pixi-cache` on the host: pixi hardlinks from it into `ros2_ws/.pixi`, which fails
-across a named-volume boundary.
+`pixi install` as its `updateContentCommand`. At container start it also uses the same
+`zed_udev.sh` helper and host udev mounts as the L4T profile, so the ZED 2's HID sensor device
+has the SDK's `99-slabs.rules` permissions. A Docker named volume mounted at
+`/usr/local/zed/resources` preserves the ZED SDK's downloaded NEURAL_LIGHT and body-tracking
+models (including `skeleton_body18_3.2`) and their optimized engines across rebuilds; Docker
+creates the volume automatically.
 
 ## Mac image (`Dockerfile.desktop.mac.humble`)
 

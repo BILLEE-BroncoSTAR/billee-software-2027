@@ -1,6 +1,6 @@
 {
   "name": "desktop-roshumble_dev-x862",
-   "build": {
+  "build": {
     "dockerfile": "../docker/Dockerfile.desktop.humble",
     "context": "../"
   },
@@ -9,7 +9,6 @@
 
   "containerUser": "ros_user",
   "remoteUser": "ros_user",
-
 
   "runArgs": [
     "--privileged",
@@ -20,26 +19,36 @@
     "--pid=host",
     "--ipc=host",
     "--hostname=ros-dev",
-	  "--volume", "/tmp/.X11-unix:/tmp/.X11-unix",
-	  "--volume", "/dev:/dev",
-	  "--volume", "/dev/shm:/dev/shm",
+    "--volume", "/tmp/.X11-unix:/tmp/.X11-unix",
+    "--volume", "/dev:/dev",
+    "--volume", "/dev/shm:/dev/shm",
+    // Lets zed_udev.sh install the ZED udev rule on the host.
+    "--volume", "/etc/udev/rules.d:/host/udev/rules.d",
+    "--volume", "/run/udev:/run/udev",
     "--device-cgroup-rule=c 189:* rmw",
     "--device-cgroup-rule=c 81:* rmw"
   ],
-  "mounts":[
-        "source=/dev/bus/usb,target=/dev/bus/usb,type=bind"
+
+  "mounts": [
+    "source=/dev/bus/usb,target=/dev/bus/usb,type=bind",
+    // Persists ZED's downloaded NEURAL_LIGHT and body-tracking models (including
+    // skeleton_body18_3.2) plus their TensorRT optimizations across desktop
+    // container rebuilds. Docker creates this named volume.
+    "source=urc-zed-resources-x86,target=/usr/local/zed/resources,type=volume"
   ],
 
   "updateContentCommand": "cd ros2_ws && pixi install",
 
+  "postStartCommand": "sudo /usr/local/bin/zed_udev.sh",
+
   "containerEnv": {
     "ROS_DISTRO": "humble",
     "DISPLAY": "${localEnv:DISPLAY}",
-    //must have these to forward graphics card into container COMMENT OUT IF YOU ARE NOT USING GPU
+    // must have these to forward graphics card into container COMMENT OUT IF YOU ARE NOT USING GPU
     "NVIDIA_DRIVER_CAPABILITIES": "all",
-     "__GLX_VENDOR_LIBRARY_NAME": "nvidia",
+    "__GLX_VENDOR_LIBRARY_NAME": "nvidia",
     "__NV_PRIME_RENDER_OFFLOAD": "1"
-    //"LIBGL_ALWAYS_SOFTWARE": "1"
+    // "LIBGL_ALWAYS_SOFTWARE": "1"
   },
 
   "customizations": {
@@ -64,14 +73,7 @@
         "remote.otherPortsAttributes": {
           "onAutoForward": "ignore"
         }
-      },
-      "mounts": [
-      // Bind mount (not a named volume) so the cache shares a filesystem with the
-      // bind-mounted workspace — pixi's pypi installer hardlinks wheels from here into
-      // ros2_ws/.pixi, which fails (panic) across the volume/workspace filesystem boundary.
-      "source=${localEnv:HOME}/.cache/urc-pixi-cache,target=/home/ros_user/.cache/rattler,type=bind"
-    ]
+      }
     }
   }
-
 }

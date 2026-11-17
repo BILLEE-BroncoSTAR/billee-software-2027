@@ -3,7 +3,7 @@
 # Without it the ZED's sensor (HID) device is root-only, and the camera fails to open as ros_user
 # ("[ZED][MCU] Permissions denied", "NOT VALID SERIAL NUMBER FOR SENSORS MODULE MCU").
 #
-# Run as root at container start (the l4t devcontainer's postStartCommand). Needs the host's
+# Run as root at container start (the x86 and L4T devcontainers' postStartCommand). Needs the host's
 # rules directory and udev control socket mounted (devcontainer runArgs):
 #   /etc/udev/rules.d -> /host/udev/rules.d      /run/udev -> /run/udev
 # Does nothing if the host already has an identical rule.
