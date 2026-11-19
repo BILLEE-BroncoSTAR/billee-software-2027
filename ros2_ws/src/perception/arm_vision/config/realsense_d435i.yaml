@@ -1,0 +1,60 @@
+# realsense2_camera parameters for the arm's D435i (arm_camera.launch.py). Every parameter and its
+# default: `ros2 param list /arm_cam` with the node running, or realsense2_camera's rs_launch.py.
+# Topics are under /arm_cam (the node's name), TF frames start with arm_cam_ (camera_name).
+/**:
+  ros__parameters:
+    camera_name: arm_cam
+    # The camera tree's root frame is <camera_name>_<base_frame_id> = arm_cam_link. The arm's URDF
+    # (or arm_camera.launch.py parent_frame:=) attaches it to the end effector.
+    base_frame_id: link
+    publish_tf: true
+    tf_publish_rate: 0.0   # static TFs only: the camera's internal extrinsics don't change
+
+    # Wait for the camera forever and reconnect after a USB drop, instead of exiting.
+    wait_for_device_timeout: -1.0
+    reconnect_timeout: 6.0
+    # true: hardware-reset the camera at start (+~5 s). Try it if the camera opens but streams
+    # nothing after the Jetson rebooted with it plugged in.
+    initial_reset: false
+
+    enable_color: true
+    rgb_camera:
+      # width,height,fps. The ArUco node runs at this resolution: 1280,720,30 sees markers about
+      # twice as far away, at about twice the CPU (detection and the CPU depth alignment).
+      color_profile: 640,480,30
+      color_format: RGB8
+      enable_auto_exposure: true
+
+    enable_depth: true
+    depth_module:
+      # 848x480 is the D435i's best depth resolution (Intel's recommendation). The aligned depth
+      # comes out at the colour resolution either way.
+      depth_profile: 848,480,30
+      depth_format: Z16
+    # Depth resampled onto the colour image (aligned_depth_to_color/image_raw): what aruco_node
+    # reads the marker's depth from, pixel for pixel.
+    align_depth:
+      enable: true
+    enable_sync: true      # colour and depth from the same frameset
+    enable_infra1: false
+    enable_infra2: false
+    pointcloud:
+      enable: false        # on demand: pointcloud.enable:=true (heavy over Wi-Fi)
+
+    # D435i IMU (BMI055), one /arm_cam/imu topic with gyro + accel interpolated together.
+    enable_gyro: true
+    enable_accel: true
+    unite_imu_method: 2    # 0 none (separate gyro/accel topics), 1 copy, 2 linear interpolation
+
+    # Depth post-processing filters, all off: they add latency and smear depth while the arm moves,
+    # and aruco_node takes the median over each marker anyway.
+    spatial_filter:
+      enable: false
+    temporal_filter:
+      enable: false
+    hole_filling_filter:
+      enable: false
+    decimation_filter:
+      enable: false
+
+    diagnostics_period: 0.0

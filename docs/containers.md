@@ -18,6 +18,11 @@ open each container is in [README §1](../README.md#1-open-the-dev-container).
 
 - Environments: `default` (linux-64 with CUDA 13), `l4t` and `mac-cpu` (both linux-aarch64, CPU
   packages; the Jetson's CUDA comes from the image, not pixi).
+- Both platforms declare glibc 2.34 (every container is Ubuntu 22.04, glibc 2.35): RoboStack's
+  librealsense2 needs it. pixi only takes that on a named platform entry, so the aarch64 platform
+  is called `linux-aarch64-glibc234`.
+- `ros2-distro-mutex = "0.9.*"` keeps ROS on RoboStack build 18 (Python 3.12). Without it, adding
+  any package can move all of ROS to a newer build in the same `pixi lock`.
 - `pixi run build` is a `colcon build --symlink-install` over `src/` in Release. The x86 variant
   also links against the CUDA stubs.
 - `pixi run fmt` runs `ruff check src/ --fix`.
@@ -35,7 +40,9 @@ OpenCV 4.5.4). In order, it adds:
 3. OpenPose, built from source by `docker/build_openpose.sh` into `/opt/openpose`. `OPENPOSE_JOBS`
    sets the parallel jobs (3 in the dev container: about 21 min on the 8 GB Orin Nano). The
    patches it applies are listed in [people-pose.md](people-pose.md#the-jetson-image).
-4. `gpu_groups.sh` and `zed_udev.sh` into `/usr/local/bin` (run at container start, below).
+4. `gpu_groups.sh` and `zed_udev.sh` into `/usr/local/bin` (run at container start, below), and
+   Intel's `99-realsense-libusb.rules` with `realsense_udev.sh`, for the arm's RealSense D435i. Its
+   SDK and driver come from pixi ([arm-camera.md](arm-camera.md)).
 5. Xvfb and VirtualGL 3.1.5 (checksum-pinned), for the headless Gazebo sim
    ([gazebo.md](gazebo.md#headless-gpu-rendering-jetson)).
 6. `gstreamer1.0-tools` and `gstreamer1.0-x`, for the CSI cameras ([cameras.md](cameras.md)).
@@ -50,7 +57,8 @@ The OpenPose layers come early so that changing anything after them doesn't reco
 - `--group-add` video (44), 104 and 995: the GPU device groups, given to every process including
   VS Code's terminals. 104 and 995 are this Jetson's gids; after a reflash check them with
   `stat -c '%G %g %n' /dev/nvmap /dev/dri/renderD128 /dev/nvhost-dbg-gpu` on the host.
-- Mounts: `/dev`, `/dev/shm`, the host's `/etc/udev/rules.d` and `/run/udev` (for the ZED rule),
+- Mounts: `/dev`, `/dev/shm`, the host's `/etc/udev/rules.d` and `/run/udev` (for the ZED and
+  RealSense rules),
   `/tmp/.X11-unix`, and the host's `/tmp` at `/host/tmp` (for the Argus socket).
 - `postStartCommand`, at every container start:
   1. links `/tmp/argus_socket` to the host's (`/host/tmp/argus_socket`). Linking rather than
@@ -59,8 +67,11 @@ The OpenPose layers come early so that changing anything after them doesn't reco
      `ros_user`, for shells opened later with `docker exec`;
   3. `zed_udev.sh`: installs the ZED SDK's `99-slabs.rules` on the **host** and reloads udev.
      Without it the ZED's sensor device is root-only (`[ZED][MCU] Permissions denied`);
-  4. copies `configs/zed/SN*.conf` into `/usr/local/zed/settings/` (below);
-  5. `pixi install --environment l4t`.
+  4. `realsense_udev.sh`: installs Intel's `99-realsense-libusb.rules` on the **host**. Without it
+     librealsense (libusb backend) can't open the D435i as `ros_user` (`No RealSense devices were
+     found`);
+  5. copies `configs/zed/SN*.conf` into `/usr/local/zed/settings/` (below);
+  6. `pixi install --environment l4t`.
 
 ### ZED calibration (`configs/zed/`)
 

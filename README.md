@@ -110,6 +110,7 @@ Everything the rover runs is documented in [`docs/`](docs):
 | [navigation.md](docs/navigation.md) | `navigation`: the EKFs and the Nav2 controller/planner servers |
 | [people-pose.md](docs/people-pose.md) | `zed_openpose`, `people`, `people_msgs`: ZED 2i point cloud, VIO, OpenPose and gestures (Jetson) |
 | [cameras.md](docs/cameras.md) | `camera_stream`: the five CSI cameras; vendored `foxglove_msgs` |
+| [arm-camera.md](docs/arm-camera.md) | `arm_vision`, `arm_vision_msgs`: the arm's RealSense D435i (driver, SDK, udev), the RGB-D CV pipeline and ArUco detection (Jetson) |
 | [synthetic-vio.md](docs/synthetic-vio.md) | `zed2i`: synthetic VIO for the sim's EKF |
 | [gazebo.md](docs/gazebo.md) | Gazebo rendering, GPU, and model notes |
 | [containers.md](docs/containers.md) | Dev containers, Docker images, pixi environments, ZED calibration (`configs/zed/`) |
@@ -133,6 +134,7 @@ ros2_ws/src/
   navigation/        EKF pose estimate + Nav2 controller/planner servers       docs/navigation.md
   camera_stream/     CSI cameras → H.264 + JPEG                                docs/cameras.md
   perception/        zed_openpose, people, people_msgs                         docs/people-pose.md
+                     arm_vision, arm_vision_msgs (arm RealSense + ArUco)       docs/arm-camera.md
                      zed2i (synthetic VIO)                                     docs/synthetic-vio.md
   third_party/       foxglove_msgs, vendored (VENDORED.md)                     docs/cameras.md
 ```

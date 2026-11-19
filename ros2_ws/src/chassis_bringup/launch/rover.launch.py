@@ -10,6 +10,7 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + both
     ros2 launch chassis_bringup rover.launch.py mode:=real vio:=true         # + ZED VIO + EKF
     ros2 launch chassis_bringup rover.launch.py mode:=real csi_cameras:=0    # no CSI cameras
+    ros2 launch chassis_bringup rover.launch.py mode:=real arm_camera:=false # no arm RealSense
 
 `mode:=sim`  -> sim_gz.launch.py  (Gazebo + ign_ros2_control, no CAN)
 `mode:=real` -> real.launch.py    (standalone controller_manager + OdescSystemHardware)
@@ -31,6 +32,12 @@ Foxglove) and /camN/image_raw/compressed (JPEG, RViz) for cam0 front, cam1 rear_
 cam2 rear_right, cam3 top_front, cam4 reverse. A camera that isn't connected publishes a
 "NO CAMERA" placeholder and never stops the launch. Skipped where there are no NVIDIA camera
 plugins (any machine but the Jetson).
+
+The arm's RealSense D435i (arm_vision/launch/arm_camera.launch.py) also starts in both modes:
+arm_camera:=auto (default) starts realsense2_camera + the ArUco node when a RealSense is on USB at
+launch, true starts them regardless (the driver waits for the camera), false never. The ground
+station's view of it: /arm_cam/aruco/image/compressed (annotated JPEG) and
+/arm_cam/color/image_raw/compressed, in Foxglove (arm_vision/foxglove/arm_camera.json) or RViz.
 """
 
 import os
@@ -117,6 +124,14 @@ declare_args = [
         "cam2 rear_right, cam3 top_front, cam4 reverse; 0 = none. Both modes. A missing "
         "camera publishes a NO CAMERA placeholder. Jetson (l4t) only.",
     ),
+    DeclareLaunchArgument(
+        "arm_camera",
+        default_value="auto",
+        choices=["auto", "true", "false"],
+        description="The arm's RealSense D435i + ArUco detection (/arm_cam/*): auto = if a "
+        "RealSense is on USB at launch; true = always (waits for the camera); false = never. "
+        "Both modes.",
+    ),
 ]
 
 # nvarguscamerasrc, present only in the Jetson (l4t) container.
@@ -188,6 +203,7 @@ def _setup(context):
             )
         )
     actions += _csi_cameras(context, mode)
+    actions += _arm_camera(context, mode)
     if vio:
         actions.append(
             Node(
@@ -259,6 +275,36 @@ def _csi_cameras(context, mode):
                 [FindPackageShare("camera_stream"), "launch", "csi_cameras.launch.py"])),
         launch_arguments={
             "cameras": count,
+            "use_sim_time": "true" if mode == "sim" else "false",
+        }.items(),
+    )]
+
+
+def _arm_camera(context, mode):
+    """arm_camera.launch.py (RealSense + ArUco) without its own bridge, or why it's skipped."""
+    wanted = LaunchConfiguration("arm_camera").perform(context)
+    if wanted == "false":
+        return []
+    try:
+        get_package_prefix("arm_vision")
+        get_package_prefix("realsense2_camera")
+    except PackageNotFoundError as e:
+        return [LogInfo(msg=(
+            f"rover.launch.py: arm_camera:={wanted} ignored, package {e} isn't installed/built "
+            "here (pixi install, then pixi run build --packages-up-to arm_vision)."))]
+    if wanted == "auto":
+        from arm_vision.usb import realsense_cameras
+
+        if not realsense_cameras():
+            return [LogInfo(msg=(
+                "rover.launch.py: no RealSense on USB, arm camera not started "
+                "(arm_camera:=true starts it anyway and waits for the camera)."))]
+    return [IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [FindPackageShare("arm_vision"), "launch", "arm_camera.launch.py"])),
+        launch_arguments={
+            "standalone": "false",  # the drivetrain launch already runs the foxglove bridge
             "use_sim_time": "true" if mode == "sim" else "false",
         }.items(),
     )]

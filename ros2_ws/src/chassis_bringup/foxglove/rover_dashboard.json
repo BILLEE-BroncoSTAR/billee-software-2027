@@ -176,6 +176,12 @@
         "/gps": "#f5a623",
         "/gps/filtered": "#4a90e2"
       }
+    },
+    "Image!arm_cam": {
+      "foxglovePanelTitle": "Arm RealSense D435i + ArUco (arm_camera:=auto/true)",
+      "imageMode": {
+        "imageTopic": "/arm_cam/aruco/image/compressed"
+      }
     }
   },
   "globalVariables": {},
@@ -214,8 +220,13 @@
     "second": {
       "direction": "column",
       "first": "3D!odometry",
-      "second": "map!gps",
-      "splitPercentage": 60
+      "second": {
+        "direction": "column",
+        "first": "Image!arm_cam",
+        "second": "map!gps",
+        "splitPercentage": 55
+      },
+      "splitPercentage": 45
     },
     "splitPercentage": 62
   }

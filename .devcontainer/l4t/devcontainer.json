@@ -33,7 +33,8 @@
     "--group-add=995",
     "--volume", "/dev:/dev",
     "--volume", "/dev/shm:/dev/shm",
-    // zed_udev.sh installs the ZED udev rule on the host through these (see postStartCommand)
+    // zed_udev.sh / realsense_udev.sh install the ZED and RealSense udev rules on the host
+    // through these (see postStartCommand)
     "--volume", "/etc/udev/rules.d:/host/udev/rules.d",
     "--volume", "/run/udev:/run/udev",
     // kept only for optional local debugging on a Jetson with a display attached
@@ -48,10 +49,12 @@
   // gpu_groups.sh: adds ros_user to the GPU device groups in /etc/group, for shells started later
   // with `docker exec` (VS Code's own terminals get them from --group-add above).
   // zed_udev.sh: the ZED's sensor device is root-only on the host without Stereolabs' udev rule.
+  // realsense_udev.sh: same for the arm's RealSense D435i (Intel's rule; libusb needs rw on its
+  // /dev/bus/usb node).
   // configs/zed/SN*.conf: the ZED's factory calibration; without it the SDK downloads it on the
   // first open, which needs internet.
   // /tmp/argus_socket: the host's Argus socket, for the CSI cameras (see runArgs).
-  "postStartCommand": "ln -sfn /host/tmp/argus_socket /tmp/argus_socket && sudo /usr/local/bin/gpu_groups.sh && sudo /usr/local/bin/zed_udev.sh && cp -n configs/zed/SN*.conf /usr/local/zed/settings/ && cd ros2_ws && pixi install --environment l4t",
+  "postStartCommand": "ln -sfn /host/tmp/argus_socket /tmp/argus_socket && sudo /usr/local/bin/gpu_groups.sh && sudo /usr/local/bin/zed_udev.sh && sudo /usr/local/bin/realsense_udev.sh && cp -n configs/zed/SN*.conf /usr/local/zed/settings/ && cd ros2_ws && pixi install --environment l4t",
 
   "containerEnv": {
     "ROS_DISTRO": "humble",

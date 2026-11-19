@@ -1,7 +1,8 @@
 # NVIDIA Jetson (L4T) rover image.
 #
 # Structural mirror of docker/Dockerfile.desktop.humble: a CUDA-capable base ->
-# apt basics -> non-root `ros_user` -> ZED SDK -> CMU OpenPose (CUDA) -> pixi in /opt/pixi ->
+# apt basics -> non-root `ros_user` -> ZED SDK -> CMU OpenPose (CUDA) -> udev rules (ZED,
+# RealSense) -> pixi in /opt/pixi ->
 # `CMD ["pixi", "shell"]`. ROS 2 Humble itself comes from pixi / RoboStack (see
 # ros2_ws/pixi.toml, environment `l4t`)
 #
@@ -116,6 +117,15 @@ RUN chmod 755 /usr/local/bin/gpu_groups.sh
 # Installs the ZED SDK's udev rule (above) on the host at container start (postStartCommand)
 COPY docker/zed_udev.sh /usr/local/bin/zed_udev.sh
 RUN chmod 755 /usr/local/bin/zed_udev.sh
+
+# Intel RealSense D435i on the arm (ros2_ws/src/perception/arm_vision, docs/arm-camera.md). The SDK
+# (librealsense, RSUSB/libusb backend, so no kernel patches or DKMS modules on the Jetson) and the
+# ROS driver come from pixi; the image only carries Intel's udev rule, which realsense_udev.sh
+# installs on the host at container start (postStartCommand), as zed_udev.sh does for the ZED.
+COPY docker/99-realsense-libusb.rules /etc/udev/rules.d/99-realsense-libusb.rules
+COPY docker/realsense_udev.sh /usr/local/bin/realsense_udev.sh
+RUN chmod 644 /etc/udev/rules.d/99-realsense-libusb.rules && \
+    chmod 755 /usr/local/bin/realsense_udev.sh
 
 # GPU rendering for the Gazebo sim with no monitor (the rover). Gazebo's renderer from pixi
 # (OGRE-Next 2.2.6, conda-forge) only reaches OpenGL through GLX, i.e. through an X server;

@@ -39,12 +39,15 @@ rover.launch.py
 │  + teleop/teleop.launch.py                 (joy_control:=true)
 ├─ people/people_rover.launch.py standalone:=false   (camera:=cloud|openpose|both, or vio:=true) → people-pose.md
 ├─ robot_localization ekf_node, navigation/config/ekf_real.yaml   (mode:=real vio:=true) → navigation.md
-└─ camera_stream/csi_cameras.launch.py cameras:=<csi_cameras>     (unless csi_cameras:=0) → cameras.md
+├─ camera_stream/csi_cameras.launch.py cameras:=<csi_cameras>     (unless csi_cameras:=0) → cameras.md
+└─ arm_vision/arm_camera.launch.py standalone:=false   (arm_camera:=auto if a RealSense is on USB, or true) → arm-camera.md
 ```
 
 `camera:=` / `vio:=` are dropped with a log line where `zed_openpose_node` isn't built (any machine
 but the Jetson container), and the CSI cameras where there are no NVIDIA camera plugins. `vio:=` is
-ignored in `mode:=sim`, whose EKF already fuses the synthetic VIO.
+ignored in `mode:=sim`, whose EKF already fuses the synthetic VIO. `arm_camera:=auto` (the default)
+starts the arm's RealSense only if one is on USB at launch; `true` starts it regardless and the
+driver waits for the camera.
 
 ## Other launch files' arguments
 
@@ -58,6 +61,9 @@ ignored in `mode:=sim`, whose EKF already fuses the synthetic VIO.
 | `viz.launch.py` | `rviz` / `foxglove` | `true` / `true` | RViz2 / foxglove_bridge on `:8765` |
 | | `use_sim_time` | `false` | `true` when viewing the sim |
 | | `rviz_config` / `fixed_frame` | `rviz/drivetrain.rviz` / config's own | `fixed_frame` overrides the config (`rviz2 -f`) |
+| `arm_vision/arm_camera.launch.py` | `camera` / `aruco` / `standalone` | `true` / `true` / `true` | RealSense driver / ArUco node / foxglove_bridge ([arm-camera.md](arm-camera.md#run)) |
+| | `marker_size` / `dictionary` | from `config/aruco.yaml` | printed marker size (m) and ArUco dictionary |
+| | `serial_no` / `parent_frame` + `mount_*` | none | a specific camera / a static TF `parent_frame → arm_cam_link` |
 | `odesc_shadow.launch.py` | `can_interface` | `vcan0` | the shadow driver's bus |
 | `ground_station.launch.py` | `fprime_gds_url` | `http://192.168.4.73:5000` | opened in a browser with `fprime_gds:=true` |
 | `sim_gz.launch.py` | `x` / `y` / `z` / `yaw` | `0` / `0` / `0.2` / `0` | spawn pose |
