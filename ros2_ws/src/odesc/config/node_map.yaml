@@ -26,13 +26,13 @@ gear_ratio: 48.0
 
 nodes:   
   - joint: joint_wheel_l3   # Front Left     
-    node_id: 4   
+    node_id: 3   
   - joint: joint_wheel_l2   # Mid Left     
     node_id: 7   
   - joint: joint_wheel_l1   # Rear Left     
     node_id: 2  
   - joint: joint_wheel_r1   # Front Right     
-    node_id: 3   
+    node_id: 4   
   - joint: joint_wheel_r2   # Mid Right     
     node_id: 6   
   - joint: joint_wheel_r3   # Rear Right     
