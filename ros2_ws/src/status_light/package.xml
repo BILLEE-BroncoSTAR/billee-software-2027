@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>status_light</name>
+  <version>0.1.0</version>
+  <description>The rover's mode light: a blink(1) USB LED showing the state machine's state (idle: yellow pulse, teleop: blue, autonomous: red, arrived: flashing green).</description>
+  <maintainer email="noreply@anthropic.com">ros_user</maintainer>
+  <license>GPL-3.0-only</license>
+
+  <depend>rclpy</depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <!-- The blink(1) driver is the PyPI package `blink1` (ros2_ws/pixi.toml, pypi-dependencies). -->
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

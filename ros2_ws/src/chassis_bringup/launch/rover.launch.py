@@ -10,6 +10,7 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + both
     ros2 launch chassis_bringup rover.launch.py mode:=real vio:=true         # + ZED VIO + EKF
     ros2 launch chassis_bringup rover.launch.py mode:=real arm_camera:=false # no arm RealSense
+    ros2 launch chassis_bringup rover.launch.py mode:=real status_light:=teleop  # blink(1): blue
 
 `mode:=sim`  -> sim_gz.launch.py  (Gazebo + ign_ros2_control, no CAN)
 `mode:=real` -> real.launch.py    (standalone controller_manager + OdescSystemHardware)
@@ -132,6 +133,14 @@ declare_args = [
         "RealSense is on USB at launch; true = always (waits for the camera); false = never. "
         "Both modes.",
     ),
+    DeclareLaunchArgument(
+        "status_light",
+        default_value="none",
+        choices=["none", "idle", "teleop", "autonomous", "arrived", "off"],
+        description="The blink(1) mode light (status_light package): teleop = solid blue, "
+        "autonomous = solid red, arrived = flashing green, idle = slow yellow pulse. none = don't "
+        "start it. The BILLEE dashboard sets it per mode. Both modes.",
+    ),
 ]
 
 # nvarguscamerasrc, present only in the Jetson (l4t) container.
@@ -214,6 +223,7 @@ def _setup(context):
         )
     actions = _csi_cameras(context, mode) + actions
     actions += _arm_camera(context, mode)
+    actions += _status_light(context)
     if vio:
         actions.append(
             Node(
@@ -288,6 +298,21 @@ def _csi_cameras(context, mode):
         # Only use_sim_time: nothing the caller passes can change which cameras start.
         launch_arguments={"use_sim_time": "true" if mode == "sim" else "false"}.items(),
     )]
+
+
+def _status_light(context):
+    """The blink(1) mode light (status_light:=<pattern>), or why it isn't started."""
+    pattern = LaunchConfiguration("status_light").perform(context)
+    if pattern == "none":
+        return []
+    try:
+        get_package_prefix("status_light")
+    except PackageNotFoundError:
+        return [LogInfo(msg=(
+            f"rover.launch.py: status_light:={pattern} ignored, the status_light package isn't "
+            "built here (pixi run build --packages-select status_light)."))]
+    return [Node(package="status_light", executable="status_light", name="status_light",
+                 output="screen", parameters=[{"pattern": pattern}])]
 
 
 def _can_problem(context):

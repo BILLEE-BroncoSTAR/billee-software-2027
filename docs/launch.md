@@ -40,7 +40,8 @@ rover.launch.py
 ├─ people/people_rover.launch.py standalone:=false   (camera:=cloud|openpose|both, or vio:=true) → people-pose.md
 ├─ robot_localization ekf_node, navigation/config/ekf_real.yaml   (mode:=real vio:=true) → navigation.md
 ├─ camera_stream/csi_cameras.launch.py   (always, every camera in cameras.yaml) → cameras.md
-└─ arm_vision/arm_camera.launch.py standalone:=false   (arm_camera:=auto if a RealSense is on USB, or true) → arm-camera.md
+├─ arm_vision/arm_camera.launch.py standalone:=false   (arm_camera:=auto if a RealSense is on USB, or true) → arm-camera.md
+└─ status_light node   (status_light:=idle|teleop|autonomous|arrived|off; default none) → ros2_ws/src/status_light/README.md
 ```
 
 `camera:=` / `vio:=` are dropped with a log line where `zed_openpose_node` isn't built (any machine

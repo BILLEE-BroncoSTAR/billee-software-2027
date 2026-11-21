@@ -1,0 +1,4 @@
+# blink(1) USB LED (ThingM, 27b8:01ed): the rover's mode light (ros2_ws/src/status_light).
+# Lets non-root users (ros_user in the dev container) open it through hidraw / libusb.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="27b8", ATTRS{idProduct}=="01ed", MODE:="0666"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="27b8", ATTRS{idProduct}=="01ed", MODE:="0666"

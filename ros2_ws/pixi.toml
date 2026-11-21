@@ -25,6 +25,8 @@ pytest-cov = "*"
 ros-humble-turtlesim = ">=1.4.3,<2"
 
 [feature.linux-cuda.pypi-dependencies]
+# blink(1) USB LED driver for the mode light (src/status_light); pulls hidapi (prebuilt wheels).
+blink1 = ">=1.1,<2"
 argcomplete = "*"
 numpy = "*"
 empy = "*"
@@ -46,6 +48,8 @@ pytest-cov = "*"
 ros-humble-turtlesim = ">=1.4.3,<2"
 
 [feature.aarch64-cpu.pypi-dependencies]
+# blink(1) USB LED driver for the mode light (src/status_light); pulls hidapi (prebuilt wheels).
+blink1 = ">=1.1,<2"
 argcomplete = "*"
 numpy = "*"
 empy = "*"

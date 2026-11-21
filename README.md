@@ -152,6 +152,7 @@ ros2_ws/src/
   teleop/            gamepad → cmd_vel                                         docs/teleop.md
   navigation/        EKF pose estimate + Nav2 controller/planner servers       docs/navigation.md
   camera_stream/     CSI cameras → H.264 + JPEG                                docs/cameras.md
+  status_light/      blink(1) mode light (idle / teleop / autonomous / arrived) status_light/README.md
   perception/        zed_openpose, people, people_msgs                         docs/people-pose.md
                      arm_vision, arm_vision_msgs (arm RealSense + ArUco)       docs/arm-camera.md
                      zed2i (synthetic VIO)                                     docs/synthetic-vio.md
