@@ -320,7 +320,7 @@ Visualization Manager:
     Max Value: 1
     Median window: 5
     Min Value: 0
-    Name: Front (cam1)
+    Name: Top front (cam1)
     Normalize Range: true
     Topic:
       Depth: 1
@@ -362,7 +362,7 @@ Visualization Manager:
     Max Value: 1
     Median window: 5
     Min Value: 0
-    Name: Top front (cam4)
+    Name: Front (cam4)
     Normalize Range: true
     Topic:
       Depth: 1

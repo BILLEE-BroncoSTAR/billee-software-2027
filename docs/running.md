@@ -258,10 +258,10 @@ arguments (there's no argument to turn them off). Each publishes two streams:
 | Camera | Where | Foxglove: H.264, 1280×720 @ 30, ≤ 3 Mbit/s | RViz: JPEG, 640×360 @ 10 Hz |
 |---|---|---|---|
 | cam0 | rear left | `/cam0/video` | `/cam0/image_raw/compressed` |
-| cam1 | front (the ZED 2i also looks forward) | `/cam1/video` | `/cam1/image_raw/compressed` |
+| cam1 | top front | `/cam1/video` | `/cam1/image_raw/compressed` |
 | cam2 | rear right | `/cam2/video` | `/cam2/image_raw/compressed` |
 | cam3 | reverse | `/cam3/video` | `/cam3/image_raw/compressed` |
-| cam4 | top front | `/cam4/video` | `/cam4/image_raw/compressed` |
+| cam4 | front (the ZED 2i also looks forward) | `/cam4/video` | `/cam4/image_raw/compressed` |
 
 - **Connect the cameras only with the Jetson powered off**, then boot. They're detected only at
   boot, and plugging a CSI cable in with the power on can damage the camera or the port. On the

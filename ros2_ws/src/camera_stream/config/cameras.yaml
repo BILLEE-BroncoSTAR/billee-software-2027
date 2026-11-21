@@ -2,8 +2,8 @@ cameras:
   rear_left:
     name: "rear_left"
     flip: 0
-  front:
-    name: "front"
+  top_front:
+    name: "top_front"
     flip: 2
   rear_right:
     name: "rear_right"
@@ -11,6 +11,6 @@ cameras:
   reverse:
     name: "reverse"
     flip: 0
-  top_front:
-    name: "top_front"
+  front:
+    name: "front"
     flip: 0

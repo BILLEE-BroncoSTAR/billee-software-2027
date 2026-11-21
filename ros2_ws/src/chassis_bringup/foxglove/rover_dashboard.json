@@ -13,13 +13,13 @@
       }
     },
     "Image!cam1": {
-      "foxglovePanelTitle": "Front (cam1)",
+      "foxglovePanelTitle": "Top front (cam1)",
       "imageMode": {
         "imageTopic": "/cam1/video"
       }
     },
     "Image!cam4": {
-      "foxglovePanelTitle": "Top front (cam4)",
+      "foxglovePanelTitle": "Front (cam4)",
       "imageMode": {
         "imageTopic": "/cam4/video"
       }
@@ -195,11 +195,11 @@
       "direction": "column",
       "first": {
         "direction": "row",
-        "first": "Image!cam1",
+        "first": "Image!cam4",
         "second": {
           "direction": "row",
           "first": "Image!zed",
-          "second": "Image!cam4",
+          "second": "Image!cam1",
           "splitPercentage": 50
         },
         "splitPercentage": 33.3
