@@ -3,9 +3,12 @@
 Code: [`ros2_ws/src/camera_stream/`](../ros2_ws/src/camera_stream). How to connect, view and
 troubleshoot the cameras is in [running.md → CSI cameras](running.md#csi-cameras).
 
-Five Arducam IMX477 cameras on the Jetson's CSI ports. Every `rover.launch.py` starts them, in both
-modes, through `launch/csi_cameras.launch.py` (`csi_cameras:=0` turns them off). They only run in
-the Jetson container: elsewhere `rover.launch.py` skips them with a log line.
+Five Arducam IMX477 cameras on the Jetson's CSI ports. Every `rover.launch.py` (and so
+`onboard_test.launch.py`) starts all of them, in both modes, whatever its arguments, through
+`launch/csi_cameras.launch.py`. There is no argument to turn them off (`csi_cameras:=` is ignored
+with a log line), and in `mode:=real` a missing or down CAN interface skips only the drivetrain, so
+the cameras keep running. They only run in the Jetson container: elsewhere `rover.launch.py` skips
+them with a log line.
 
 ## Launch files
 
@@ -19,12 +22,13 @@ the Jetson container: elsewhere `rover.launch.py` skips them with a log line.
 | `cameras` | `5` | how many to start, cam0 upwards |
 | `source` | `argus` | `test`: a moving test pattern through the same encoders, no cameras needed |
 | `width` / `height` / `fps` | `1280` / `720` / `30` | H.264 stream |
-| `bitrate` | `3000000` | H.264 bits/s, constant whatever the scene |
+| `bitrate` | `3000000` | H.264 cap, bits/s: a busy scene never uses more |
+| `min_qp` | `22` | H.264 quality floor (0–51, lower = finer): a calm scene uses only the bits this quality needs. `0` = no floor (always ~`bitrate`) |
 | `jpeg_width` / `jpeg_height` / `jpeg_fps` | `640` / `360` / `10` | JPEG stream; `jpeg_fps:=0` turns it off |
 | `use_sim_time` | `false` | `rover.launch.py mode:=sim` sets it |
 
-The camera list is the `CAMERAS` table at the top of `csi_cameras.launch.py`: name and
-`flip_method` per camera. cam0 `front` and cam1 `rear_left` are mounted upside down (`2`, rotate
+The camera list is `config/cameras.yaml` in `camera_stream`: name and
+`flip_method` per camera. cam0 `rear_left` and cam1 `front` are mounted upside down (`2`, rotate
 180°); the rest are `0`. Other values: `4` mirror left-right, `6` mirror top-bottom, `1` / `3`
 rotate 90° (the stream becomes portrait, 720×1280). The flip happens in the Jetson's video hardware
 before encoding, so every viewer gets the corrected image. Edit the table and relaunch; with the
@@ -58,7 +62,16 @@ the node logs one warning saying why, publishes a 2 fps placeholder on both topi
 CAMERA" text, or colour bars without the pango plugin), and checks again every 10 s
 (`recheck_s`).
 
-Other node parameters: `encoding` (`h264` or `h265`), `gop` (30), `jpeg_quality` (70),
+**Compression.** H.264 High profile, the encoder's Slow preset, 2 reference frames, and VBR with a
+QP floor (`min_qp`, 22, close to visually lossless) capped at `bitrate`. At the same QP this is
+~35% smaller than the encoder's defaults (Baseline, UltraFast), and the floor stops it spending
+bits a calm scene doesn't need, where CBR padded every scene to `bitrate`. Measured on the rover
+(1280×720 @ 30, indoors, 2026-11-20): 2954 → 1564 kbit/s offline, ~1100 kbit/s live; a worst-case
+noise pattern stays at the 3 Mbit/s cap, at a quality no lower than the old CBR stream. Three
+cameras at once still encode in real time. H.265 would be smaller again, but Foxglove on a Linux
+ground station usually can't decode it.
+
+Other node parameters: `encoding` (`h264` or `h265`), `preset_level` (4, Slow), `gop` (30), `jpeg_quality` (70),
 `placeholder_fps` (2), `frame_id` (`camN_optical`), `gst_launch` (`/usr/bin/gst-launch-1.0`).
 
 ## `foxglove_msgs` (vendored)

@@ -1,7 +1,8 @@
 """All-in-one real-hardware test launch for the rover Jetson.
 
 Starts the real ODESC/CAN ros2_control stack, diff_drive_controller, local
-joystick teleop, RViz, and Foxglove on one computer.  This is for bench and
+joystick teleop, RViz, Foxglove and the CSI cameras (always on, see rover.launch.py) on one
+computer.  This is for bench and
 short field tests only; normal operations should run the joystick and viewers
 on the separate ground station.
 
@@ -36,11 +37,6 @@ def generate_launch_description():
     rviz = DeclareLaunchArgument(
         "rviz", default_value="true", description="Start RViz locally."
     )
-    csi_cameras = DeclareLaunchArgument(
-        "csi_cameras",
-        default_value="5",
-        description="CSI cameras to start (cam0..cam4); 0 = none. See rover.launch.py.",
-    )
     joy_control = DeclareLaunchArgument(
         "joy_control",
         default_value="true",
@@ -60,9 +56,8 @@ def generate_launch_description():
             "fault_policy": LaunchConfiguration("fault_policy"),
             "rviz": LaunchConfiguration("rviz"),
             "joy_control": LaunchConfiguration("joy_control"),
-            "csi_cameras": LaunchConfiguration("csi_cameras"),
         }.items(),
     )
 
     return LaunchDescription(
-        [can_interface, gear_ratio, fault_policy, rviz, joy_control, csi_cameras, rover])
+        [can_interface, gear_ratio, fault_policy, rviz, joy_control, rover])

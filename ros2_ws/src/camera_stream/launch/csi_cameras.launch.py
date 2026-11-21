@@ -4,8 +4,8 @@
     ros2 launch camera_stream csi_cameras.launch.py cameras:=3      # cam0..cam2
     ros2 launch camera_stream csi_cameras.launch.py source:=test    # test pattern, no cameras
 
-rover.launch.py includes this (csi_cameras:=5 by default). Camera N is Argus sensor-id N and
-publishes
+rover.launch.py always includes this, with every camera in the config. Camera N is Argus
+sensor-id N and publishes
     /camN/video                     foxglove_msgs/CompressedVideo, H.264 (Foxglove Image panel)
     /camN/image_raw/compressed      sensor_msgs/CompressedImage, JPEG (RViz Image display)
 
@@ -63,7 +63,12 @@ declare_args = [
     DeclareLaunchArgument("fps", default_value="30", description="Camera and H.264 frame rate."),
     DeclareLaunchArgument(
         "bitrate", default_value="3000000",
-        description="H.264 bits/s per camera (Foxglove). 5 x 3 Mbit/s fits on Wi-Fi."),
+        description="H.264 cap per camera, bits/s (Foxglove). A calm scene uses far less "
+        "(min_qp); a busy one never more. 5 x 3 Mbit/s fits on Wi-Fi."),
+    DeclareLaunchArgument(
+        "min_qp", default_value="22",
+        description="H.264 quality floor (0-51, lower = finer): the encoder spends no bits "
+        "beyond this quality. 22 is close to visually lossless; 0 = no floor (always ~bitrate)."),
     DeclareLaunchArgument(
         "jpeg_fps", default_value="10",
         description="JPEG frame rate per camera (RViz); 0 = no JPEG topics."),
@@ -80,7 +85,8 @@ def _cameras(context):
     if not 0 <= count <= len(CAMERAS):
         raise RuntimeError(f"csi_cameras.launch.py: cameras:={count}, expected 0-{len(CAMERAS)}")
     shared = {key: LaunchConfiguration(key) for key in (
-        "source", "width", "height", "fps", "bitrate", "jpeg_fps", "jpeg_width", "jpeg_height")}
+        "source", "width", "height", "fps", "bitrate", "min_qp", "jpeg_fps", "jpeg_width",
+        "jpeg_height")}
     return [
         Node(
             package="camera_stream",

@@ -39,7 +39,7 @@ rover.launch.py
 │  + teleop/teleop.launch.py                 (joy_control:=true)
 ├─ people/people_rover.launch.py standalone:=false   (camera:=cloud|openpose|both, or vio:=true) → people-pose.md
 ├─ robot_localization ekf_node, navigation/config/ekf_real.yaml   (mode:=real vio:=true) → navigation.md
-├─ camera_stream/csi_cameras.launch.py cameras:=<csi_cameras>     (unless csi_cameras:=0) → cameras.md
+├─ camera_stream/csi_cameras.launch.py   (always, every camera in cameras.yaml) → cameras.md
 └─ arm_vision/arm_camera.launch.py standalone:=false   (arm_camera:=auto if a RealSense is on USB, or true) → arm-camera.md
 ```
 
@@ -57,7 +57,7 @@ driver waits for the camera.
 | | `rviz` / `foxglove` | `false` / `false` | viewers via `viz.launch.py` |
 | | `description_pkg` / `xacro_file` / `controllers_file` | `robot_description` / `urdf/robot.urdf.xacro` / `config/controllers.yaml` | model and controller sources |
 | `onboard_test.launch.py` | `can_interface` / `gear_ratio` / `fault_policy` | `can2` / `48.0` / `warn` | passed to `rover.launch.py mode:=real` |
-| | `joy_control` / `rviz` / `csi_cameras` | `true` / `true` / `5` | teleop and RViz on the Jetson itself |
+| | `joy_control` / `rviz` | `true` / `true` | teleop and RViz on the Jetson itself (the CSI cameras always start) |
 | `viz.launch.py` | `rviz` / `foxglove` | `true` / `true` | RViz2 / foxglove_bridge on `:8765` |
 | | `use_sim_time` | `false` | `true` when viewing the sim |
 | | `rviz_config` / `fixed_frame` | `rviz/drivetrain.rviz` / config's own | `fixed_frame` overrides the config (`rviz2 -f`) |

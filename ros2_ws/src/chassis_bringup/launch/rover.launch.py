@@ -9,7 +9,6 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose  # + OpenPose
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + both
     ros2 launch chassis_bringup rover.launch.py mode:=real vio:=true         # + ZED VIO + EKF
-    ros2 launch chassis_bringup rover.launch.py mode:=real csi_cameras:=0    # no CSI cameras
     ros2 launch chassis_bringup rover.launch.py mode:=real arm_camera:=false # no arm RealSense
 
 `mode:=sim`  -> sim_gz.launch.py  (Gazebo + ign_ros2_control, no CAN)
@@ -26,12 +25,14 @@ its visual-inertial odometry (/zed/vio/odom), and a robot_localization EKF
 `odom -> base_footprint`. The wheel-odometry TF is then off (real.launch.py odom_tf:=false),
 since a TF frame can have only one publisher. It combines with any camera:=.
 
-The five CSI cameras (camera_stream/launch/csi_cameras.launch.py) start in both modes, since
-they are real hardware on the Jetson even when the drivetrain is simulated: /camN/video (H.264,
-Foxglove) and /camN/image_raw/compressed (JPEG, RViz) for cam0 front, cam1 rear_left,
-cam2 rear_right, cam3 top_front, cam4 reverse. A camera that isn't connected publishes a
-"NO CAMERA" placeholder and never stops the launch. Skipped where there are no NVIDIA camera
-plugins (any machine but the Jetson).
+The CSI cameras (camera_stream/launch/csi_cameras.launch.py, every camera in
+camera_stream/config/cameras.yaml) always start, whatever the arguments, since they are real
+hardware on the Jetson even when the drivetrain is simulated: /camN/video (H.264, Foxglove) and
+/camN/image_raw/compressed (JPEG, RViz). There is no argument to turn them off. A camera that
+isn't connected publishes a "NO CAMERA" placeholder and never stops the launch. In mode:=real, a
+missing or down CAN interface skips the drivetrain with an error instead of stopping the launch,
+so the cameras (and the foxglove bridge) keep running. Skipped only where there are no NVIDIA
+camera plugins (any machine but the Jetson).
 
 The arm's RealSense D435i (arm_vision/launch/arm_camera.launch.py) also starts in both modes:
 arm_camera:=auto (default) starts realsense2_camera + the ArUco node when a RealSense is on USB at
@@ -40,9 +41,14 @@ station's view of it: /arm_cam/aruco/image/compressed (annotated JPEG) and
 /arm_cam/color/image_raw/compressed, in Foxglove (arm_vision/foxglove/arm_camera.json) or RViz.
 """
 
+import importlib.util
 import os
 
-from ament_index_python.packages import PackageNotFoundError, get_package_prefix
+from ament_index_python.packages import (
+    PackageNotFoundError,
+    get_package_prefix,
+    get_package_share_directory,
+)
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
 from launch.conditions import IfCondition
@@ -118,13 +124,6 @@ declare_args = [
         "(odom_tf is then false). Any camera:=. Jetson (l4t) only.",
     ),
     DeclareLaunchArgument(
-        "csi_cameras",
-        default_value="5",
-        description="CSI cameras to start, cam0 upwards: cam0 front, cam1 rear_left, "
-        "cam2 rear_right, cam3 top_front, cam4 reverse; 0 = none. Both modes. A missing "
-        "camera publishes a NO CAMERA placeholder. Jetson (l4t) only.",
-    ),
-    DeclareLaunchArgument(
         "arm_camera",
         default_value="auto",
         choices=["auto", "true", "false"],
@@ -159,15 +158,25 @@ def _setup(context):
             "joy_control": LaunchConfiguration("joy_control"),
         }
     elif mode == "real":
-        target = "real.launch.py"
-        args = {
-            **common,
-            "can_interface": LaunchConfiguration("can_interface"),
-            "gear_ratio": LaunchConfiguration("gear_ratio"),
-            "fault_policy": LaunchConfiguration("fault_policy"),
-            # The EKF owns odom -> base_footprint; diff_drive_controller must not also send it.
-            "odom_tf": "false" if vio else LaunchConfiguration("odom_tf"),
-        }
+        can_problem = _can_problem(context)
+        if can_problem:
+            # real.launch.py would raise and take the whole launch down, cameras included.
+            # Start everything but the drivetrain, plus the bridge real.launch.py would start.
+            actions.append(LogInfo(msg=(
+                f"rover.launch.py: ERROR, drivetrain NOT started: {can_problem} "
+                "The cameras keep running; fix CAN and relaunch to drive.")))
+            target = "viz.launch.py"
+            args = {**common, "use_sim_time": "false"}
+        else:
+            target = "real.launch.py"
+            args = {
+                **common,
+                "can_interface": LaunchConfiguration("can_interface"),
+                "gear_ratio": LaunchConfiguration("gear_ratio"),
+                "fault_policy": LaunchConfiguration("fault_policy"),
+                # The EKF owns odom -> base_footprint; diff_drive_controller mustn't also send it.
+                "odom_tf": "false" if vio else LaunchConfiguration("odom_tf"),
+            }
         # real.launch.py has no teleop of its own (sim_gz does, via joy_control).
         actions.append(
             IncludeLaunchDescription(
@@ -202,7 +211,7 @@ def _setup(context):
                 }.items(),
             )
         )
-    actions += _csi_cameras(context, mode)
+    actions = _csi_cameras(context, mode) + actions
     actions += _arm_camera(context, mode)
     if vio:
         actions.append(
@@ -261,23 +270,37 @@ def _camera_and_vio(context, mode):
 
 
 def _csi_cameras(context, mode):
-    """The CSI camera nodes, or a log line saying why they're skipped here."""
-    count = LaunchConfiguration("csi_cameras").perform(context)
-    if count == "0":
-        return []
+    """The CSI camera nodes, always (no argument turns them off), or why they can't run here."""
+    logs = []
+    if "csi_cameras" in context.launch_configurations:
+        logs.append(LogInfo(msg=(
+            "rover.launch.py: csi_cameras:= is no longer an argument and is ignored: the CSI "
+            "cameras always start. Change the camera list in camera_stream/config/cameras.yaml.")))
     if not os.path.exists(CSI_PLUGIN):
-        return [LogInfo(msg=(
-            f"rover.launch.py: csi_cameras:={count} ignored, no NVIDIA camera plugins here "
+        return logs + [LogInfo(msg=(
+            "rover.launch.py: CSI cameras not started, no NVIDIA camera plugins here "
             "(the CSI cameras run in the Jetson container)."))]
-    return [IncludeLaunchDescription(
+    return logs + [IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [FindPackageShare("camera_stream"), "launch", "csi_cameras.launch.py"])),
-        launch_arguments={
-            "cameras": count,
-            "use_sim_time": "true" if mode == "sim" else "false",
-        }.items(),
+        # Only use_sim_time: nothing the caller passes can change which cameras start.
+        launch_arguments={"use_sim_time": "true" if mode == "sim" else "false"}.items(),
     )]
+
+
+def _can_problem(context):
+    """Run real.launch.py's CAN check here: its error message, or None if CAN is fine."""
+    path = os.path.join(
+        get_package_share_directory("chassis_bringup"), "launch", "real.launch.py")
+    spec = importlib.util.spec_from_file_location("chassis_bringup_real_launch", path)
+    real = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(real)
+    try:
+        real._check_can_interface(LaunchConfiguration("can_interface").perform(context))
+    except RuntimeError as e:
+        return str(e)
+    return None
 
 
 def _arm_camera(context, mode):

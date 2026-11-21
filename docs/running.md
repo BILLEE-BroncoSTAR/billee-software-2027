@@ -152,7 +152,9 @@ tooling/can-clear-faults  # clear latched ODESC errors (e.g. after power-up); --
 The USB-CAN adapter's number can change when it is replugged or the Jetson reboots (it has been
 `can3`). `ip -br link | grep can` on the host lists the interfaces. If the drivetrain isn't on
 `can2`, pass its interface to both: `tooling/can-up can3` and `rover.launch.py mode:=real
-can_interface:=can3`. A launch on a missing or down interface stops and lists the ones that exist.
+can_interface:=can3`. On a missing or down interface, `real.launch.py` stops and lists the ones that
+exist; `rover.launch.py` logs the same error and skips only the drivetrain, so the CSI cameras keep
+running.
 
 To bring it up on every boot instead:
 `sudo cp tooling/can2.service /etc/systemd/system/ && sudo systemctl enable --now can2.service`.
@@ -239,13 +241,13 @@ test the VIO alone: 1 m forward reads x ≈ 1, and a spin in place leaves x and 
 
 How the camera node works and its settings: [cameras.md](cameras.md).
 
-Five Arducam IMX477 CSI cameras start with every `rover.launch.py`, in both modes
-(`csi_cameras:=0` turns them off). Each publishes two streams:
+Five Arducam IMX477 CSI cameras start with every `rover.launch.py`, in both modes, whatever the
+arguments (there's no argument to turn them off). Each publishes two streams:
 
-| Camera | Where | Foxglove: H.264, 1280×720 @ 30, 3 Mbit/s | RViz: JPEG, 640×360 @ 10 Hz |
+| Camera | Where | Foxglove: H.264, 1280×720 @ 30, ≤ 3 Mbit/s | RViz: JPEG, 640×360 @ 10 Hz |
 |---|---|---|---|
-| cam0 | front (the ZED 2i also looks forward) | `/cam0/video` | `/cam0/image_raw/compressed` |
-| cam1 | rear left | `/cam1/video` | `/cam1/image_raw/compressed` |
+| cam0 | rear left | `/cam0/video` | `/cam0/image_raw/compressed` |
+| cam1 | front (the ZED 2i also looks forward) | `/cam1/video` | `/cam1/image_raw/compressed` |
 | cam2 | rear right | `/cam2/video` | `/cam2/image_raw/compressed` |
 | cam3 | top front | `/cam3/video` | `/cam3/image_raw/compressed` |
 | cam4 | reverse | `/cam4/video` | `/cam4/image_raw/compressed` |
@@ -265,7 +267,8 @@ Five Arducam IMX477 CSI cameras start with every `rover.launch.py`, in both mode
   so the dashboard's camera panels stay empty. RViz still works.
 - **Viewing:** Foxglove's `rover_dashboard.json` shows all five, with the ZED 2i on a second tab of
   the front view ([Foxglove](#foxglove)). In RViz, every `view:=` has an Image display per camera.
-- **Bandwidth:** 5 × 3 Mbit/s of H.264 while Foxglove shows the cameras. A JPEG stream crosses the
+- **Bandwidth:** at most 5 × 3 Mbit/s of H.264 while Foxglove shows the cameras, usually about a
+  third to half of that (quality-floored VBR, see [cameras.md](cameras.md)). A JPEG stream crosses the
   network only while RViz shows it.
 - **No cameras at hand:** `ros2 launch camera_stream csi_cameras.launch.py source:=test` sends a
   moving test pattern through the same encoders.
@@ -353,7 +356,6 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 | | `joy_control` | `false` | teleop on the Jetson. Only when no ground station runs it. |
 | | `rviz` / `gui` | `false` | RViz on the Jetson (needs a display) / the Gazebo window (`mode:=sim`) |
 | | `camera` | `none` | `cloud` (ZED point cloud), `openpose` (OpenPose) or `both`. Jetson container only. |
-| | `csi_cameras` | `5` | [CSI cameras](#csi-cameras) to start, cam0 upwards; `0` = none. Both modes. Jetson container only. |
 | | `vio` | `false` | `mode:=real` only: ZED visual-inertial odometry (`/zed/vio/odom`) + the EKF, which then publishes `odom → base_footprint` (forces `odom_tf:=false`). Jetson container only. |
 | | `arm_camera` | `auto` | The arm's RealSense D435i + ArUco (`/arm_cam/*`, [arm-camera.md](arm-camera.md)): `auto` = if a RealSense is on USB at launch, `true` = always (waits for it), `false` = never. Both modes. |
 | `ground_station.launch.py` | `use_sim_time` | `true` | `false` when the Jetson runs `mode:=real` |

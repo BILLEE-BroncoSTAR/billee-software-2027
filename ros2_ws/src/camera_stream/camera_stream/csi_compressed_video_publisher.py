@@ -6,7 +6,8 @@
 
 Publishes
   video_topic  foxglove_msgs/CompressedVideo, H.264 (Annex B), one frame per message:
-               Foxglove's Image panel. About `bitrate` bits/s whatever the scene.
+               Foxglove's Image panel. Only the bits the scene needs at QP >= min_qp, at most
+               `bitrate` bits/s.
   jpeg_topic   sensor_msgs/CompressedImage, JPEG at jpeg_width x jpeg_height, jpeg_fps: RViz's
                Image display (a topic ending in /compressed selects that transport) and Foxglove.
                DDS sends it only while something subscribes.
@@ -130,7 +131,9 @@ class CSICompressedVideoPublisher(Node):
         self.height = int(p("height", 720).value)
         self.fps = int(p("fps", 30).value)
         self.encoding = str(p("encoding", "h264").value).lower()
-        self.bitrate = int(p("bitrate", 3_000_000).value)
+        self.bitrate = int(p("bitrate", 3_000_000).value)  # the cap, not a target (see _pipeline)
+        self.min_qp = int(p("min_qp", 22).value)
+        self.preset_level = int(p("preset_level", 4).value)
         self.gop = int(p("gop", 30).value)
         self.flip_method = int(p("flip_method", 0).value)
         self.jpeg_width = int(p("jpeg_width", 640).value)
@@ -147,6 +150,10 @@ class CSICompressedVideoPublisher(Node):
             raise ValueError(f"source must be argus or test, not {self.source!r}")
         if not 0 <= self.flip_method <= 7:
             raise ValueError(f"flip_method must be 0-7 (nvvidconv), not {self.flip_method}")
+        if not 0 <= self.min_qp <= 51:
+            raise ValueError(f"min_qp must be 0-51, not {self.min_qp}")
+        if not 1 <= self.preset_level <= 4:
+            raise ValueError(f"preset_level must be 1-4, not {self.preset_level}")
         self.label = f"cam{self.sensor_id} {self.cam_name}"
 
         # Best effort, newest frames only: a slow link drops frames instead of building latency.
@@ -235,11 +242,25 @@ class CSICompressedVideoPublisher(Node):
             if self.flip_method:
                 # In the Jetson's video hardware (VIC), before encoding: every viewer gets it.
                 src += ["!", "nvvidconv", f"flip-method={self.flip_method}", "!", nvmm_out]
-        enc = "nvv4l2h264enc" if self.encoding == "h264" else "nvv4l2h265enc"
+        # Quality-capped VBR: the encoder never quantizes finer than min_qp (22 is close to
+        # visually lossless), so a calm scene uses only the bits it needs, and never sends more
+        # than `bitrate`, so a busy scene can't flood the link. Plain CBR pads every scene to
+        # `bitrate`; plain VBR on NVENC doesn't undershoot. High profile (CABAC, 8x8 transform),
+        # the Slow preset and 2 reference frames are ~35% smaller at the same QP than the
+        # encoder's defaults (Baseline, UltraFast, 1). Measured on the rover's IMX477s,
+        # 1280x720@30 indoors: 2954 -> 1564 kbit/s. min_qp:=0 removes the floor (always ~bitrate).
+        qp = f"{self.min_qp},51"
+        if self.encoding == "h264":
+            enc = ["nvv4l2h264enc", "profile=4"]  # High
+        else:
+            enc = ["nvv4l2h265enc"]  # Main is its default
+        enc += [f"bitrate={self.bitrate}", f"peak-bitrate={self.bitrate}", "control-rate=0",
+                f"preset-level={self.preset_level}", "num-Ref-Frames=2",
+                f"qp-range={qp}:{qp}:{qp}"]
         argv = src + [
             "!", "tee", "name=t",
             "t.", "!", "queue", "max-size-buffers=2", "leaky=downstream",
-            "!", enc, f"bitrate={self.bitrate}", "control-rate=1", f"iframeinterval={gop}",
+            "!", *enc, f"iframeinterval={gop}",
             f"idrinterval={gop}", "insert-sps-pps=true", "insert-aud=true", "num-B-Frames=0",
             "!", f"video/x-{self.encoding},stream-format=byte-stream",
             "!", "fdsink", "fd=1", "sync=false",
@@ -340,8 +361,8 @@ class CSICompressedVideoPublisher(Node):
             self.get_logger().info(
                 f"{self.label}: {self.source} sensor-id={self.sensor_id}"
                 + (f" flip-method={self.flip_method}" if self.flip_method else "")
-                + f" -> {self.encoding} {out_w}x{out_h}@{self.fps} {self.bitrate // 1000} kbit/s "
-                f"on {self.video_topic}"
+                + f" -> {self.encoding} {out_w}x{out_h}@{self.fps} QP>={self.min_qp}, "
+                f"<={self.bitrate // 1000} kbit/s on {self.video_topic}"
                 + (f", JPEG {jpeg_w}x{jpeg_h}@{self.jpeg_fps} on {self.jpeg_topic}"
                    if self.jpeg_pub else ""))
         next_check = time.monotonic() + 1.0
