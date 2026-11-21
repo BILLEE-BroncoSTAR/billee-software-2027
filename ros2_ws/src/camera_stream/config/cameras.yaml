@@ -1,9 +1,9 @@
 cameras:
-  front:
-    name: "front"
-    flip: 2
   rear_left:
     name: "rear_left"
+    flip: 2
+  front:
+    name: "front"
     flip: 2
   rear_right:
     name: "rear_right"

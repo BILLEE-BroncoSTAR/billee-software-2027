@@ -1,7 +1,7 @@
 {
   "configById": {
     "Image!cam0": {
-      "foxglovePanelTitle": "Front (cam0)",
+      "foxglovePanelTitle": "Rear left (cam0)",
       "imageMode": {
         "imageTopic": "/cam0/video"
       }
@@ -13,7 +13,7 @@
       }
     },
     "Image!cam1": {
-      "foxglovePanelTitle": "Rear left (cam1)",
+      "foxglovePanelTitle": "Front (cam1)",
       "imageMode": {
         "imageTopic": "/cam1/video"
       }
@@ -195,7 +195,7 @@
       "direction": "column",
       "first": {
         "direction": "row",
-        "first": "Image!cam0",
+        "first": "Image!cam1",
         "second": {
           "direction": "row",
           "first": "Image!zed",
@@ -206,7 +206,7 @@
       },
       "second": {
         "direction": "row",
-        "first": "Image!cam1",
+        "first": "Image!cam0",
         "second": {
           "direction": "row",
           "first": "Image!cam4",
