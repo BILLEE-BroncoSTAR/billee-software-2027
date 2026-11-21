@@ -8,9 +8,9 @@ cameras:
   rear_right:
     name: "rear_right"
     flip: 0
-  top_front:
-    name: "top_front"
-    flip: 0
   reverse:
     name: "reverse"
+    flip: 0
+  top_front:
+    name: "top_front"
     flip: 0
