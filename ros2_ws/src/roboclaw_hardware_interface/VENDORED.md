@@ -32,6 +32,27 @@ Local changes are marked `BILLEE:` in the source.
   whatever a still-active controller left in the command interfaces. `write()` now sends
   zero speed unless the hardware is ACTIVE.
 - Address-range error message corrected to [128:135].
+- **Per-joint Jetson GPIO limit-switch input.** `third_party/JetsonGPIO` is a pinned Git
+  submodule, linked directly into this package. A RoboClaw `<joint>` may have an optional
+  `limit_switch` parameter containing a non-negative Jetson **BOARD** pin number. The hardware
+  plugin creates a `LimitSwitch` owned by that joint's `MotorJoint`; it is deliberately only an
+  input at this layer, with no automatic change to RoboClaw commands.
+
+### Jetson GPIO deployment
+
+Configure actual pins only after verifying their wiring and polarity. `limit_switch` uses
+JetsonGPIO's `BOARD` numbering, and is configured per RoboClaw joint by the ros2_control
+hardware description. For example, the generated joint parameter from `arm_axes.yaml` can be
+`limit_switch: 1`. The `MotorJoint` owns the resulting `LimitSwitch`; future control code can
+call `is_pressed()` to choose how that axis should respond. The policy for stopping or reversing
+an axis remains deliberately outside the generic hardware plugin.
+
+The regular colcon install deliberately does **not** write system udev files. It installs the
+upstream `99-gpio.rules` beside this package at
+`share/JetsonGPIO/udev/99-gpio.rules`; deploy that rule through the Jetson's system
+configuration, then reload udev rules, so the ROS user can access GPIO without running the
+controller as root. GPIO control is supplementary: any e-stop or critical motor-enable circuit
+must still be electrically fail-safe.
 
 None of this helps if `ros2_control_node` is killed (`kill -9`, a crash, a Jetson power
 loss): the RoboClaws keep the last speed. **Set each RoboClaw's serial timeout** (Motion

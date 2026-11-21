@@ -30,11 +30,35 @@ include_directories(
 # Add roboclaw hardware interface shared library
 add_library(${PROJECT_NAME} SHARED
   src/roboclaw_hardware_interface.cpp
+  src/limit_switch.cpp
   src/roboclaw_unit.cpp
   src/motor_joint.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} roboclaw_serial)
+# JetsonGPIO is vendored at the repository root rather than in ros2_ws/src:
+# it is a CMake library, not an ament package.  Do not install its udev rules
+# during a colcon install; deployment performs that one privileged setup step.
+set(BUILD_EXAMPLES OFF CACHE BOOL "Build JetsonGPIO examples" FORCE)
+set(JETSON_GPIO_POST_INSTALL OFF CACHE BOOL "Install JetsonGPIO udev permissions" FORCE)
+# Do not let a colcon install write into /lib/udev. Keep the rule with this
+# package; deployment can copy it to the system deliberately on a Jetson.
+set(UDEVRULES_INSTALL_DIR share/JetsonGPIO/udev CACHE STRING "JetsonGPIO udev rule install dir" FORCE)
+add_subdirectory(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../../third_party/JetsonGPIO
+  ${CMAKE_CURRENT_BINARY_DIR}/jetson_gpio
+  EXCLUDE_FROM_ALL
+)
+# JetsonGPIO's GPIOEvent private header uses uint64_t without including
+# <cstdint>. Keep the vendored submodule pristine while making that upstream
+# omission explicit for GCC and Clang builds.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(JetsonGPIO PRIVATE -include cstdint)
+endif()
+
+target_link_libraries(${PROJECT_NAME}
+  roboclaw_serial
+  JetsonGPIO::JetsonGPIO
+)
 
 # Add library dependencies
 ament_target_dependencies(${PROJECT_NAME}

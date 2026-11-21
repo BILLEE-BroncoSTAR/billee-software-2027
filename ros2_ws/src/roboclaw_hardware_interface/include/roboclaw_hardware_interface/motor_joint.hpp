@@ -19,7 +19,10 @@
 
 #include <array>
 #include <memory>
+#include <optional>
 #include <string>
+
+#include "roboclaw_hardware_interface/limit_switch.hpp"
 
 namespace roboclaw_hardware_interface
 {
@@ -39,6 +42,9 @@ private:
   int32_t prior_encoder_count_;
   bool initialized_encoder_count_ = false;
 
+  // Optional Jetson GPIO limit switch configured for this hardware joint.
+  std::unique_ptr<LimitSwitch> limit_switch_;
+
 public:
   typedef std::shared_ptr<MotorJoint> SharedPtr;
 
@@ -46,7 +52,9 @@ public:
   const std::string name;
 
   // Constructor
-  MotorJoint(const std::string joint_name, const int32_t qppr);
+  MotorJoint(
+    const std::string joint_name, const int32_t qppr,
+    std::optional<int> limit_switch_pin = std::nullopt);
 
   // Return the tick rate required to execute the current velocity command
   int32_t getTickRateCommand() const;
@@ -57,6 +65,7 @@ public:
   // Accessor methods to enable ros2_control to access joint interface pointers
   inline double * getPositionStatePtr() {return &position_state_;}
   inline double * getVelocityCommandPtr() {return &velocity_command_;}
+  const LimitSwitch * getLimitSwitch() const {return limit_switch_.get();}
 };
 }  // namespace roboclaw_hardware_interface
 

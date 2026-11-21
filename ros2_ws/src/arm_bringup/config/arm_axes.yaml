@@ -43,6 +43,9 @@
 #   tuning              record of the values saved in the RoboClaw's EEPROM via
 #                       Motion Studio. NOT pushed by the launch; kept here so a
 #                       replaced / factory-reset unit can be restored.
+#   limit_switch        optional Jetson GPIO ID for this hardware joint. If 
+#                       activated motion of joint is disabled.
+
 # ---------------------------------------------------------------------------
 
 axes:

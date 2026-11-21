@@ -17,9 +17,13 @@
 namespace roboclaw_hardware_interface
 {
 
-MotorJoint::MotorJoint(const std::string joint_name, const int32_t qppr)
+MotorJoint::MotorJoint(
+  const std::string joint_name, const int32_t qppr, std::optional<int> limit_switch_pin)
 : ticks_per_radian_(static_cast<double>(qppr) * 0.5 * M_1_PI), name(joint_name)
 {
+  if (limit_switch_pin) {
+    limit_switch_ = std::make_unique<LimitSwitch>(*limit_switch_pin);
+  }
 }
 
 int32_t MotorJoint::getTickRateCommand() const

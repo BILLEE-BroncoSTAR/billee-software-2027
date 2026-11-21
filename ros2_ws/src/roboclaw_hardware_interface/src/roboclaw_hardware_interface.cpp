@@ -14,6 +14,7 @@
 
 #include "roboclaw_hardware_interface/roboclaw_hardware_interface.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <roboclaw_serial/device.hpp>
 
@@ -264,6 +265,22 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
               " provided).");
     }
 
+    std::optional<int> limit_switch_pin;
+    const auto limit_switch = joint.parameters.find("limit_switch");
+    if (limit_switch != joint.parameters.end()) {
+      try {
+        size_t parsed = 0;
+        const int pin = std::stoi(limit_switch->second, &parsed);
+        if (parsed != limit_switch->second.size() || pin < 0) {
+          throw std::invalid_argument("invalid limit switch pin");
+        }
+        limit_switch_pin = pin;
+      } catch (const std::exception &) {
+        throw std::runtime_error(
+                "limit_switch must be a non-negative integer GPIO ID for " + joint.name);
+      }
+    }
+
     // Ensure that a key exists for this address, otherwise initialize default values
     roboclaw_config.emplace(
       roboclaw_address,
@@ -273,7 +290,7 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
     if (!roboclaw_config[roboclaw_address][motor_type]) {
       // Set configuration parameters for this motor
       roboclaw_config[roboclaw_address][motor_type] =
-        std::make_shared<MotorJoint>(joint.name, qppr);
+        std::make_shared<MotorJoint>(joint.name, qppr, limit_switch_pin);
     } else {
       throw std::runtime_error(
               "Bad motor type " + motor_type + " specified for joint " + joint.name);

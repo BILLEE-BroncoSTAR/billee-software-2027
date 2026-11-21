@@ -81,6 +81,14 @@ def _load_axes(path):
                 # The RoboClaw driver only accepts an integer counts-per-joint-rev.
                 axis["qppr_rounding"] = qppr
             axis["qppr"] = int(round(qppr)) * direction
+            if "limit_switch" in axis:
+                try:
+                    limit_switch = int(axis["limit_switch"])
+                except (TypeError, ValueError) as e:
+                    raise RuntimeError(f"{where}: limit_switch must be an integer GPIO ID") from e
+                if limit_switch < 0:
+                    raise RuntimeError(f"{where}: limit_switch must be non-negative")
+                axis["limit_switch"] = limit_switch
         else:
             raise RuntimeError(f"{where}: driver must be 'pxx' or 'roboclaw', got {driver!r}")
     return axes
@@ -118,8 +126,9 @@ def _robot_description(can_axes, can_interface, rc_axes, roboclaw_port, roboclaw
       <param name="serial_port">{roboclaw_port}</param>
       <param name="baud_rate">{roboclaw_baud}</param>"""
         joints = "\n".join(
-            _joint_xml(a["joint"],
-                       {"address": a["address"], "qppr": a["qppr"], "motor_type": a["channel"]},
+            _joint_xml(a["joint"], {
+                       "address": a["address"], "qppr": a["qppr"], "motor_type": a["channel"],
+                       **({"limit_switch": a["limit_switch"]} if "limit_switch" in a else {})},
                        "velocity", ["position"])
             for a in rc_axes)
         systems.append(f"""  <ros2_control name="ArmRoboClaw" type="system">
