@@ -8,8 +8,8 @@ and `sim_gz.launch.py` are in [running.md → Launch options](running.md#launch-
 |---|---|
 | `sim_gz.launch.py` | Gazebo + rover + `diff_drive_controller`, gamepad teleop (`joy_control`). Also `navigation` (default `true`: synthetic VIO + EKF, the `odom → base_footprint` TF source, and the Nav2 controller/planner servers). Optional: `gui` (Gazebo window, default `true`), `foxglove`, `rviz`, `odesc_shadow` (always on `vcan0`) |
 | `real.launch.py` | Standalone `controller_manager` + `odesc/OdescSystemHardware` (`can_interface`: `can2` / `vcan0`), `gear_ratio`, `foxglove`, `rviz`. `odom_tf` (default `true`): `diff_drive_controller` publishes `odom → base_footprint` from wheel odometry; `rover.launch.py vio:=true` hands it to the EKF instead |
-| `rover.launch.py` | `mode:=sim` → `sim_gz` (`gui` default `false`), `mode:=real` → `real`, always with the Foxglove bridge. `camera:=cloud\|openpose\|both` adds the ZED point cloud, OpenPose, or both through `people/launch/people_rover.launch.py standalone:=false`; skipped with a log line if `zed_openpose_node` isn't built (not the Jetson container). `joy_control` defaults to `false` (the ground station runs teleop) |
-| `ground_station.launch.py` | RViz + Foxglove bridge + gamepad teleop. `view:=drivetrain\|cloud\|openpose\|both` picks the RViz layout. Optional: F' GDS browser tab (`fprime_gds:=true`) |
+| `rover.launch.py` | `mode:=sim` → `sim_gz` (`gui` default `false`), `mode:=real` → `real`, always with the Foxglove bridge. `camera:=video\|cloud\|openpose\|both` adds the ZED 2i: its video (`/zed/image/compressed`), + the point cloud, + OpenPose, or + both, through `people/launch/people_rover.launch.py standalone:=false`; skipped with a log line if `zed_openpose_node` isn't built (not the Jetson container). `joy_control` defaults to `false` (the ground station runs teleop) |
+| `ground_station.launch.py` | RViz + Foxglove bridge + gamepad teleop. `view:=drivetrain\|video\|cloud\|openpose\|both` picks the RViz layout. Optional: F' GDS browser tab (`fprime_gds:=true`) |
 | `viz.launch.py` | RViz and/or the Foxglove bridge on their own |
 | `onboard_test.launch.py` | real drivetrain + teleop + viewers, all on the rover (bench tests) |
 | `odesc_shadow.launch.py` | included by `sim_gz odesc_shadow:=true`: a namespaced ODESC controller manager on `vcan0` plus the ODrive emulator, fed the same `cmd_vel` as Gazebo |
@@ -37,7 +37,7 @@ rover.launch.py
 │    ├─ robot_state_publisher, ros2_control_node (OdescSystemHardware), controller spawners
 │    └─ viz.launch.py
 │  + teleop/teleop.launch.py                 (joy_control:=true)
-├─ people/people_rover.launch.py standalone:=false   (camera:=cloud|openpose|both, or vio:=true) → people-pose.md
+├─ people/people_rover.launch.py standalone:=false   (camera:=video|cloud|openpose|both, or vio:=true) → people-pose.md
 ├─ robot_localization ekf_node, navigation/config/ekf_real.yaml   (mode:=real vio:=true) → navigation.md
 ├─ camera_stream/csi_cameras.launch.py   (always, every camera in cameras.yaml) → cameras.md
 ├─ arm_vision/arm_camera.launch.py standalone:=false   (arm_camera:=auto if a RealSense is on USB, or true) → arm-camera.md

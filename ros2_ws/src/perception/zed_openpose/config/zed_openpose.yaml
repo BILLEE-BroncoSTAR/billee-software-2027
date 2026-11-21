@@ -18,6 +18,10 @@ zed_openpose:
     # Modes. enable_pose: false = camera only (no OpenPose), launch arg openpose:= overrides.
     enable_pose: true
     cloud_max_hz: 10.0           # cap on /zed/points rate; 0 = every frame (~290 kB each)
+    # The ZED's video on /zed/image/compressed (launch arg video:= overrides): OpenPose's rendering
+    # while OpenPose runs, else the left image (JPEG, jpeg_quality) at most video_max_hz.
+    publish_video: false
+    video_max_hz: 10.0           # ~40 kB a frame at 720x405: ~3 Mbit/s over the Prism link
 
     # ROS port additions.
     camera_resolution: HD720     # HD2K, HD1080, HD720, VGA, AUTO (the sample grabbed HD2K)
@@ -28,7 +32,7 @@ zed_openpose:
     zed_frame: zed_left_camera_frame
     target_frame: base_link      # frame of /people/skeletons and /people/markers
     cloud_step: 4                # keep every Nth pixel in /zed/points
-    jpeg_quality: 80             # /people/debug_image/compressed
+    jpeg_quality: 80             # /people/debug_image/compressed and /zed/image/compressed
 
     # VIO: the SDK's positional tracking -> base_frame's pose in odom_frame, for the EKF
     # (navigation/config/ekf_real.yaml). Same format as the synthetic VIO (zed2i).

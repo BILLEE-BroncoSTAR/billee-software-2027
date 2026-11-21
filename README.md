@@ -96,11 +96,12 @@ setup of both machines (clone, container, build, OpenPose models) is in
 | Where | Command |
 |---|---|
 | Jetson host (not the container), once per boot | `cd ~/billee-software-2027 && tooling/can-up` |
-| Jetson container | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=<none\|cloud\|openpose\|both>` |
-| Ground-station container | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=<drivetrain\|cloud\|openpose\|both>` |
+| Jetson container | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=<none\|video\|cloud\|openpose\|both>` |
+| Ground-station container | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=<drivetrain\|video\|cloud\|openpose\|both>` |
 
-- `camera:=cloud` adds the ZED point cloud, `camera:=openpose` OpenPose, `camera:=both` both. Use
-  the ground station's `view:=` with the same name (`camera:=none` ↔ `view:=drivetrain`).
+- The ZED 2i: `camera:=video` is its video alone, `cloud` video + point cloud, `openpose` video +
+  OpenPose (the video then shows the skeletons), `both` video + point cloud + OpenPose. Use the
+  ground station's `view:=` with the same name (`camera:=none` ↔ `view:=drivetrain`).
 - No motors connected: use the virtual bus instead ([docs/running.md → CAN testing without motors](docs/running.md#can-testing-without-motors)).
 - On the ground-station **host**, open Foxglove Studio, connect to `ws://localhost:8765`, and
   import `ros2_ws/src/chassis_bringup/foxglove/rover_dashboard.json`, the one layout for every

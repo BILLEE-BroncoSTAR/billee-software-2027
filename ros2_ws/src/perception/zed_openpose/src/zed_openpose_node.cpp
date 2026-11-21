@@ -7,6 +7,9 @@
 //   /people/skeletons              people_msgs/Skeletons  everyone, 2D + 3D joints in target_frame
 //   /people/markers                MarkerArray            3D skeletons (the sample's OpenGL view)
 //   /people/debug_image(/compressed)                      OpenPose's rendering (opencv_display)
+//   /zed/image/compressed          CompressedImage        the ZED's video (publish_video), ROS
+//                                                         addition: OpenPose's rendering while
+//                                                         OpenPose runs, else the left image
 //   /zed/points                    PointCloud2            optional (ogl_ptcloud)
 //   /zed/depth_image               Image                  optional (depth_display)
 //   /zed/vio/odom                  Odometry               optional (publish_odom), ROS addition
@@ -14,7 +17,8 @@
 // frame with ROS axes, and the URDF says where camera_link sits on the rover.
 //
 // enable_pose:=false is the camera-only mode: no OpenPose thread, no model load, no /people/*;
-// the ZED thread grabs at the camera's own rate and only publishes /zed/points (+ depth).
+// the ZED thread grabs at the camera's own rate and publishes /zed/points, the video (JPEG of the
+// left image, at most video_max_hz) and/or the depth image, as enabled.
 //
 // publish_odom:=true turns on the SDK's positional tracking (visual-inertial odometry) and
 // publishes base_footprint's pose in odom for the EKF, in the synthetic VIO's (zed2i) format.
@@ -177,6 +181,8 @@ public:
     publish_depth_ = declare_parameter<bool>("publish_depth", false);    // depth_display
     enable_pose_ = declare_parameter<bool>("enable_pose", true);          // false: camera only
     cloud_max_hz_ = declare_parameter<double>("cloud_max_hz", 10.0);     // 0 = every frame
+    publish_video_ = declare_parameter<bool>("publish_video", false);    // /zed/image/compressed
+    video_max_hz_ = declare_parameter<double>("video_max_hz", 10.0);     // without OpenPose
     // ROS additions.
     camera_resolution_ = declare_parameter<std::string>("camera_resolution", "HD720");
     depth_mode_ = declare_parameter<std::string>("depth_mode", "ULTRA");
@@ -205,9 +211,9 @@ public:
     if (scale_gap_ <= 0. && scale_number_ > 1) {
       throw std::invalid_argument("scale_gap must be > 0 when scale_number > 1");
     }
-    if (!enable_pose_ && !publish_cloud_ && !publish_depth_ && !publish_odom_) {
+    if (!enable_pose_ && !publish_cloud_ && !publish_depth_ && !publish_odom_ && !publish_video_) {
       throw std::invalid_argument(
-        "enable_pose, publish_cloud, publish_depth and publish_odom are all false: "
+        "enable_pose, publish_cloud, publish_depth, publish_odom and publish_video are all false: "
         "nothing to publish");
     }
     if (min_position_var_ <= 0. || min_yaw_var_ <= 0.) {
@@ -225,6 +231,9 @@ public:
     }
     if (publish_cloud_) {
       cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("/zed/points", 1);
+    }
+    if (publish_video_) {
+      video_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>("/zed/image/compressed", 1);
     }
     if (publish_depth_) {
       depth_pub_ = create_publisher<sensor_msgs::msg::Image>("/zed/depth_image", 1);
@@ -245,7 +254,9 @@ public:
     if (enable_pose_) {
       openpose_thread_ = std::thread(&ZedOpenPoseNode::findpose, this);
     } else {
-      RCLCPP_INFO(get_logger(), "Camera-only mode (enable_pose:=false): OpenPose not loaded");
+      RCLCPP_INFO(
+        get_logger(), "Camera-only mode (enable_pose:=false): OpenPose not loaded%s",
+        publish_video_ ? "; video is the left image on /zed/image/compressed" : "");
     }
   }
 
@@ -332,8 +343,8 @@ private:
     rt.enable_depth = true;
     rt.measure3D_reference_frame = sl::REFERENCE_FRAME::CAMERA;
 
-    sl::Mat img_buffer, xyz_buffer, depth_img_buffer;
-    cv::Mat input_bgr;
+    sl::Mat img_buffer, xyz_buffer, depth_img_buffer, video_buffer;
+    cv::Mat input_bgr, video_bgr;
     op::ScaleAndSizeExtractor scale_and_size{
       net_input_size_, 1.f, output_size_, scale_number_, scale_gap_};
     op::CvMatToOpInput cv_to_input{pose_model_};
@@ -346,6 +357,11 @@ private:
     const double cloud_period = cloud_max_hz_ > 0. ? 1.0 / cloud_max_hz_ : 0.;
     bool cloud_sent = false;
     rclcpp::Time last_cloud;
+    // With OpenPose the video is its rendering (publish_debug_image); without, the left image.
+    const bool plain_video = publish_video_ && !enable_pose_;
+    const double video_period = video_max_hz_ > 0. ? 1.0 / video_max_hz_ : 0.;
+    bool video_sent = false;
+    rclcpp::Time last_video;
 
     while (!quit_ && rclcpp::ok()) {
       // With OpenPose, grab only once it has taken the last frame; camera-only grabs freely.
@@ -392,6 +408,13 @@ private:
         publish_cloud(xyz_buffer, stamp);
         last_cloud = stamp;
         cloud_sent = true;
+      }
+      if (plain_video && (!video_sent || (stamp - last_video).seconds() >= video_period)) {
+        zed_.retrieveImage(video_buffer, sl::VIEW::LEFT, sl::MEM::CPU, resolution);
+        cv::cvtColor(sl_to_cv(video_buffer), video_bgr, cv::COLOR_BGRA2BGR);
+        publish_video(video_bgr, stamp);
+        last_video = stamp;
+        video_sent = true;
       }
       RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 10000, "ZED %.1f fps", zed_.getCurrentFPS());
       if (!pose_frame) {continue;}
@@ -543,6 +566,19 @@ private:
     jpeg.format = "jpeg";
     cv::imencode(".jpg", bgr, jpeg.data, {cv::IMWRITE_JPEG_QUALITY, jpeg_quality_});
     compressed_pub_->publish(jpeg);
+    // The rendering is also the ZED's video: same JPEG, no second encode.
+    if (video_pub_) {video_pub_->publish(jpeg);}
+  }
+
+  // The ZED's video without OpenPose: the left image as JPEG on /zed/image/compressed.
+  void publish_video(const cv::Mat & bgr, const rclcpp::Time & stamp)
+  {
+    sensor_msgs::msg::CompressedImage jpeg;
+    jpeg.header.stamp = stamp;
+    jpeg.header.frame_id = zed_frame_;
+    jpeg.format = "jpeg";
+    cv::imencode(".jpg", bgr, jpeg.data, {cv::IMWRITE_JPEG_QUALITY, jpeg_quality_});
+    video_pub_->publish(jpeg);
   }
 
   void publish_image(
@@ -657,8 +693,9 @@ private:
   std::string model_pose_, model_folder_, net_resolution_, output_resolution_flag_, svo_path_;
   std::string camera_resolution_, depth_mode_, camera_frame_, zed_frame_, target_frame_;
   int num_gpu_start_, scale_number_, image_width_, image_height_, cloud_step_, jpeg_quality_;
-  double scale_gap_, render_threshold_, alpha_pose_, cloud_max_hz_;
+  double scale_gap_, render_threshold_, alpha_pose_, cloud_max_hz_, video_max_hz_;
   bool disable_blending_, publish_cloud_, publish_depth_, enable_pose_, use_ros_clock_;
+  bool publish_video_;
   bool publish_odom_;
   std::string odom_topic_, odom_frame_, base_frame_, tracking_mode_;
   double min_position_var_, min_yaw_var_;
@@ -679,7 +716,7 @@ private:
   rclcpp::Publisher<people_msgs::msg::Skeletons>::SharedPtr skeletons_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_, depth_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr compressed_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr compressed_pub_, video_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;

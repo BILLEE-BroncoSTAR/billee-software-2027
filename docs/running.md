@@ -52,7 +52,7 @@ on the machine named above it. The only exceptions are marked **host** (outside 
    checksum-verified). They aren't in git (`ros2_ws/models/` is ignored), so every new clone needs
    this, even on a Jetson where another clone already has them. Without them, `camera:=openpose`
    and `camera:=both` stop about 5 s after launch with `Prototxt file not found`, and the point
-   cloud goes down with them. `camera:=cloud` doesn't need the models.
+   cloud goes down with them. `camera:=video` and `camera:=cloud` don't need the models.
    ```bash
    src/perception/zed_openpose/scripts/get_openpose_models.sh   # in ros2_ws, inside pixi shell -e l4t
    ls models/openpose/pose/body_25/   # pose_deploy.prototxt  pose_iter_584000.caffemodel
@@ -131,9 +131,10 @@ skeletons are drawn on the simulated rover.
 | Runs | Command |
 |---|---|
 | sim | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py` |
-| sim + ZED point cloud | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=cloud` |
-| sim + OpenPose | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=openpose` |
-| sim + ZED point cloud + OpenPose | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=both` |
+| sim + ZED video | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=video` |
+| sim + ZED video + point cloud | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=cloud` |
+| sim + ZED video + OpenPose | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=openpose` |
+| sim + ZED video + point cloud + OpenPose | `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup rover.launch.py camera:=both` |
 
 `xvfb-run` gives Gazebo the X display it needs without a monitor; `vglrun` renders on the GPU. The
 drivetrain is ready when the log shows `diff_drive_controller` active (about 30 s). The sim runs
@@ -144,6 +145,7 @@ at about 0.33× real time.
 | Jetson `camera:=` | Command |
 |---|---|
 | none (default) | `ros2 launch chassis_bringup ground_station.launch.py` |
+| `video` | `ros2 launch chassis_bringup ground_station.launch.py view:=video` |
 | `cloud` | `ros2 launch chassis_bringup ground_station.launch.py view:=cloud` |
 | `openpose` | `ros2 launch chassis_bringup ground_station.launch.py view:=openpose` |
 | `both` | `ros2 launch chassis_bringup ground_station.launch.py view:=both` |
@@ -178,9 +180,10 @@ To bring it up on every boot instead:
 | Drivetrain | Camera | Command |
 |---|---|---|
 | ODESCs on `can2` | none | `ros2 launch chassis_bringup rover.launch.py mode:=real` |
-| ODESCs on `can2` | point cloud | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud` |
-| ODESCs on `can2` | OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose` |
-| ODESCs on `can2` | point cloud + OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both` |
+| ODESCs on `can2` | video | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=video` |
+| ODESCs on `can2` | video + point cloud | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud` |
+| ODESCs on `can2` | video + OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose` |
+| ODESCs on `can2` | video + point cloud + OpenPose | `ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both` |
 | ODESCs on `can2` | VIO + EKF | `ros2 launch chassis_bringup rover.launch.py mode:=real vio:=true` (combines with any `camera:=`) |
 
 Check the drivetrain in a second Jetson terminal: `ros2 control list_controllers` shows both
@@ -212,6 +215,7 @@ the ODESCs):
 | Jetson `camera:=` | Command |
 |---|---|
 | none (default) | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false` |
+| `video` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=video` |
 | `cloud` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=cloud` |
 | `openpose` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=openpose` |
 | `both` | `ros2 launch chassis_bringup ground_station.launch.py use_sim_time:=false view:=both` |
@@ -328,7 +332,7 @@ networking, so the host can reach their port 8765.
 2. **Layouts → Import from file** (once; Foxglove keeps it):
    `ros2_ws/src/chassis_bringup/foxglove/rover_dashboard.json`. It is **the** layout, for every
    mode and every `camera:=`: the five [CSI cameras](#csi-cameras) (front: tabs for cam0 and the ZED
-   2i, whose image needs `camera:=openpose` or `both`), the arm RealSense, the GPS map, and a 3D
+   2i's video, with any `camera:=` but `none`; it shows the skeletons with `openpose` or `both`), the arm RealSense, the GPS map, and a 3D
    view that follows the rover (rover model, odometry, ZED point cloud, OpenPose skeletons). Panels
    whose topics aren't running read "waiting for messages".
 
@@ -366,12 +370,12 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 | | `odom_tf` | `true` | `mode:=real` only: publish `odom → base_footprint` from wheel odometry. `false` once an EKF on the rover publishes it. |
 | | `joy_control` | `false` | teleop on the Jetson. Only when no ground station runs it. |
 | | `rviz` / `gui` | `false` | RViz on the Jetson (needs a display) / the Gazebo window (`mode:=sim`) |
-| | `camera` | `none` | `cloud` (ZED point cloud), `openpose` (OpenPose) or `both`. Jetson container only. |
+| | `camera` | `none` | The ZED 2i: `video` (its video, `/zed/image/compressed`), `cloud` (video + point cloud), `openpose` (video + OpenPose) or `both` (video + point cloud + OpenPose). Jetson container only. |
 | | `vio` | `false` | `mode:=real` only: ZED visual-inertial odometry (`/zed/vio/odom`) + the EKF, which then publishes `odom → base_footprint` (forces `odom_tf:=false`). Jetson container only. |
 | | `arm_camera` | `auto` | The arm's RealSense D435i + ArUco (`/arm_cam/*`, [arm-camera.md](arm-camera.md)): `auto` = if a RealSense is on USB at launch, `true` = always (waits for it), `false` = never. Both modes. |
 | | `status_light` | `none` | The blink(1) mode light ([status_light](../ros2_ws/src/status_light/README.md)): `teleop` solid blue, `autonomous` solid red, `idle` slow yellow pulse, `arrived` flashing green, `none` = not started. The dashboard sets it per mode. |
 | `ground_station.launch.py` | `use_sim_time` | `true` | `false` when the Jetson runs `mode:=real` |
-| | `view` | `drivetrain` | RViz layout: `drivetrain`, `cloud`, `openpose` or `both` (match the Jetson's `camera:=`) |
+| | `view` | `drivetrain` | RViz layout: `drivetrain`, `video`, `cloud`, `openpose` or `both` (match the Jetson's `camera:=`) |
 | | `fixed_frame` | `odom` | RViz fixed frame. `base_link` rides along with the rover. |
 | | `joystick` / `rviz` / `foxglove` | `true` | |
 | | `fprime_gds` | `false` | open the F' GDS web UI (`fprime_gds_url`) |

@@ -1,7 +1,8 @@
 """zed_openpose_node alone: ZED 2 + CUDA OpenPose -> /people/skeletons, markers, debug image.
 
     ros2 launch zed_openpose zed_openpose.launch.py [svo_path:=/path/rec.svo2] [model_pose:=COCO]
-    ros2 launch zed_openpose zed_openpose.launch.py openpose:=false     # camera + /zed/points only
+    ros2 launch zed_openpose zed_openpose.launch.py openpose:=false     # video + /zed/points, no OpenPose
+    ros2 launch zed_openpose zed_openpose.launch.py openpose:=false point_cloud:=false  # video only
     ros2 launch zed_openpose zed_openpose.launch.py vio:=true           # + /zed/vio/odom (VIO)
 
 Usually started through `ros2 launch people people_rover.launch.py`, which adds the gesture node,
@@ -54,6 +55,7 @@ def _node():
                 "target_frame": LaunchConfiguration("target_frame"),
                 "enable_pose": LaunchConfiguration("openpose"),
                 "publish_cloud": LaunchConfiguration("point_cloud"),
+                "publish_video": LaunchConfiguration("video"),
                 "publish_odom": LaunchConfiguration("vio"),
                 "use_sim_time": ParameterValue(LaunchConfiguration("use_sim_time"),
                                                value_type=bool),
@@ -89,6 +91,9 @@ def generate_launch_description():
                               description="Run OpenPose (/people/*). false = camera only."),
         DeclareLaunchArgument("point_cloud", default_value="true",
                               description="Publish /zed/points (base_link via TF)."),
+        DeclareLaunchArgument("video", default_value="true",
+                              description="Publish the ZED's video on /zed/image/compressed "
+                              "(OpenPose's rendering with openpose:=true, else the left image)."),
         DeclareLaunchArgument("vio", default_value="false",
                               description="Publish the ZED's visual-inertial odometry on "
                               "/zed/vio/odom (base_footprint in odom) for the EKF. Needs the "

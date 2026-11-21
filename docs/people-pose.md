@@ -15,7 +15,8 @@ flowchart LR
     C -- "keypoints (u, v, score)" --> D
     D --> E["TF: camera → base_link"]
     E --> F["/people/skeletons, /people/markers"]
-    C --> G["/people/debug_image"]
+    C --> G["/people/debug_image, /zed/image/compressed"]
+    B -- "left image, without OpenPose" --> V["/zed/image/compressed"]
     F --> H["gesture_node"] --> I["/people/gesture"]
 ```
 
@@ -27,9 +28,10 @@ Jetson container only. Setup (models, build, udev, calibration) is in
 **With the drivetrain** (the normal way), on the **Jetson**:
 
 ```bash
-ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud      # point cloud
-ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose   # OpenPose
-ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both       # point cloud + OpenPose
+ros2 launch chassis_bringup rover.launch.py mode:=real camera:=video      # video
+ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud      # video + point cloud
+ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose   # video + OpenPose
+ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both       # video + point cloud + OpenPose
 ```
 
 Without motors, use the [virtual bus](running.md#can-testing-without-motors). On the **ground station**:
@@ -40,9 +42,10 @@ including the simulator: [running.md](running.md#pick-a-setup).
 **Camera alone**, without any drivetrain launch, on the **Jetson**:
 
 ```bash
-ros2 launch people people_rover.launch.py openpose:=false       # point cloud
-ros2 launch people people_rover.launch.py point_cloud:=false    # OpenPose
-ros2 launch people people_rover.launch.py                       # point cloud + OpenPose
+ros2 launch people people_rover.launch.py openpose:=false point_cloud:=false   # video
+ros2 launch people people_rover.launch.py openpose:=false                     # video + point cloud
+ros2 launch people people_rover.launch.py point_cloud:=false                  # video + OpenPose
+ros2 launch people people_rover.launch.py                                     # video + point cloud + OpenPose
 ```
 
 This also starts `robot_state_publisher` and the Foxglove bridge (`standalone:=true`).
@@ -96,6 +99,7 @@ is actually free, and the camera and OpenPose failed at startup when most RAM wa
 | `/people/skeletons` | `people_msgs/Skeletons` | Published every frame, even with nobody in view. For each person: `u[]`, `v[]`, `confidence[]` (2D px), `joints[]` (3D m in `base_link`, NaN if unknown), `centroid`. |
 | `/people/markers` | `MarkerArray` | One red line list per person |
 | `/people/debug_image` (+ `/compressed`) | `Image` | OpenPose rendering. Use `/compressed` over Wi-Fi. |
+| `/zed/image/compressed` | `CompressedImage` | The ZED's video, in every `camera:=` but `none` (`video:=`, `publish_video`): OpenPose's rendering while OpenPose runs, else the left image (JPEG, at most `video_max_hz`, 10 Hz). Foxglove's front ZED panel shows it. |
 | `/people/gesture` | `people_msgs/Gesture` | `gesture`, `command`, `confidence`, `position` |
 | `/people/gesture_marker` | `Marker` | text label above the person |
 | `/zed/points` | `PointCloud2` | XYZ + colour in `zed_left_camera_frame`. Every 4th pixel of the 720×405 depth map (~18k points, ~290 kB), at most `cloud_max_hz` (10). With OpenPose it runs at the OpenPose rate (5 Hz on the Orin Nano). |

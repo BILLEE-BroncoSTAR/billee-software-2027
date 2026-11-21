@@ -6,8 +6,9 @@
     # next to a running drivetrain (real.launch.py foxglove:=true already has both)
     ros2 launch people people_rover.launch.py standalone:=false
 
-    # modes: OpenPose + point cloud (default), or the point cloud alone (no OpenPose, no gestures)
-    ros2 launch people people_rover.launch.py openpose:=false
+    # modes: video + OpenPose + point cloud (default); turn any part off, e.g.
+    ros2 launch people people_rover.launch.py openpose:=false                     # video + cloud
+    ros2 launch people people_rover.launch.py openpose:=false point_cloud:=false  # video only
 
     # + the ZED's visual-inertial odometry for the EKF (/zed/vio/odom); rover.launch.py vio:=true
     ros2 launch people people_rover.launch.py vio:=true
@@ -52,6 +53,8 @@ def generate_launch_description():
                               description="Run OpenPose + gestures. false = point cloud only."),
         DeclareLaunchArgument("point_cloud", default_value="true",
                               description="Publish the ZED point cloud on /zed/points."),
+        DeclareLaunchArgument("video", default_value="true",
+                              description="Publish the ZED's video on /zed/image/compressed."),
         DeclareLaunchArgument("vio", default_value="false",
                               description="Publish the ZED's visual-inertial odometry on "
                               "/zed/vio/odom for the EKF."),
@@ -68,6 +71,7 @@ def generate_launch_description():
                 "svo_path": LaunchConfiguration("svo_path"),
                 "openpose": openpose,
                 "point_cloud": LaunchConfiguration("point_cloud"),
+                "video": LaunchConfiguration("video"),
                 "vio": LaunchConfiguration("vio"),
                 "use_sim_time": LaunchConfiguration("use_sim_time"),
             }.items(),

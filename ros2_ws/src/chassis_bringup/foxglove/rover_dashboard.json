@@ -31,9 +31,9 @@
       }
     },
     "Image!zed": {
-      "foxglovePanelTitle": "Front ZED 2i + OpenPose (camera:=openpose/both)",
+      "foxglovePanelTitle": "Front ZED 2i (any camera:=; skeletons drawn with OpenPose)",
       "imageMode": {
-        "imageTopic": "/people/debug_image/compressed"
+        "imageTopic": "/zed/image/compressed"
       }
     },
     "3D!odometry": {

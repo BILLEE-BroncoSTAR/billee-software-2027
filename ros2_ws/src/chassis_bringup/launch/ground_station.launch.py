@@ -49,9 +49,10 @@ declare_args = [
     DeclareLaunchArgument(
         "view",
         default_value="drivetrain",
-        choices=["drivetrain", "cloud", "openpose", "both"],
-        description="RViz layout: drivetrain (fixed frame odom), cloud (ZED point cloud), "
-        "openpose or both (point cloud + skeletons). Match the rover's camera:= option.",
+        choices=["drivetrain", "video", "cloud", "openpose", "both"],
+        description="RViz layout: drivetrain (fixed frame odom; also for the rover's "
+        "camera:=video), cloud (ZED point cloud), openpose or both (point cloud + skeletons). "
+        "Match the rover's camera:= option.",
     ),
     DeclareLaunchArgument(
         "fixed_frame",
@@ -76,6 +77,7 @@ declare_args = [
 
 RVIZ_CONFIGS = {  # view:= -> (package, file under share/<package>/rviz/)
     "drivetrain": ("chassis_bringup", "drivetrain.rviz"),
+    "video": ("chassis_bringup", "drivetrain.rviz"),  # the ZED video is in Foxglove
     "cloud": ("people", "zed_points.rviz"),
     "openpose": ("people", "people_rover.rviz"),
     "both": ("people", "people_rover.rviz"),

@@ -5,9 +5,10 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py                       # sim, no ODESC
     ros2 launch chassis_bringup rover.launch.py mode:=real            # ODESC over CAN
     ros2 launch chassis_bringup rover.launch.py mode:=real can_interface:=vcan0  # emulator, no motors
-    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud     # + ZED point cloud
-    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose  # + OpenPose
-    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + both
+    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=video     # + ZED video
+    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=cloud     # + video + point cloud
+    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=openpose  # + video + OpenPose
+    ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + video + cloud + OpenPose
     ros2 launch chassis_bringup rover.launch.py mode:=real vio:=true         # + ZED VIO + EKF
     ros2 launch chassis_bringup rover.launch.py mode:=real arm_camera:=false # no arm RealSense
     ros2 launch chassis_bringup rover.launch.py mode:=real status_light:=teleop  # blink(1): blue
@@ -114,9 +115,11 @@ declare_args = [
     DeclareLaunchArgument(
         "camera",
         default_value="none",
-        choices=["none", "cloud", "openpose", "both"],
-        description="ZED 2i on the Jetson: none; cloud = point cloud (/zed/points); "
-        "openpose = OpenPose people/gestures (/people/*); both. Jetson (l4t) only.",
+        choices=["none", "video", "cloud", "openpose", "both"],
+        description="ZED 2i on the Jetson. Every mode but none has the video "
+        "(/zed/image/compressed): video = video only; cloud = video + point cloud (/zed/points); "
+        "openpose = video + OpenPose people/gestures (/people/*), the video then shows the "
+        "skeletons; both = video + point cloud + OpenPose. Jetson (l4t) only.",
     ),
     DeclareLaunchArgument(
         "vio",
@@ -146,12 +149,14 @@ declare_args = [
 # nvarguscamerasrc, present only in the Jetson (l4t) container.
 CSI_PLUGIN = "/usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstnvarguscamerasrc.so"
 
-# camera:= -> people_rover.launch.py (openpose, point_cloud). "none" runs the ZED for vio:= alone.
+# camera:= -> people_rover.launch.py (openpose, point_cloud, video). "none" runs the ZED for
+# vio:= alone; every other mode has the video.
 CAMERA_MODES = {
-    "none": ("false", "false"),
-    "cloud": ("false", "true"),
-    "openpose": ("true", "false"),
-    "both": ("true", "true"),
+    "none": ("false", "false", "false"),
+    "video": ("false", "false", "true"),
+    "cloud": ("false", "true", "true"),
+    "openpose": ("true", "false", "true"),
+    "both": ("true", "true", "true"),
 }
 
 
@@ -204,7 +209,7 @@ def _setup(context):
     if camera != "none" or vio:
         # The drivetrain launch above already runs robot_state_publisher and the foxglove
         # bridge, so the camera launch runs without its own (standalone:=false).
-        openpose, point_cloud = CAMERA_MODES[camera]
+        openpose, point_cloud, video = CAMERA_MODES[camera]
         actions.append(
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -216,6 +221,7 @@ def _setup(context):
                     "standalone": "false",
                     "openpose": openpose,
                     "point_cloud": point_cloud,
+                    "video": video,
                     "vio": "true" if vio else "false",
                     "use_sim_time": "true" if mode == "sim" else "false",
                 }.items(),
