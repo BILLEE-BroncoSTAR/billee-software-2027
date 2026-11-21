@@ -1,5 +1,5 @@
 {
-  "name": "desktop-roshumble_dev-x862",
+  "name": "desktop-roshumble_dev-x86",
    "build": {
     "dockerfile": "../docker/Dockerfile.desktop.humble",
     "context": "../"

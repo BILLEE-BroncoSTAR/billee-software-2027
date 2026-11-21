@@ -7,7 +7,7 @@ open each container is in [README §1](../README.md#1-open-the-dev-container).
 
 | Dev container | Config | Image | Pixi env |
 |---|---|---|---|
-| `desktop-roshumble_dev-x862` (x86 + NVIDIA) | `.devcontainer/devcontainer.json` | `docker/Dockerfile.desktop.humble` | `default` |
+| `desktop-roshumble_dev-x86` (x86 + NVIDIA) | `.devcontainer/devcontainer.json` | `docker/Dockerfile.desktop.humble` | `default` |
 | `rover-roshumble_l4t-aarch64` (Jetson) | `.devcontainer/l4t/devcontainer.json` | `docker/Dockerfile.l4t-humble` | `l4t` |
 | `desktop-roshumble-mac-cpu` (Apple Silicon) | `.devcontainer/mac/devcontainer.json` | `docker/Dockerfile.desktop.mac.humble` | `mac-cpu` |
 

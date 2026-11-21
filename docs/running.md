@@ -76,7 +76,7 @@ on the machine named above it. The only exceptions are marked **host** (outside 
 1. **Host:** the x86 requirements in [README §1](../README.md#1-open-the-dev-container), and
    [Foxglove Studio](https://foxglove.dev/download) (the desktop app; it is not in the container).
 2. **Host:** clone the repo as above, open it in VS Code, then **Dev Containers: Reopen in
-   Container** → `desktop-roshumble_dev-x862`.
+   Container** → `desktop-roshumble_dev-x86`.
 3. **Ground-station container:**
    ```bash
    cd ros2_ws

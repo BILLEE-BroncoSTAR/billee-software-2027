@@ -10,7 +10,7 @@ Pick the configuration for your machine (VS Code: **Dev Containers: Reopen in Co
 
 | Machine | Container | Pixi env |
 |---|---|---|
-| x86 Linux with an NVIDIA GPU (dev box, ground station) | `desktop-roshumble_dev-x862` (`.devcontainer/devcontainer.json`) | `default` |
+| x86 Linux with an NVIDIA GPU (dev box, ground station) | `desktop-roshumble_dev-x86` (`.devcontainer/devcontainer.json`) | `default` |
 | Jetson Orin, JetPack 6.2 / L4T r36.4 (the rover) | `rover-roshumble_l4t-aarch64` (`.devcontainer/l4t/`) | `l4t` |
 | Apple-Silicon Mac (headless sim and viewer, no GPU) | `desktop-roshumble-mac-cpu` (`.devcontainer/mac/`) | `mac-cpu` |
 
