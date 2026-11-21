@@ -4,6 +4,7 @@
     tooling/can-clear-faults                  # every wheel node in node_map.yaml, on can2
     tooling/can-clear-faults --nodes 5        # just node 5 (comma-separated list)
     tooling/can-clear-faults --reboot         # also reboot boards whose error a clear can't fix
+    tooling/can-clear-faults --force-reboot   # reboot every listed board, then clear (--nodes to pick)
     tooling/can-clear-faults --iface vcan0    # another interface
     tooling/can-clear-faults --status         # only report, send nothing
 
@@ -16,6 +17,7 @@ armed only at boot: once a fault (e.g. motor DcBusOverCurrent) disarms it, the
 board reports BrakeResistorDisarmed (0x10) again straight after every clear, until
 it restarts. With --reboot, such boards get CANSimple Reset (0x16), the same reboot
 odrivetool does; the script waits for the board to come back and clears again.
+--force-reboot does the same to every listed board, whatever its error.
 A rebooted board runs its own startup sequence: with the checked-in configs that is
 an encoder offset calibration (the motor turns briefly) and then closed loop, so the
 wheel is live afterwards. Keep the wheels off the ground.
@@ -177,6 +179,9 @@ def main():
     parser.add_argument("--reboot", action="store_true",
                         help="reboot boards still reporting BrakeResistorDisarmed after the "
                              "clear (the motor turns during their startup calibration)")
+    parser.add_argument("--force-reboot", action="store_true",
+                        help="reboot every listed board (--nodes, default all), whatever its "
+                             "error, then clear (the motors turn during startup calibration)")
     args = parser.parse_args()
     nodes = args.nodes or node_map_ids()
 
@@ -206,6 +211,8 @@ def main():
     report("after:", after)
 
     stuck = [n for n, e in after.items() if any(err & NEEDS_REBOOT for err, _ in e)]
+    if args.force_reboot:
+        stuck, args.reboot = list(nodes), True
     if stuck and args.reboot:
         reboot_and_wait(sock, stuck)
         clear(sock, stuck)  # e.g. DcBusUnderVoltage latched while the board restarted

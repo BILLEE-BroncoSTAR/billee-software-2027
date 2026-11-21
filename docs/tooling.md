@@ -93,6 +93,7 @@ tooling/can-clear-faults                     # every node in odesc/config/node_m
 tooling/can-clear-faults --nodes 5           # one node (or a comma-separated list)
 tooling/can-clear-faults --status            # only report; send nothing
 tooling/can-clear-faults --nodes 5 --reboot  # also reboot a board a clear can't fix
+tooling/can-clear-faults --force-reboot      # reboot every listed board, whatever its error
 tooling/can-clear-faults --iface vcan0
 ```
 
@@ -104,7 +105,8 @@ again, printing the axis state and the error names (from the fw 0.5.1 interface 
 at boot. With `--reboot`, such a board gets CANSimple `Reset` (`0x16`), the same reboot `odrivetool`
 does, and the script waits up to 20 s for it to come back and clears again. **The rebooted board
 runs its startup sequence**, an encoder offset calibration that turns the motor and then closed
-loop, so keep the wheels off the ground.
+loop, so keep the wheels off the ground. `--force-reboot` does the same to every listed board
+(`--nodes`, default all) whatever its error: the dashboard's CAN panel **Reboot** button.
 
 Exit status: `0` every listed node answered with no error, `1` an error remains or a node didn't
 answer, `2` usage or interface problem.

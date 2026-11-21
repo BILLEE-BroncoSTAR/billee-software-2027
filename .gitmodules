@@ -4,3 +4,7 @@
 [submodule "ros2_ws/src/roboclaw_serial"]
 	path = ros2_ws/src/roboclaw_serial
 	url = https://github.com/dumbotics/roboclaw_serial.git
+[submodule "dashboard"]
+	path = dashboard
+	url = https://github.com/LucaLanzi/BILLEE-dashboard-tool.git
+	branch = main

@@ -7,6 +7,9 @@ There are two machines:
 | **Jetson** (the rover) | `.devcontainer/l4t/` | `l4t` | CAN bus, ZED 2i. No monitor. |
 | **Ground station** (x86 laptop) | `.devcontainer/devcontainer.json` | `default` | Gamepad, screen, Foxglove Studio |
 
+The [BILLEE dashboard](../dashboard/README.md) (`make setup-dash`, then `make start` on the ground
+station host) runs these setups from a web page, with these commands as each mode's defaults.
+
 Every command below runs **inside the dev container, in `ros2_ws`, inside `pixi shell -e <env>`**,
 on the machine named above it. The only exceptions are marked **host** (outside the container).
 
