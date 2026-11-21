@@ -56,6 +56,17 @@ on the machine named above it. The only exceptions are marked **host** (outside 
    ```
 6. Plug the ZED 2i into a **USB 3** port. On the **host**, `lsusb | grep 2b03` must list
    `STEREOLABS ZED 2i`.
+7. **Host, once per JetPack flash: the Argus watchdog.** It restarts `nvargus-daemon` when a flaky
+   CSI camera wedges it, so the feeds come back without anyone running `sudo systemctl restart
+   nvargus-daemon` ([tooling.md](tooling.md#argus-watchdog)):
+   ```bash
+   cd ~/billee-software-2027
+   sudo install -m 755 tooling/argus-watchdog /usr/local/bin/argus-watchdog
+   sudo cp tooling/argus-watchdog.service /etc/systemd/system/
+   sudo systemctl daemon-reload && sudo systemctl enable --now argus-watchdog.service
+   ```
+   Run the `install` line again whenever `tooling/argus-watchdog` changes, then
+   `sudo systemctl restart argus-watchdog`.
 
 ### Ground station
 
@@ -420,7 +431,10 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | Sim: Gazebo keeps running after the launch is stopped (`ps -eo pid,args \| grep "[i]gn gazebo"` lists it) | It ignores Ctrl-C and SIGTERM. In the Jetson container: `kill -9 <pid>`. A leftover Gazebo conflicts with the next sim. |
 | A camera view shows `camN …: NO CAMERA` (or colour bars) | That camera wasn't detected at boot, or its pipeline failed. The Jetson log has one warning per camera saying which. Power off, check its CSI cable, boot. On the host, `cat /sys/class/video4linux/video*/name` must list a `vi-output, imx477` for it. |
 | CSI camera: `no Argus socket (/tmp/argus_socket)` or `gst-launch-1.0 is missing` | The Jetson container predates the CSI cameras: **Rebuild Container**. |
-| CSI camera: `camera stopped` or `failed to start` with an Argus error | On the Jetson host, `sudo systemctl restart nvargus-daemon`, then relaunch. |
+| CSI camera: `camera stopped` or `failed to start` with an Argus error | Usually recovers by itself: the node retries every 10 s, and the [Argus watchdog](tooling.md#argus-watchdog) restarts `nvargus-daemon` when it wedges (`journalctl -u argus-watchdog` says what it did). Without the watchdog: on the Jetson host, `sudo systemctl restart nvargus-daemon`. If it keeps happening, look at the CSI cables (next row). |
+| CSI camera: low or unsteady frame rate, Argus log (`journalctl -u nvargus-daemon`) full of `PIXEL_SHORT_LINE`, `PD_CRC_ERR` or `Camera HwEvents wait … hardware timeout` | Corrupted data on that camera's CSI link: a badly seated, creased or too-long ribbon cable. It can also crash Argus (SEGV / BUS in `journalctl -b \| grep nvargus`), dropping **every** camera for ~30 s. Power off, reseat both ends, and swap the cable with a working camera's to see whether the fault follows the cable. |
+| CSI cameras show `NO CAMERA` after every relaunch, Argus logs `AlreadyAllocated: Device … is in use` | Argus still holds sessions from a camera process that was killed while closing. The watchdog restarts it after 3 of these; without it, `sudo systemctl restart nvargus-daemon` on the host. Stop launches with one Ctrl-C and give them the ~10 s they need; don't `kill -9` camera nodes. |
+| Build: `failed to create symbolic link … because existing path cannot be removed: Is a directory` | That package was once built without `--symlink-install` (a bare `colcon build`). `rm -rf build install log`, then `pixi run build`. Always build with `pixi run build`, never with `sudo`: a root build leaves files the next build can't overwrite, and its Python entry points use the system Python (`No module named 'rclpy._rclpy_pybind11'`). |
 | Foxglove camera panels stay empty, RViz shows the cameras, the Jetson logs `foxglove_msgs isn't built` | Jetson container: `pixi run colcon build --symlink-install --packages-select foxglove_msgs camera_stream`, then relaunch. The ground station's bridge needs it too: `pixi run colcon build --packages-select foxglove_msgs` there (or connect Foxglove to `ws://<jetson-ip>:8765`). |
 | `ZED open failed: CAMERA NOT DETECTED` | On the host, `lsusb \| grep 2b03` must list `ZED 2i`. Use a USB 3 port. |
 | `[ZED][MCU] Permissions denied`, then `NOT VALID SERIAL NUMBER FOR SENSORS MODULE MCU` | The host has no ZED udev rule. The container installs it at start: on the host, `ls /etc/udev/rules.d/99-slabs.rules`. If it's missing, the container was created before this was added: **Rebuild Container**. |

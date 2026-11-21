@@ -145,6 +145,10 @@ class CSICompressedVideoPublisher(Node):
         self.jpeg_quality = int(p("jpeg_quality", 70).value)
         self.placeholder_fps = max(1, int(p("placeholder_fps", 2).value))
         self.recheck_s = float(p("recheck_s", 10.0).value)
+        # A pipeline that stops delivering frames is restarted: when nvargus-daemon crashes or
+        # is restarted, gst-launch-1.0 often doesn't exit, it just goes quiet forever.
+        self.stall_s = float(p("stall_s", 5.0).value)
+        self.start_timeout_s = float(p("start_timeout_s", 20.0).value)
         self.gst_launch = str(p("gst_launch", "/usr/bin/gst-launch-1.0").value)
 
         if self.encoding not in AUD:
@@ -180,6 +184,7 @@ class CSICompressedVideoPublisher(Node):
         self._proc: Optional[subprocess.Popen] = None
         self._proc_lock = threading.Lock()
         self._frames = 0
+        self._last_frame = 0.0
         self._supervisor = threading.Thread(target=self._supervise, daemon=True)
         self._supervisor.start()
 
@@ -378,12 +383,19 @@ class CSICompressedVideoPublisher(Node):
                 f"<={self.bitrate // 1000} kbit/s on {self.video_topic}"
                 + (f", JPEG {jpeg_w}x{jpeg_h}@{self.jpeg_fps} on {self.jpeg_topic}"
                    if self.jpeg_pub else ""))
-        next_check = time.monotonic() + 1.0
+        started = time.monotonic()
+        next_check = started + 1.0
+        stalled = ""
         while proc.poll() is None and not self._stop.is_set():
-            if stop_when is not None and time.monotonic() >= next_check:
-                if stop_when():
+            now = time.monotonic()
+            if now >= next_check:
+                next_check = now + 1.0
+                if stop_when is not None and stop_when():
                     break
-                next_check = time.monotonic() + 1.0
+                if not placeholder:
+                    stalled = self._stalled(now, started)
+                    if stalled:
+                        break
             time.sleep(0.2)
         self._terminate(proc)
         for t in readers:
@@ -395,8 +407,20 @@ class CSICompressedVideoPublisher(Node):
                 pass
         with self._proc_lock:
             self._proc = None
+        if stalled:
+            return stalled
         errors = [line.strip() for line in stderr_tail if line.strip()]
         return errors[-1] if errors else ""
+
+    def _stalled(self, now: float, started: float) -> str:
+        """Why a running camera pipeline counts as stuck, or "" while it's delivering."""
+        if self._frames == 0:
+            if now - started > self.start_timeout_s:
+                return f"no frame within {self.start_timeout_s:.0f} s of starting"
+        elif now - self._last_frame > self.stall_s:
+            return (f"no frame for {now - self._last_frame:.0f} s "
+                    "(nvargus-daemon restarted or the CSI link dropped)")
+        return ""
 
     @staticmethod
     def _terminate(proc: subprocess.Popen) -> None:
@@ -430,6 +454,7 @@ class CSICompressedVideoPublisher(Node):
             buf += chunk
             for unit in split_access_units(buf, aud):
                 self._frames += 1
+                self._last_frame = time.monotonic()
                 if self.video_pub is None:
                     continue
                 msg = CompressedVideo()

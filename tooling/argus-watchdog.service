@@ -1,0 +1,24 @@
+# Restart nvargus-daemon when it is down, wedged or leaking camera sessions (tooling/argus-watchdog).
+#
+# Install on the Jetson host:
+#   sudo install -m 755 tooling/argus-watchdog /usr/local/bin/argus-watchdog
+#   sudo cp tooling/argus-watchdog.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now argus-watchdog.service
+#   journalctl -u argus-watchdog -f        # what it saw and did
+#
+# After changing tooling/argus-watchdog, run the `install` line again and
+# `sudo systemctl restart argus-watchdog`.
+
+[Unit]
+Description=Restart nvargus-daemon when it is down, wedged or leaking camera sessions
+After=nvargus-daemon.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/argus-watchdog
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

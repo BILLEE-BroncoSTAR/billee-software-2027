@@ -114,7 +114,7 @@ Everything the rover runs is documented in [`docs/`](docs):
 | [synthetic-vio.md](docs/synthetic-vio.md) | `zed2i`: synthetic VIO for the sim's EKF |
 | [gazebo.md](docs/gazebo.md) | Gazebo rendering, GPU, and model notes |
 | [containers.md](docs/containers.md) | Dev containers, Docker images, pixi environments, ZED calibration (`configs/zed/`) |
-| [tooling.md](docs/tooling.md) | `tooling/`: `can-up`, `can2.service`, `can-clear-faults`, `sim-up`, `desktop-ros2` / `rover-ros2` |
+| [tooling.md](docs/tooling.md) | `tooling/`: `can-up`, `can2.service`, `argus-watchdog` (restarts a wedged camera daemon), `can-clear-faults`, `sim-up`, `desktop-ros2` / `rover-ros2` |
 | [cheatsheet.md](docs/cheatsheet.md) | pixi and ROS 2 CLI commands |
 
 ## Repository layout
@@ -124,7 +124,7 @@ Everything the rover runs is documented in [`docs/`](docs):
 docker/            Dockerfiles and container setup scripts                  docs/containers.md
 configs/odesc/     ODESC board configs (odrivetool backups)                 docs/odesc.md
 configs/zed/       ZED factory calibration                                  docs/containers.md
-tooling/           CAN bring-up and fault clearing, sim-up, image runners   docs/tooling.md
+tooling/           CAN bring-up and fault clearing, Argus watchdog, sim-up, image runners   docs/tooling.md
 ros2_ws/pixi.toml  dependencies, environments, `build` task, ROS_DOMAIN_ID
 ros2_ws/src/
   chassis_bringup/   launch files: sim, real, rover, ground station, viewers   docs/launch.md

@@ -57,7 +57,8 @@ child runs in its own process group under `setpriv --pdeathsig INT`, and is stop
 one SIGINT, then up to 10 s to close the camera (the launch waits 15 s before escalating).
 gst-launch-1.0 dies on a second SIGINT or a SIGTERM, and a camera cut off mid-close stays
 allocated in `nvargus-daemon`: every later launch then shows "NO CAMERA" and the daemon logs
-`Device ... is in use` until `sudo systemctl restart nvargus-daemon` on the host.
+`Device ... is in use` until it restarts (the [Argus watchdog](tooling.md#argus-watchdog) does
+that after 3 of these; by hand: `sudo systemctl restart nvargus-daemon` on the host).
 
 **A missing camera never stops the launch.** If `gst-launch-1.0`, the NVIDIA plugins or the Argus
 socket (`/tmp/argus_socket`) is missing, the camera wasn't detected at boot, or the pipeline fails,
@@ -73,6 +74,12 @@ bits a calm scene doesn't need, where CBR padded every scene to `bitrate`. Measu
 noise pattern stays at the 3 Mbit/s cap, at a quality no lower than the old CBR stream. Three
 cameras at once still encode in real time. H.265 would be smaller again, but Foxglove on a Linux
 ground station usually can't decode it.
+
+**Recovery.** A camera pipeline that stops delivering frames for `stall_s` (5 s), or never
+delivers one within `start_timeout_s` (20 s), is stopped and retried. When `nvargus-daemon`
+crashes or is restarted, `gst-launch-1.0` usually doesn't exit, it just goes quiet, so without
+this a feed never came back. With a crash that's about 30 s to a working feed again.
+`tooling/argus-watchdog` restarts Argus itself when it wedges ([tooling.md](tooling.md#argus-watchdog)).
 
 Other node parameters: `encoding` (`h264` or `h265`), `preset_level` (4, Slow), `gop` (30), `jpeg_quality` (70),
 `placeholder_fps` (2), `frame_id` (`camN_optical`), `gst_launch` (`/usr/bin/gst-launch-1.0`).

@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+"""argus-watchdog: restart nvargus-daemon when it is down, wedged or leaking camera sessions.
+
+    sudo tooling/argus-watchdog              # foreground (what argus-watchdog.service runs)
+    sudo tooling/argus-watchdog --dry-run    # detect and log, but never restart
+    tooling/argus-watchdog --status          # one-shot report: service state, PID, accept queue
+
+Jetson host only, as root (it runs `systemctl restart nvargus-daemon`). Python standard library.
+
+Why: one flaky CSI camera can take every camera down. Its capture times out in hardware, and
+Argus then sometimes stops accepting clients or leaves sessions allocated; those need a restart
+that nothing else does.
+The camera nodes (camera_stream) retry every 10 s, so after a restart the feeds come back alone.
+
+What counts as "down", checked every second:
+  wedged    clients stay queued on /tmp/argus_socket, never accepted, for --wedge-s seconds.
+            Read from /proc/net/unix, so the check never connects (a probe connection makes
+            Argus log an error) and costs the daemon nothing.
+  leaked    --leak-count "AlreadyAllocated ... is in use" within 60 s: sessions left allocated by
+            a client that died mid-close, so no new client can open that camera.
+  inactive  the service isn't active for --inactive-s seconds (crashed and systemd gave up, or
+            stopped).
+
+Logged only, no restart: "Sending critical error event" / "Camera HwEvents wait" (one camera's
+capture timed out in hardware). Argus usually survives these and only that camera's session
+dies, so restarting would drop the healthy feeds too; when it does crash or wedge after one,
+the checks above catch it. A plain crash (segfault) is restarted by systemd itself
+(Restart=on-failure); this only steps in if that doesn't bring it back.
+
+Restarts are at least --min-interval-s apart; each restart within 10 min of the previous one
+doubles that gap, up to --max-interval-s, so a bad cable can't make every feed flap. Ten quiet
+minutes reset it. Everything is logged to stdout (the journal: journalctl -u argus-watchdog).
+"""
+
+import argparse
+import json
+import os
+import queue
+import re
+import subprocess
+import sys
+import threading
+import time
+
+SERVICE = "nvargus-daemon"
+SOCKET = "/tmp/argus_socket"
+LEAK_WINDOW_S = 60.0
+CALM_S = 600.0  # this long without a restart resets the backoff
+
+CRITICAL = re.compile(r"Sending critical error event|Camera HwEvents wait")
+LEAK = re.compile(r"AlreadyAllocated.*is in use")
+
+
+def log(msg):
+    print(f"argus-watchdog: {msg}", flush=True)
+
+
+def run(cmd):
+    return subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+
+def service_state():
+    """(ActiveState, MainPID) of the daemon's systemd unit."""
+    out = run(["systemctl", "show", SERVICE, "-p", "ActiveState", "-p", "MainPID"]).stdout
+    props = dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
+    return props.get("ActiveState", "unknown"), int(props.get("MainPID", "0") or 0)
+
+
+def accept_queue(path):
+    """Clients waiting for the daemon to accept them on its socket, or None if not listening.
+
+    A unix socket's pending connections don't show as a count (ss prints Recv-Q 0): each one is
+    its own /proc/net/unix line on the socket's path, in state 02 (connecting; SYN-SENT in ss).
+    The listener is the line on the path with __SO_ACCEPTCON (0x10000) in its flags.
+    """
+    listening, pending = False, 0
+    try:
+        with open("/proc/net/unix") as fh:
+            next(fh)  # header
+            for line in fh:
+                # Num RefCount Protocol Flags Type St Inode Path
+                f = line.split()
+                if len(f) < 8 or f[7] != path:
+                    continue
+                if int(f[3], 16) & 0x10000:
+                    listening = True
+                elif f[5] == "02":
+                    pending += 1
+    except OSError:
+        return None
+    return pending if listening else None
+
+
+def classify(message):
+    """'critical', 'leak' or None for one line of the daemon's log."""
+    if CRITICAL.search(message):
+        return "critical"
+    if LEAK.search(message):
+        return "leak"
+    return None
+
+
+def follow_journal(events):
+    """Push (pid, kind, message) for each relevant new daemon log line. Runs in a thread."""
+    cmd = ["journalctl", "-u", SERVICE, "-f", "-n", "0", "-o", "json",
+           "--output-fields=MESSAGE,_PID"]
+    while True:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True)
+        for line in proc.stdout:
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            msg = entry.get("MESSAGE")
+            if isinstance(msg, list):  # journald sends non-UTF-8 text as a byte list
+                msg = bytes(msg).decode(errors="replace")
+            kind = classify(msg or "")
+            if kind:
+                events.put((int(entry.get("_PID", 0) or 0), kind, msg.strip()))
+        proc.wait()
+        time.sleep(2.0)  # journalctl exited (journald restarted?): follow again
+
+
+def status(args):
+    state, pid = service_state()
+    q = accept_queue(args.socket)
+    print(f"{SERVICE}: {state}, PID {pid or '-'}")
+    print(f"{args.socket}: " + ("not listening" if q is None else
+                                f"listening, {q} client(s) waiting to be accepted"))
+    return 0 if state == "active" and q == 0 else 1
+
+
+class Watchdog:
+    def __init__(self, args):
+        self.args = args
+        self.interval = args.min_interval_s
+        self.last_restart = 0.0
+        self.holding = False
+        self.wedged_since = None
+        self.inactive_since = None
+        self.leaks = []  # (pid, when)
+
+    def restart(self, reason):
+        now = time.monotonic()
+        wait = self.last_restart + self.interval - now
+        if self.last_restart and wait > 0:
+            if not self.holding:  # once per hold-off, not every second
+                log(f"would restart ({reason}), but the last restart was "
+                    f"{now - self.last_restart:.0f} s ago; holding off {wait:.0f} s more")
+                self.holding = True
+            return
+        self.holding = False
+        if self.args.dry_run:
+            log(f"DRY RUN: would restart {SERVICE}: {reason}")
+        else:
+            log(f"restarting {SERVICE}: {reason}")
+            run(["systemctl", "reset-failed", SERVICE])
+            res = run(["systemctl", "restart", SERVICE])
+            if res.returncode != 0:
+                log(f"systemctl restart failed: {res.stderr.strip()}")
+        # Backoff: a restart soon after the previous one doubles the minimum gap.
+        if self.last_restart and now - self.last_restart < CALM_S:
+            self.interval = min(self.interval * 2, self.args.max_interval_s)
+        else:
+            self.interval = self.args.min_interval_s
+        self.last_restart = now
+        self.wedged_since = self.inactive_since = None
+        self.leaks.clear()
+
+    def tick(self, events):
+        now = time.monotonic()
+        if self.last_restart and now - self.last_restart > CALM_S:
+            self.interval = self.args.min_interval_s
+        state, pid = service_state()
+
+        while True:
+            try:
+                ev_pid, kind, msg = events.get_nowait()
+            except queue.Empty:
+                break
+            if ev_pid and ev_pid != pid:
+                continue  # from a daemon that has already been replaced
+            if kind == "critical":
+                log(f"camera error in {SERVICE} (PID {ev_pid}), not restarting for it: "
+                    f"{msg[:140]}")
+            elif kind == "leak":
+                self.leaks.append((ev_pid, now))
+
+        if state != "active":
+            self.wedged_since = None
+            if self.inactive_since is None:
+                self.inactive_since = now
+                log(f"{SERVICE} is {state}")
+            elif now - self.inactive_since >= self.args.inactive_s:
+                self.restart(f"service {state} for {now - self.inactive_since:.0f} s")
+            return
+        if self.inactive_since is not None:
+            log(f"{SERVICE} is active again (PID {pid})")
+            self.inactive_since = None
+
+        self.leaks = [(p, t) for p, t in self.leaks if p == pid and now - t <= LEAK_WINDOW_S]
+        if len(self.leaks) >= self.args.leak_count:
+            self.restart(f"{len(self.leaks)} 'Device is in use' errors in "
+                         f"{LEAK_WINDOW_S:.0f} s (camera sessions leaked)")
+            return
+
+        q = accept_queue(self.args.socket)
+        if q:  # None (not listening yet) is the inactive check's job
+            if self.wedged_since is None:
+                self.wedged_since = now
+            elif now - self.wedged_since >= self.args.wedge_s:
+                self.restart(f"not accepting clients for {now - self.wedged_since:.0f} s "
+                             f"({q} queued on {self.args.socket})")
+        else:
+            self.wedged_since = None
+
+
+def main():
+    p = argparse.ArgumentParser(
+        description="Restart nvargus-daemon when it crashes, wedges or leaks camera sessions.")
+    p.add_argument("--status", action="store_true", help="report once and exit")
+    p.add_argument("--dry-run", action="store_true", help="log what it would do, never restart")
+    p.add_argument("--socket", default=SOCKET, help=f"Argus socket (default {SOCKET})")
+    p.add_argument("--wedge-s", type=float, default=10.0,
+                   help="clients queued this long = wedged (default 10)")
+    p.add_argument("--leak-count", type=int, default=3,
+                   help="'in use' errors within 60 s that mean leaked sessions (default 3)")
+    p.add_argument("--inactive-s", type=float, default=15.0,
+                   help="service not active this long = restart it (default 15)")
+    p.add_argument("--min-interval-s", type=float, default=30.0,
+                   help="minimum time between restarts (default 30)")
+    p.add_argument("--max-interval-s", type=float, default=300.0,
+                   help="backoff cap for the time between restarts (default 300)")
+    args = p.parse_args()
+
+    if args.status:
+        return status(args)
+    if os.geteuid() != 0 and not args.dry_run:
+        log("must run as root to restart the daemon (sudo), or use --dry-run")
+        return 2
+
+    events = queue.Queue()
+    threading.Thread(target=follow_journal, args=(events,), daemon=True).start()
+    dog = Watchdog(args)
+    state, pid = service_state()
+    log(f"watching {SERVICE} ({state}, PID {pid or '-'}) and {args.socket}"
+        + (" [dry run]" if args.dry_run else ""))
+    while True:
+        dog.tick(events)
+        time.sleep(1.0)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(0)

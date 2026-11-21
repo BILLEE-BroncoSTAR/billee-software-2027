@@ -6,6 +6,7 @@ Scripts run from the repository root. Only the CAN ones touch the rover's hardwa
 |---|---|---|
 | [`can-up`](#can-up) | Jetson **host** | brings a CAN interface up or down |
 | [`can2.service`](#can2service) | Jetson **host** (systemd) | brings `can2` up at every boot |
+| [`argus-watchdog`, `argus-watchdog.service`](#argus-watchdog) | Jetson **host** (systemd) | restarts `nvargus-daemon` when it's down, wedged or leaking camera sessions |
 | [`can-clear-faults`](#can-clear-faults) | host or container | clears latched ODESC errors, optionally reboots a board |
 | [`sim-up`](#sim-up) | container | one-command Gazebo sim |
 | [`desktop-ros2`, `rover-ros2`](#desktop-ros2-rover-ros2) | host | build and run the dev images without VS Code |
@@ -45,6 +46,42 @@ systemctl status can2.service
 
 It is bound to the `can2` device, so it does nothing if the adapter enumerates under another
 number. The bitrate (500000) is in its `ExecStart` line.
+
+## argus-watchdog
+
+One flaky CSI camera can take every camera down: its capture times out in hardware and
+`nvargus-daemon` (Argus, on the host) crashes, stops accepting clients, or leaves sessions
+allocated. systemd restarts a crash by itself; the rest needed `sudo systemctl restart
+nvargus-daemon` by hand. This does it automatically. Python standard library, host only.
+
+```bash
+sudo install -m 755 tooling/argus-watchdog /usr/local/bin/argus-watchdog
+sudo cp tooling/argus-watchdog.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now argus-watchdog.service
+journalctl -u argus-watchdog -f             # what it saw and did
+
+tooling/argus-watchdog --status             # Argus state and its accept queue, no root needed
+sudo tooling/argus-watchdog --dry-run       # detect and log, never restart
+```
+
+After changing `tooling/argus-watchdog`, run the `install` line again and
+`sudo systemctl restart argus-watchdog`.
+
+| Restarts Argus when | Detected by |
+|---|---|
+| it stops accepting clients | connections queued on `/tmp/argus_socket` for 10 s (`--wedge-s`), read from `/proc/net/unix` (it never connects, so it costs Argus nothing) |
+| sessions leaked by a client that died mid-close | 3 `AlreadyAllocated … is in use` in its log within 60 s (`--leak-count`) |
+| the service is down and systemd gave up on it | not `active` for 15 s (`--inactive-s`) |
+
+- A **camera error** (`Sending critical error event`, `Camera HwEvents wait`) is only logged:
+  Argus usually survives it and only that camera's session dies, so a restart would drop the
+  healthy feeds too.
+- Restarts are at least 30 s apart; every restart within 10 min of the last doubles that, up to
+  5 min, so a bad cable can't make all the feeds flap. Ten quiet minutes reset it.
+- The camera nodes recover by themselves after any Argus restart (theirs or this one's): a
+  pipeline with no frame for 5 s is restarted ([cameras.md](cameras.md)). Feeds are back about
+  30 s after a crash.
 
 ## can-clear-faults
 
