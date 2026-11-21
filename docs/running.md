@@ -334,10 +334,10 @@ networking, so the host can reach their port 8765.
    | `camera:=cloud` | `ros2_ws/src/perception/people/foxglove/zed_points.json` (`drivetrain.json` + `/zed/points`) |
    | `camera:=openpose` or `camera:=both` | `ros2_ws/src/perception/people/foxglove/people_rover.json` (`drivetrain.json` + point cloud, skeletons, OpenPose image, `/people/gesture`) |
 
-**Mac:** run Foxglove on macOS and connect to `ws://localhost:8765`. The Mac container forwards
-the port. The Mac container has no GPU and no gamepad, so run the sim as
-`xvfb-run -a ros2 launch chassis_bringup sim_gz.launch.py gui:=false foxglove:=true joy_control:=false`
-and drive with the keyboard (below).
+**Mac:** there is no Mac dev container. To control the rover from a Mac, run the
+[dashboard](../dashboard/README.md#on-a-mac) natively (`make setup-dash`, `make start`): the rover
+runs everything, Foxglove (the macOS app) connects to `ws://<jetson-ip>:8765`, and the browser
+reads the gamepad.
 
 ## Controls
 

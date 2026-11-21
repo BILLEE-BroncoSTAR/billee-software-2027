@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| `pixi shell -e <env>` | enter the env (`default`, `l4t`, `mac-cpu`) |
+| `pixi shell -e <env>` | enter the env (`default`, `l4t`) |
 | `pixi run build` | build everything (inside the shell) |
 | `pixi run build --packages-select <pkg>` | build one package |
 | `pixi run -e <env> <cmd>` | run one command without entering the shell |

@@ -12,7 +12,6 @@ Pick the configuration for your machine (VS Code: **Dev Containers: Reopen in Co
 |---|---|---|
 | x86 Linux with an NVIDIA GPU (dev box, ground station) | `desktop-roshumble_dev-x86` (`.devcontainer/devcontainer.json`) | `default` |
 | Jetson Orin, JetPack 6.2 / L4T r36.4 (the rover) | `rover-roshumble_l4t-aarch64` (`.devcontainer/l4t/`) | `l4t` |
-| Apple-Silicon Mac (headless sim and viewer, no GPU) | `desktop-roshumble-mac-cpu` (`.devcontainer/mac/`) | `mac-cpu` |
 
 Host requirements:
 
@@ -34,7 +33,6 @@ Host requirements:
 
   Without this, the image builds but the container fails to start with
   `failed to discover GPU vendor from CDI: no known GPU vendor found`.
-- **Mac:** Docker Desktop.
 - **Jetson:** Docker with the `nvidia` runtime. Do this once, and again after every reflash:
 
   ```sh
@@ -61,7 +59,7 @@ commands:
 
 ```bash
 cd ros2_ws
-pixi shell -e default        # x86 ground station / dev box. Jetson: -e l4t. Mac: -e mac-cpu
+pixi shell -e default        # x86 ground station / dev box. Jetson: -e l4t
 pixi run build               # inside the shell: builds with the active env
 ```
 
@@ -138,7 +136,7 @@ Everything the rover runs is documented in [`docs/`](docs):
 ## Repository layout
 
 ```
-.devcontainer/     dev container configs (x86 default, l4t/, mac/)          docs/containers.md
+.devcontainer/     dev container configs (x86 default, l4t/)               docs/containers.md
 docker/            Dockerfiles and container setup scripts                  docs/containers.md
 configs/odesc/     ODESC board configs (odrivetool backups)                 docs/odesc.md
 configs/zed/       ZED factory calibration                                  docs/containers.md

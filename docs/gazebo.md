@@ -7,11 +7,11 @@ and QML paths Gazebo needs to find the meshes and `ign_ros2_control`.
 ## GPU and rendering
 
 - Check what's rendering with `glxinfo | grep "OpenGL renderer"`. It should name your GPU (x86) or
-  `llvmpipe` (Mac/headless).
+  `llvmpipe` (headless).
 - Ubuntu 22.04's mesa is too old for newer GPUs. The Dockerfiles add the `ppa:kisak/kisak-mesa`
   PPA.
-- **Mac / CI (no GPU):** run under `xvfb-run -a`. The Mac container sets
-  `LIBGL_ALWAYS_SOFTWARE=1` and `GALLIUM_DRIVER=llvmpipe`. If `ogre2` still fails, set
+- **CI / no GPU:** run under `xvfb-run -a` with `LIBGL_ALWAYS_SOFTWARE=1` and
+  `GALLIUM_DRIVER=llvmpipe`. If `ogre2` still fails, set
   `export IGN_GAZEBO_RENDER_ENGINE=ogre`, or skip Gazebo with the virtual CAN bus
   ([running.md → CAN testing without motors](running.md#can-testing-without-motors)).
 - If textures don't load, the QML/GUI plugin paths are wrong. `sim_gz.launch.py` finds them from

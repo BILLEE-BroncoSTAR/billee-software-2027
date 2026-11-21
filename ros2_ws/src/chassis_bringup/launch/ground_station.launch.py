@@ -8,7 +8,7 @@
 Starts:
   - viz.launch.py  -> rviz2 (view:= drivetrain/cloud/openpose/both) + foxglove_bridge :8765
   - teleop.launch.py -> joy_node + joy_tank_drive  (publishes cmd_vel over DDS);
-    skip with joystick:=false (e.g. headless / Mac container / Foxglove-only station)
+    skip with joystick:=false (e.g. headless / Foxglove-only station)
   - optionally opens the F' GDS web UI in a browser (fprime_gds:=true) at fprime_gds_url:=
 
 The ground station shares ROS_DOMAIN_ID (pixi.toml) and LAN with the rover, so the local
@@ -44,7 +44,7 @@ declare_args = [
         "joystick",
         default_value="true",
         description="Start teleop (joy_node + joy_tank_drive). Set false for a "
-        "view-only station or where no /dev/input gamepad exists (Mac container, CI).",
+        "view-only station or where no /dev/input gamepad exists (CI).",
     ),
     DeclareLaunchArgument(
         "view",

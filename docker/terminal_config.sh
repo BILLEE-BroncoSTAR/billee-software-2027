@@ -4,7 +4,7 @@
 # fallback supports opening a regular dev-container terminal before `pixi
 # shell`; a Jetson `pixi shell -e l4t` selects the l4t prefix automatically.
 # The workspace is wherever the repo is mounted: <repo>/ros2_ws (x86 devcontainer,
-# /workspaces/<repo-folder>), or ros2_ws itself (Mac devcontainer, tooling/*-ros2).
+# /workspaces/<repo-folder>), or ros2_ws itself (tooling/*-ros2).
 _billee_ws=
 for _d in "$PWD/ros2_ws" "$PWD" /workspaces/*/ros2_ws "$HOME/ros2_ws"; do
   if [ -f "$_d/pixi.toml" ]; then _billee_ws=$_d; break; fi
@@ -42,7 +42,6 @@ echo "          Project BILL-EE 2027           "
 echo "========================================="
 echo "To get started, activate an environment:"
 echo "  $ pixi shell              | Default x86 Environment"
-echo "  $ pixi shell -e mac-cpu   | Apple-Silicon Mac Environment"
 echo "  $ pixi shell -e l4t       | Jetson Environment"
 echo ""
 fi

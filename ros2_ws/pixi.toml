@@ -30,9 +30,8 @@ numpy = "*"
 empy = "*"
 lark = "*"
 
-# CPU-only aarch64 environment. Shared by:
-#   - `mac-cpu` : Apple-Silicon Docker Desktop containers
-#   - `l4t`     : NVIDIA Jetson (L4T / JetPack) rover, see .devcontainer/l4t/
+# CPU-only aarch64 environment for the NVIDIA Jetson (L4T / JetPack) rover (`l4t`, see
+# .devcontainer/l4t/). The Jetson's CUDA comes from its image, not from pixi.
 [feature.aarch64-cpu]
 platforms = ["linux-aarch64-glibc234"]
 
@@ -54,7 +53,6 @@ lark = "*"
 
 [environments]
 default = { features = ["linux-cuda"]}
-mac-cpu = { features = ["aarch64-cpu"]}
 l4t = { features = ["aarch64-cpu"]}
 
 [dependencies]
@@ -76,7 +74,7 @@ ros-humble-ros2-control = ">=2.54.0,<3"
 ros-humble-ign-ros2-control = ">=0.7.19,<0.8"
 # Foxglove WebSocket bridge: rover publishes on :8765, ground station connects with Foxglove Studio.
 ros-humble-foxglove-bridge = "*"
-# Keyboard teleop — the drive path where no /dev/input gamepad exists (Mac devcontainer, CI).
+# Keyboard teleop — the drive path where no /dev/input gamepad exists (CI, headless).
 ros-humble-teleop-twist-keyboard = "*"
 ros-humble-navigation2 = ">=1.1.20,<2"
 ros-humble-nav2-bringup = ">=1.1.20,<2"
@@ -102,8 +100,7 @@ ros-humble-image-transport-plugins = "*"
 ros-humble-cv-bridge = "*"
 
 [activation]
-# Pixi has already activated the selected environment (default, mac-cpu, or
-# l4t).  Source only this workspace's overlay so we do not re-source the
+# Pixi has already activated the selected environment (default or l4t).  Source only this workspace's overlay so we do not re-source the
 # underlay captured when another architecture built install/setup.sh.
 scripts = ["install/local_setup.sh"]
 

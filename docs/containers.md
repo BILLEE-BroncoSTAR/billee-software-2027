@@ -9,15 +9,14 @@ open each container is in [README §1](../README.md#1-open-the-dev-container).
 |---|---|---|---|
 | `desktop-roshumble_dev-x86` (x86 + NVIDIA) | `.devcontainer/devcontainer.json` | `docker/Dockerfile.desktop.humble` | `default` |
 | `rover-roshumble_l4t-aarch64` (Jetson) | `.devcontainer/l4t/devcontainer.json` | `docker/Dockerfile.l4t-humble` | `l4t` |
-| `desktop-roshumble-mac-cpu` (Apple Silicon) | `.devcontainer/mac/devcontainer.json` | `docker/Dockerfile.desktop.mac.humble` | `mac-cpu` |
 
 `tooling/desktop-ros2` and `tooling/rover-ros2` build and run the first two without VS Code
 ([tooling.md](tooling.md#desktop-ros2-rover-ros2)).
 
 ## Pixi (`ros2_ws/pixi.toml`)
 
-- Environments: `default` (linux-64 with CUDA 13), `l4t` and `mac-cpu` (both linux-aarch64, CPU
-  packages; the Jetson's CUDA comes from the image, not pixi).
+- Environments: `default` (linux-64 with CUDA 13) and `l4t` (linux-aarch64, CPU packages; the
+  Jetson's CUDA comes from the image, not pixi).
 - Both platforms declare glibc 2.34 (every container is Ubuntu 22.04, glibc 2.35): RoboStack's
   librealsense2 needs it. pixi only takes that on a named platform entry, so the aarch64 platform
   is called `linux-aarch64-glibc234`.
@@ -96,16 +95,9 @@ allows USB (189) and video4linux (81) devices (`--device-cgroup-rule`), and runs
 `~/.cache/urc-pixi-cache` on the host: pixi hardlinks from it into `ros2_ws/.pixi`, which fails
 across a named-volume boundary.
 
-## Mac image (`Dockerfile.desktop.mac.humble`)
-
-Plain Ubuntu 22.04 with pixi, `mac-cpu` installed and the workspace built into the image. The
-container runs as root with `ros2_ws` mounted at `/root/ros2_ws`, forwards port 8765 for Foxglove
-on macOS (Docker Desktop has no host networking), and forces Mesa's `llvmpipe` software renderer.
-Its `postStartCommand` reinstalls the pixi env when it was built for another path.
-
 ## Shell setup (`docker/terminal_config.sh`)
 
-Appended to `~/.bashrc` in the x86 and Mac images. It finds the workspace, sources the active
+Appended to `~/.bashrc` in the x86 image. It finds the workspace, sources the active
 pixi env's `setup.bash` and the workspace's `install/local_setup.bash`, `cd`s into `ros2_ws`, and
 prints which pixi env is active (or how to enter one).
 

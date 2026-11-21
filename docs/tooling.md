@@ -121,7 +121,7 @@ tooling/sim-up true true true                       # + ODESC driver on vcan0 (c
 
 Runs `sim_gz.launch.py` with `foxglove`, `joy_control` and `odesc_shadow` set from its arguments.
 It uses the active pixi env (`$PIXI_ENVIRONMENT_NAME`), or picks one from the machine (x86 →
-`default`, Jetson → `l4t`, else `mac-cpu`). Without a usable display (none, or a stale `$DISPLAY`
+`default`, anything else → `l4t`). Without a usable display (none, or a stale `$DISPLAY`
 that `xdpyinfo` can't reach), it sets `gui:=false` and wraps the launch in `xvfb-run -a vglrun -d
 egl` ([gazebo.md](gazebo.md#headless-gpu-rendering-jetson)).
 

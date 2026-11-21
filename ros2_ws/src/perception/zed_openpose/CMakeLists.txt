@@ -24,8 +24,8 @@ endif()
 install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
 
 # The node runs only on the rover: docker/Dockerfile.l4t-humble installs the ZED SDK
-# (/usr/local/zed) and CMU OpenPose built with CUDA (/opt/openpose). On the ground station and
-# the Mac this package builds nothing else.
+# (/usr/local/zed) and CMU OpenPose built with CUDA (/opt/openpose). On the ground station this
+# package builds nothing else.
 find_path(OPENPOSE_INCLUDE_DIR openpose/headers.hpp PATHS /opt/openpose/include NO_DEFAULT_PATH)
 find_library(OPENPOSE_LIB openpose PATHS /opt/openpose/lib NO_DEFAULT_PATH)
 find_library(CAFFE_LIB caffe PATHS /opt/openpose/lib NO_DEFAULT_PATH)
