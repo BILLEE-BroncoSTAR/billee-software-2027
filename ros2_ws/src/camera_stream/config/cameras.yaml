@@ -1,7 +1,7 @@
 cameras:
   rear_left:
     name: "rear_left"
-    flip: 2
+    flip: 0
   front:
     name: "front"
     flip: 2

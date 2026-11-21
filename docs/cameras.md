@@ -28,8 +28,8 @@ them with a log line.
 | `use_sim_time` | `false` | `rover.launch.py mode:=sim` sets it |
 
 The camera list is `config/cameras.yaml` in `camera_stream`: name and
-`flip_method` per camera. cam0 `rear_left` and cam1 `front` are mounted upside down (`2`, rotate
-180°); the rest are `0`. Other values: `4` mirror left-right, `6` mirror top-bottom, `1` / `3`
+`flip_method` per camera. cam1 `front` is mounted upside down (`2`, rotate 180°); the rest
+are `0`. Other values: `4` mirror left-right, `6` mirror top-bottom, `1` / `3`
 rotate 90° (the stream becomes portrait, 720×1280). The flip happens in the Jetson's video hardware
 before encoding, so every viewer gets the corrected image. Edit the table and relaunch; with the
 symlink install there's nothing to rebuild.
