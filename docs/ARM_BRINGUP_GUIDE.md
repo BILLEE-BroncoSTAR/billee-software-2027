@@ -398,6 +398,35 @@ generated URDF only carries the `<ros2_control>` blocks.
   RoboClaws keep the **last speed** until their own serial timeout trips. That's why every
   unit needs one (§1.2).
 
+### 5.1 Joystick joint jog (`arm_teleop.launch.py`)
+
+The minimum teleop for testing: one joint at a time, in joint space, with no IK. Start
+`arm.launch.py` first, then:
+
+```bash
+pixi run --environment l4t ros2 launch arm_bringup arm_teleop.launch.py                   # starts its own joy_node
+pixi run --environment l4t ros2 launch arm_bringup arm_teleop.launch.py joy:=false        # joy_node already running
+pixi run --environment l4t ros2 launch arm_bringup arm_teleop.launch.py speed_scale:=0.5  # half of test_velocity
+```
+
+| Input (raw-joystick Xbox layout) | Action |
+|---|---|
+| hold **LB** (button 4) | deadman: nothing moves unless it is held |
+| **B** / **X** (buttons 1 / 2) | select the next / previous joint (it logs name, driver, position, limits) |
+| left stick vertical (axis 1) | jog the selected joint; full stick = `test_velocity` × `speed_scale` |
+
+- **Source of truth:** joints, speeds and limits come from `arm_axes.yaml`, so a re-wire or
+  rename is a YAML edit only. Commands never leave `limits.min/max_position`, and speed is
+  capped at `limits.max_velocity`.
+- **Stopping:** releasing LB, switching joints, or `/joy` going quiet for more than 0.3 s
+  stops the arm. The quiet-`/joy` stop guards against a dropped controller.
+- **No conflict with drive:** the drive teleop uses **RB**, so the arm and the rover never
+  share a deadman.
+- **Wrong direction or mapping:** for a stick that's backwards, pass
+  `--ros-args -p invert_axis:=true` to the script. For a different controller, override
+  `deadman_button`, `next_button`, `prev_button` or `jog_axis` the same way. Run
+  `ros2 topic echo /joy` to find the indices.
+
 ---
 
 ## 6. Physical constants (`arm_axes.yaml`)
@@ -451,3 +480,4 @@ The launch derives everything else:
 7. [ ] Total ratio measured for every axis, `arm_axes.yaml` filled in, `verified: true` (§6)
 8. [ ] Real launch, arm supported: each joint moved with `--speed 0.02` (±0.05 rad), direction checked
 9. [ ] Limits walked out at `test_velocity`, then recorded in `arm_axes.yaml`
+10. [ ] `arm_teleop.launch.py`: deadman, joint select, and each joint's stick direction checked; pulling the controller (or killing `joy_node`) stops a moving joint (§5.1)

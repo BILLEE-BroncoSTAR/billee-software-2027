@@ -36,6 +36,10 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>trajectory_msgs</exec_depend>
 
+  <!-- arm_joy_teleop.py / arm_teleop.launch.py -->
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>joy</exec_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>

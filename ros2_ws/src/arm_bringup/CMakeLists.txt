@@ -8,6 +8,7 @@ install(DIRECTORY config launch
 )
 install(PROGRAMS
   scripts/arm_slow_jog.py
+  scripts/arm_joy_teleop.py
   scripts/pxx_probe.py
   scripts/roboclaw_probe.py
   DESTINATION lib/${PROJECT_NAME}
