@@ -59,6 +59,7 @@ hardware_interface::CallbackReturn PxxSystemHardware::on_init(
   joint_names_.reserve(n);
   node_ids_.reserve(n);
   gear_ratios_.reserve(n);
+  limit_switches_.reserve(n);
 
   for (const auto & joint : info_.joints) {
     if (joint.command_interfaces.size() != 1 ||
@@ -115,9 +116,29 @@ hardware_interface::CallbackReturn PxxSystemHardware::on_init(
       return hardware_interface::CallbackReturn::ERROR;
     }
 
+    std::unique_ptr<roboclaw_hardware_interface::LimitSwitch> limit_switch;
+    const auto limit_switch_it = joint.parameters.find("limit_switch");
+    if (limit_switch_it != joint.parameters.end()) {
+      try {
+        size_t parsed = 0;
+        const int pin = std::stoi(limit_switch_it->second, &parsed);
+        if (parsed != limit_switch_it->second.size() || pin < 0) {
+          throw std::invalid_argument("invalid limit switch pin");
+        }
+        limit_switch = std::make_unique<roboclaw_hardware_interface::LimitSwitch>(pin);
+      } catch (const std::exception &) {
+        RCLCPP_FATAL(
+          rclcpp::get_logger(kLogger),
+          "joint '%s' limit_switch must be a non-negative integer GPIO ID.",
+          joint.name.c_str());
+        return hardware_interface::CallbackReturn::ERROR;
+      }
+    }
+
     joint_names_.push_back(joint.name);
     node_ids_.push_back(static_cast<uint8_t>(nid));
     gear_ratios_.push_back(gear_ratio);
+    limit_switches_.push_back(std::move(limit_switch));
   }
 
   hw_positions_.assign(n, 0.0);

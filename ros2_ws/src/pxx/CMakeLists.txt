@@ -10,6 +10,7 @@ find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(roboclaw_hardware_interface REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -33,6 +34,7 @@ ament_target_dependencies(pxx
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  roboclaw_hardware_interface
 )
 
 # Export the plugin so ros2_control's pluginlib loader finds PxxSystemHardware.
@@ -65,6 +67,7 @@ ament_export_dependencies(
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  roboclaw_hardware_interface
 )
 
 ament_package()

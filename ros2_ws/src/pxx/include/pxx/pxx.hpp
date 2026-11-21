@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "pxx/motor_backend.hpp"
+#include "roboclaw_hardware_interface/limit_switch.hpp"
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
 #include "hardware_interface/system_interface.hpp"
@@ -66,6 +67,8 @@ private:
   std::vector<std::string> joint_names_;
   std::vector<uint8_t> node_ids_;
   std::vector<double> gear_ratios_;
+  // Optional GPIO input for each hardware joint; indexes match joint_names_.
+  std::vector<std::unique_ptr<roboclaw_hardware_interface::LimitSwitch>> limit_switches_;
 
   // ---- ros2_control interface storage (indexed by joint) ----
   std::vector<double> hw_positions_;
