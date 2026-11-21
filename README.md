@@ -81,8 +81,8 @@ the ground station, and opens the F´ GDS and Foxglove. Its output panel shows b
 terminals. On the ground station **host**, from this repo's root:
 
 ```bash
-make setup-dash   # once: host tools, SSH key to the rover, config
-make start        # http://localhost:7780
+make setup-dash   # once: asks for the Jetson's IP, SSH key to the rover, checks
+make start        # the dashboard (http://localhost:7780) and the RCM GDS
 ```
 
 Details: [BILLEE-dashboard-tool/README.md](BILLEE-dashboard-tool/README.md).
