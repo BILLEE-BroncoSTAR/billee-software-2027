@@ -3,14 +3,14 @@
 #   make              same as `make help`
 #   make setup-dash   install and configure the dashboard on the ground station (x86 host)
 #   make start        start the dashboard: http://localhost:7780 + the RCM GDS
-#   make start ARGS=--no-browser    pass options to the dashboard (./dashboard/billee-dash --help)
+#   make start ARGS=--no-browser    pass options to the dashboard (./BILLEE-dashboard-tool/billee-dash --help)
 #   make test-dash    run the dashboard's tests
 #
 # Run on the ground station HOST, not in a dev container: the dashboard starts the ground
 # station's x86 dev container itself and drives the rover's l4t container over SSH.
-# The dashboard is the `dashboard/` submodule (github.com/LucaLanzi/BILLEE-dashboard-tool).
+# The dashboard is the `BILLEE-dashboard-tool/` submodule (github.com/LucaLanzi/BILLEE-dashboard-tool).
 
-DASH_DIR := dashboard
+DASH_DIR := BILLEE-dashboard-tool
 ARGS     ?=
 
 .DEFAULT_GOAL := help

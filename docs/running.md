@@ -7,7 +7,7 @@ There are two machines:
 | **Jetson** (the rover) | `.devcontainer/l4t/` | `l4t` | CAN bus, ZED 2i. No monitor. |
 | **Ground station** (x86 laptop) | `.devcontainer/devcontainer.json` | `default` | Gamepad, screen, Foxglove Studio |
 
-The [BILLEE dashboard](../dashboard/README.md) (`make setup-dash`, then `make start` on the ground
+The [BILLEE dashboard](../BILLEE-dashboard-tool/README.md) (`make setup-dash`, then `make start` on the ground
 station host) runs these setups from a web page, with these commands as each mode's defaults.
 
 Every command below runs **inside the dev container, in `ros2_ws`, inside `pixi shell -e <env>`**,
@@ -333,7 +333,7 @@ networking, so the host can reach their port 8765.
    whose topics aren't running read "waiting for messages".
 
 **Mac:** there is no Mac dev container. To control the rover from a Mac, run the
-[dashboard](../dashboard/README.md#on-a-mac) natively (`make setup-dash`, `make start`): the rover
+[dashboard](../BILLEE-dashboard-tool/README.md#on-a-mac) natively (`make setup-dash`, `make start`): the rover
 runs everything, Foxglove (the macOS app) connects to `ws://<jetson-ip>:8765`, and the browser
 reads the gamepad.
 

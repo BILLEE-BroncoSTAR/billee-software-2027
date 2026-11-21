@@ -74,7 +74,7 @@ On an 8 GB Jetson, a full build can run out of RAM. Use
 
 ### With the dashboard (ground station)
 
-The BILLEE dashboard ([`dashboard/`](dashboard), a submodule) runs everything below from one web
+The BILLEE dashboard ([`BILLEE-dashboard-tool/`](BILLEE-dashboard-tool), a submodule) runs everything below from one web
 page on the ground station: pick a mode (Teleop · Drive / Arm / Science, sim, bench test), press
 **Run**. It starts both dev containers, brings CAN up, clears ODESC faults, launches the rover and
 the ground station, and opens the F´ GDS and Foxglove. Its output panel shows both machines'
@@ -85,7 +85,7 @@ make setup-dash   # once: host tools, SSH key to the rover, config
 make start        # http://localhost:7780
 ```
 
-Details: [dashboard/README.md](dashboard/README.md).
+Details: [BILLEE-dashboard-tool/README.md](BILLEE-dashboard-tool/README.md).
 
 ### By hand
 
@@ -132,7 +132,7 @@ Everything the rover runs is documented in [`docs/`](docs):
 | [containers.md](docs/containers.md) | Dev containers, Docker images, pixi environments, ZED calibration (`configs/zed/`) |
 | [tooling.md](docs/tooling.md) | `tooling/`: `can-up`, `can2.service`, `argus-watchdog` (restarts a wedged camera daemon), `can-clear-faults`, `sim-up`, `desktop-ros2` / `rover-ros2` |
 | [cheatsheet.md](docs/cheatsheet.md) | pixi and ROS 2 CLI commands |
-| [dashboard/README.md](dashboard/README.md) | The BILLEE dashboard: modes, CAN panel, output, setup (`make setup-dash`, `make start`) |
+| [BILLEE-dashboard-tool/README.md](BILLEE-dashboard-tool/README.md) | The BILLEE dashboard: modes, CAN panel, output, setup (`make setup-dash`, `make start`) |
 
 ## Repository layout
 
@@ -141,8 +141,8 @@ Everything the rover runs is documented in [`docs/`](docs):
 docker/            Dockerfiles and container setup scripts                  docs/containers.md
 configs/odesc/     ODESC board configs (odrivetool backups)                 docs/odesc.md
 configs/zed/       ZED factory calibration                                  docs/containers.md
-Makefile           make setup-dash / make start: the dashboard                dashboard/README.md
-dashboard/         BILLEE dashboard (submodule)                             dashboard/README.md
+Makefile           make setup-dash / make start: the dashboard              BILLEE-dashboard-tool/README.md
+BILLEE-dashboard-tool/ BILLEE dashboard (submodule)                       BILLEE-dashboard-tool/README.md
 tooling/           CAN bring-up and fault clearing, Argus watchdog, sim-up, image runners   docs/tooling.md
 ros2_ws/pixi.toml  dependencies, environments, `build` task, ROS_DOMAIN_ID
 ros2_ws/src/
