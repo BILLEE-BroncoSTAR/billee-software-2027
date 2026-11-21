@@ -13,9 +13,9 @@
     ros2 launch people people_rover.launch.py vio:=true
 
 Skeletons are placed in base_link, i.e. relative to the rover, using the URDF's
-base_link -> camera_link mount. Ground station layouts, one per mode:
-  Foxglove (ws://<rover>:8765): people/foxglove/people_rover.json | zed_points.json
-  RViz: people/rviz/people_rover.rviz | zed_points.rviz
+base_link -> camera_link mount. Ground station layouts:
+  Foxglove (ws://<rover>:8765): chassis_bringup/foxglove/rover_dashboard.json (every mode)
+  RViz, one per mode: people/rviz/people_rover.rviz | zed_points.rviz
 """
 
 from launch import LaunchDescription

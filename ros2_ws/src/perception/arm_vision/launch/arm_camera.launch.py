@@ -28,7 +28,7 @@ Topics (/arm_cam = the realsense2_camera node; config/realsense_d435i.yaml)
 TF: arm_cam_link -> arm_cam_{color,depth,...}_optical_frame (driver), optical frame -> aruco_<id>.
 
 realsense2_camera waits for the camera and reconnects after a USB drop, so the launch can start
-before the camera is plugged in. Foxglove layout: arm_vision/foxglove/arm_camera.json.
+before the camera is plugged in. Foxglove layout: chassis_bringup/foxglove/rover_dashboard.json.
 """
 
 import os

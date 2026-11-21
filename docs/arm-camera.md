@@ -92,10 +92,8 @@ ros2 launch arm_vision arm_camera.launch.py serial_no:=838212070123   # a specif
 
 **Ground station:** Foxglove Studio → `ws://<rover>:8765` (or `ws://localhost:8765` when the ground
 station runs its own bridge, as with `ground_station.launch.py`).
-- `rover_dashboard.json` (chassis_bringup) has an **Arm RealSense** panel showing the annotated
-  feed. It reads "waiting for messages" until the camera is up.
-- `arm_vision/foxglove/arm_camera.json` is the full arm-camera layout: annotated feed, raw colour,
-  3D markers and the marker list.
+- `rover_dashboard.json` (chassis_bringup), the Foxglove layout, has an **Arm RealSense** panel
+  showing the annotated feed. It reads "waiting for messages" until the camera is up.
 - In RViz, add an Image display on `/arm_cam/aruco/image` with transport `compressed`.
 
 Bandwidth: the bridge sends only what a panel subscribes to. The annotated JPEG is about 10-40 kB

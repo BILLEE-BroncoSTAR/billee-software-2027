@@ -38,7 +38,8 @@ The arm's RealSense D435i (arm_vision/launch/arm_camera.launch.py) also starts i
 arm_camera:=auto (default) starts realsense2_camera + the ArUco node when a RealSense is on USB at
 launch, true starts them regardless (the driver waits for the camera), false never. The ground
 station's view of it: /arm_cam/aruco/image/compressed (annotated JPEG) and
-/arm_cam/color/image_raw/compressed, in Foxglove (arm_vision/foxglove/arm_camera.json) or RViz.
+/arm_cam/color/image_raw/compressed, in Foxglove (chassis_bringup/foxglove/rover_dashboard.json)
+or RViz.
 """
 
 import importlib.util

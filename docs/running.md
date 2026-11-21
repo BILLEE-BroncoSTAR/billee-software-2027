@@ -325,14 +325,12 @@ networking, so the host can reach their port 8765.
    | `ws://localhost:8765` | the ground station's own, started by `ground_station.launch.py` (setup 1: `sim_gz.launch.py foxglove:=true`) | normal case. It shows the Jetson's topics, received over DDS. |
    | `ws://<jetson-ip>:8765` | the Jetson's, started by `rover.launch.py` | DDS between the machines doesn't work, or you have no ground-station container. Get the IP with `hostname -I` on the Jetson. |
 
-2. **Layouts → Import from file**, and pick the layout for what is running:
-
-   | Jetson runs | Layout |
-   |---|---|
-   | the rover, any `camera:=` | `ros2_ws/src/chassis_bringup/foxglove/rover_dashboard.json`: the five [CSI cameras](#csi-cameras) (front: tabs for cam0 and the ZED 2i, whose image needs `camera:=openpose` or `both`), GPS map, odometry |
-   | no `camera:=` | `ros2_ws/src/chassis_bringup/foxglove/drivetrain.json` (3D view, `/joy`, `/diff_drive_controller/cmd_vel_unstamped`) |
-   | `camera:=cloud` | `ros2_ws/src/perception/people/foxglove/zed_points.json` (`drivetrain.json` + `/zed/points`) |
-   | `camera:=openpose` or `camera:=both` | `ros2_ws/src/perception/people/foxglove/people_rover.json` (`drivetrain.json` + point cloud, skeletons, OpenPose image, `/people/gesture`) |
+2. **Layouts → Import from file** (once; Foxglove keeps it):
+   `ros2_ws/src/chassis_bringup/foxglove/rover_dashboard.json`. It is **the** layout, for every
+   mode and every `camera:=`: the five [CSI cameras](#csi-cameras) (front: tabs for cam0 and the ZED
+   2i, whose image needs `camera:=openpose` or `both`), the arm RealSense, the GPS map, and a 3D
+   view that follows the rover (rover model, odometry, ZED point cloud, OpenPose skeletons). Panels
+   whose topics aren't running read "waiting for messages".
 
 **Mac:** there is no Mac dev container. To control the rover from a Mac, run the
 [dashboard](../dashboard/README.md#on-a-mac) natively (`make setup-dash`, `make start`): the rover

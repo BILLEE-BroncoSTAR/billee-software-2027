@@ -58,14 +58,15 @@ This also starts `robot_state_publisher` and the Foxglove bridge (`standalone:=t
 | `target_frame` | `base_link` | frame of all 3D output |
 | `use_sim_time` | `false` | Stamp with sim time. `rover.launch.py camera:=…` sets it in the sim (`mode:=sim`), where the camera's own clock would put every message "in the future" for the viewers. |
 
-**View it** on the ground station. The Foxglove layouts are `drivetrain.json` (rover model,
-odometry trail, `/joy`, drive command) plus the camera topics. RViz's fixed frame is `odom` on sim
-time and `base_link` otherwise (`ground_station.launch.py`).
+**View it** on the ground station. In Foxglove, `chassis_bringup/foxglove/rover_dashboard.json`
+(the one layout) shows the point cloud and skeletons in its 3D view and the OpenPose image on the
+front camera's ZED tab. RViz's fixed frame is `odom` on sim time and `base_link` otherwise
+(`ground_station.launch.py`):
 
-| Mode | Foxglove (Layouts → Import) | RViz (`ground_station.launch.py … view:=`) |
-|---|---|---|
-| point cloud | `ros2_ws/src/perception/people/foxglove/zed_points.json` | `view:=cloud` |
-| OpenPose, or point cloud + OpenPose | `ros2_ws/src/perception/people/foxglove/people_rover.json` | `view:=openpose` / `view:=both` |
+| Mode | RViz (`ground_station.launch.py … view:=`) |
+|---|---|
+| point cloud | `view:=cloud` |
+| OpenPose, or point cloud + OpenPose | `view:=openpose` / `view:=both` |
 
 Measured on the dev Orin Nano (2026-11-13, HD720, depth `ULTRA`): the camera runs at 30 fps.
 Point cloud alone: `/zed/points` at 8.5 Hz. OpenPose alone, or with the point cloud: 5 Hz, the
@@ -83,7 +84,7 @@ is actually free, and the camera and OpenPose failed at startup when most RAM wa
 | Node params | `zed_openpose/config/zed_openpose.yaml` |
 | Gesture rules + node (Python) | `people/people/gestures.py`, `gesture_node.py`, `people/config/gestures.yaml` |
 | Messages | `people_msgs/msg/`: `Skeleton.msg`, `Skeletons.msg`, `Gesture.msg` (keypoint order and field meanings are commented in each) |
-| Viewer layouts | `people/foxglove/zed_points.json`, `people_rover.json`; `people/rviz/zed_points.rviz`, `people_rover.rviz` |
+| Viewer layouts | `people/rviz/zed_points.rviz`, `people_rover.rviz` (Foxglove: `chassis_bringup/foxglove/rover_dashboard.json`) |
 | VIO pose (header-only, unit-tested) | `zed_openpose/include/zed_openpose/vio_pose.hpp` |
 | OpenPose model download | `zed_openpose/scripts/get_openpose_models.sh` |
 | Launch | `people/launch/people_rover.launch.py` (full), `zed_openpose/launch/zed_openpose.launch.py` (the node alone) |

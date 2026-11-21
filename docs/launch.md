@@ -19,8 +19,8 @@ and `sim_gz.launch.py` are in [running.md → Launch options](running.md#launch-
 | `config/config.yaml` | Gazebo → ROS bridge (`/clock`) |
 | `config/zed_config.yaml` | Gazebo camera topics (`/depth_cam/*`) and ground-truth `/gz/odom` |
 | `config/gz_params.yaml` | Gazebo params |
-| `foxglove/rover_dashboard.json` | Foxglove dashboard: the five CSI cameras (front tab also shows the ZED 2i), GPS map (`/gps`, nothing publishes it yet), odometry |
-| `rviz/drivetrain.rviz`, `foxglove/drivetrain.json` | matching viewer layouts (Foxglove: 3D view, `/joy`, drive command). `ground_station.launch.py` sets RViz's fixed frame to `odom` (`fixed_frame:=`). The sim's EKF (`navigation:=true`) or the real path's wheel-odometry TF (`odom_tf:=true`) publishes it |
+| `foxglove/rover_dashboard.json` | The Foxglove layout, for every mode: the five CSI cameras (front tab also shows the ZED 2i), arm RealSense, GPS map (`/gps`, nothing publishes it yet), and a 3D view that follows the rover (odometry, point cloud, skeletons) |
+| `rviz/drivetrain.rviz` | RViz layout. `ground_station.launch.py` sets RViz's fixed frame to `odom` (`fixed_frame:=`). The sim's EKF (`navigation:=true`) or the real path's wheel-odometry TF (`odom_tf:=true`) publishes it |
 
 ## What `rover.launch.py` starts
 
