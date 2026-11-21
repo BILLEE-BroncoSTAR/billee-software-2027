@@ -48,6 +48,9 @@ except ImportError:  # warned about in __init__
     CompressedVideo = None
 
 GST_PLUGIN_DIR = "/usr/lib/aarch64-linux-gnu/gstreamer-1.0"
+# How long gst-launch-1.0 gets to close the camera before it's killed. csi_cameras.launch.py
+# gives the node longer than this before ros2 launch escalates to SIGTERM / SIGKILL.
+STOP_TIMEOUT_S = 10.0
 ARGUS_SOCKET = "/tmp/argus_socket"
 # nvarguscamerasrc, nvvidconv, nvv4l2h26xenc, nvjpegenc
 NVIDIA_PLUGINS = ("nvarguscamerasrc", "nvvidconv", "nvvideo4linux2", "nvjpeg")
@@ -335,14 +338,20 @@ class CSICompressedVideoPublisher(Node):
         env = {k: v for k, v in os.environ.items()
                if k in ("HOME", "USER", "LANG", "LC_ALL", "XDG_RUNTIME_DIR")}
         env["PATH"] = "/usr/bin:/bin"
-        # setpriv --pdeathsig: gst-launch-1.0 dies with this node, even after a kill -9.
-        prefix = (["/usr/bin/setpriv", "--pdeathsig", "TERM", "--"]
+        # setpriv --pdeathsig INT: gst-launch-1.0 stops with this node even after a kill -9,
+        # and SIGINT (with -e) still closes the camera cleanly. SIGTERM would kill it outright
+        # and leave its capture session allocated in nvargus-daemon ("Device is in use").
+        prefix = (["/usr/bin/setpriv", "--pdeathsig", "INT", "--"]
                   if os.path.exists("/usr/bin/setpriv") else [])
         stderr_tail: collections.deque = collections.deque(maxlen=20)
         try:
             proc = subprocess.Popen(prefix + [self.gst_launch, "-q", "-e"] + argv,
                                     stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, env=env,
+                                    # Its own process group: a Ctrl-C in the launch terminal
+                                    # signals the whole group, and gst-launch-1.0 dies on a
+                                    # second SIGINT. Only _terminate() may send it one.
+                                    start_new_session=True,
                                     pass_fds=(jpeg_w,) if jpeg_w is not None else ())
         except OSError as exc:
             if jpeg_r is not None:
@@ -393,11 +402,13 @@ class CSICompressedVideoPublisher(Node):
     def _terminate(proc: subprocess.Popen) -> None:
         if proc.poll() is not None:
             return
-        # SIGINT with -e: gst-launch-1.0 sends EOS and closes the camera cleanly. Killing it
-        # outright can leave the Argus daemon needing a restart.
+        # One SIGINT with -e: gst-launch-1.0 sends EOS and closes the camera cleanly. A second
+        # SIGINT, or killing it, mid-close leaves its session allocated in nvargus-daemon and
+        # every later launch gets "Device is in use" until the daemon restarts. Argus can take
+        # several seconds to close a session (longer with a flaky CSI link), so wait.
         proc.send_signal(signal.SIGINT)
         try:
-            proc.wait(timeout=3.0)
+            proc.wait(timeout=STOP_TIMEOUT_S)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()

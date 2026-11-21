@@ -96,6 +96,10 @@ def _cameras(context):
             # A crash (a bug, not a missing camera: that's handled inside) restarts the node.
             respawn=True,
             respawn_delay=5.0,
+            # Ctrl-C: give the node time to close its camera (STOP_TIMEOUT_S = 10 s in the
+            # node) before launch escalates; the default 5 s cuts Argus off mid-close.
+            sigterm_timeout="15",
+            sigkill_timeout="5",
             parameters=[{
                 **shared,
                 "name": name,

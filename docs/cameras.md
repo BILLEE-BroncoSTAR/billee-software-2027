@@ -53,8 +53,11 @@ frames, no B-frames, an access-unit delimiter per frame) to stdout, and → `nvv
 the delimiters and the JPEG stream at the JPEG markers, and publishes them. It uses a child process
 because ROS's Python comes from pixi and has no GStreamer bindings, while NVIDIA's camera and
 encoder plugins are built for the system GStreamer (from `gstreamer1.0-tools` in the image). The
-child runs under `setpriv --pdeathsig`, so it dies with the node, and is stopped with SIGINT so the camera closes
-cleanly.
+child runs in its own process group under `setpriv --pdeathsig INT`, and is stopped with exactly
+one SIGINT, then up to 10 s to close the camera (the launch waits 15 s before escalating).
+gst-launch-1.0 dies on a second SIGINT or a SIGTERM, and a camera cut off mid-close stays
+allocated in `nvargus-daemon`: every later launch then shows "NO CAMERA" and the daemon logs
+`Device ... is in use` until `sudo systemctl restart nvargus-daemon` on the host.
 
 **A missing camera never stops the launch.** If `gst-launch-1.0`, the NVIDIA plugins or the Argus
 socket (`/tmp/argus_socket`) is missing, the camera wasn't detected at boot, or the pipeline fails,
