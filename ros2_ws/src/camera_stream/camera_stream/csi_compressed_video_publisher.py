@@ -238,10 +238,14 @@ class CSICompressedVideoPublisher(Node):
         else:
             src = ["nvarguscamerasrc", f"sensor-id={self.sensor_id}", "!",
                    f"video/x-raw(memory:NVMM),width={self.width},height={self.height},"
-                   f"framerate={self.fps}/1"]
-            if self.flip_method:
-                # In the Jetson's video hardware (VIC), before encoding: every viewer gets it.
-                src += ["!", "nvvidconv", f"flip-method={self.flip_method}", "!", nvmm_out]
+                   f"framerate={self.fps}/1",
+                   # Always through nvvidconv, even with flip_method 0: it copies each frame out
+                   # of Argus's small buffer pool. Teeing Argus's own buffers to two consumers
+                   # (H.264 + JPEG) stalls the capture session ("waitForIdle() timed out",
+                   # "buffers still pending") and hangs every camera on the daemon. The flip
+                   # runs here, in the Jetson's video hardware (VIC): every viewer gets it.
+                   "!", "nvvidconv", f"flip-method={self.flip_method}", "!",
+                   f"{nvmm_out},format=NV12"]
         # Quality-capped VBR: the encoder never quantizes finer than min_qp (22 is close to
         # visually lossless), so a calm scene uses only the bits it needs, and never sends more
         # than `bitrate`, so a busy scene can't flood the link. Plain CBR pads every scene to
