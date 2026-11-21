@@ -64,7 +64,7 @@
         "far": 5000
       },
       "followMode": "follow-position",
-      "followTf": "odom",
+      "followTf": "base_footprint",
       "scene": {
         "transforms": {
           "showLabel": true,
@@ -123,10 +123,11 @@
           "instanceId": "grid",
           "label": "Grid",
           "visible": true,
+          "frameId": "odom",
           "frameLocked": true,
           "order": 1,
-          "size": 20,
-          "divisions": 20,
+          "size": 100,
+          "divisions": 100,
           "lineWidth": 1,
           "color": "#a0a0a4ff",
           "position": [
