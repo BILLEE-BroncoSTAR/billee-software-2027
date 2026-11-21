@@ -1,20 +1,22 @@
 # billee-software-2027 — ground-station shortcuts for the BILLEE dashboard
 #
 #   make              same as `make help`
-#   make setup-dash   install and configure the dashboard on the ground station (x86 host)
+#   make setup-dash   install and configure the dashboard on the ground station (asks for the
+#                     Jetson's IP: every page the dashboard opens uses it). Alias: setup-dashboard
 #   make start        start the dashboard: http://localhost:7780 + the RCM GDS
 #   make start ARGS=--no-browser    pass options to the dashboard (./BILLEE-dashboard-tool/billee-dash --help)
 #   make test-dash    run the dashboard's tests
 #
 # Run on the ground station HOST, not in a dev container: the dashboard starts the ground
-# station's x86 dev container itself and drives the rover's l4t container over SSH.
+# station's x86 dev container itself and drives the rover (its l4t container, CAN, the
+# astronaut-streamer) over SSH.
 # The dashboard is the `BILLEE-dashboard-tool/` submodule (github.com/LucaLanzi/BILLEE-dashboard-tool).
 
 DASH_DIR := BILLEE-dashboard-tool
 ARGS     ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help banner setup-dash start test-dash dash-submodule
+.PHONY: help banner setup-dash setup-dashboard start test-dash dash-submodule
 
 help: ## Show this list of targets
 	@$(MAKE) --no-print-directory banner
@@ -30,6 +32,8 @@ dash-submodule:
 setup-dash: dash-submodule ## Install the dashboard's dependencies, SSH key to the rover, config
 	@bash $(DASH_DIR)/scripts/setup.sh
 	@$(MAKE) --no-print-directory banner
+
+setup-dashboard: setup-dash
 
 start: dash-submodule ## Start the dashboard (opens it and the RCM GDS in the browser)
 	@exec $(DASH_DIR)/billee-dash $(ARGS)

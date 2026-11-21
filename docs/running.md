@@ -332,10 +332,9 @@ networking, so the host can reach their port 8765.
    view that follows the rover (rover model, odometry, ZED point cloud, OpenPose skeletons). Panels
    whose topics aren't running read "waiting for messages".
 
-**Mac:** there is no Mac dev container. To control the rover from a Mac, run the
-[dashboard](../BILLEE-dashboard-tool/README.md#on-a-mac) natively (`make setup-dash`, `make start`): the rover
-runs everything, Foxglove (the macOS app) connects to `ws://<jetson-ip>:8765`, and the browser
-reads the gamepad.
+**Without the ground-station container** (e.g. a Mac): the
+[dashboard](../BILLEE-dashboard-tool/README.md#setup-make-setup-dash) runs every mode on the rover
+only, Foxglove connects to `ws://<jetson-ip>:8765`, and the browser reads the gamepad.
 
 ## Controls
 
