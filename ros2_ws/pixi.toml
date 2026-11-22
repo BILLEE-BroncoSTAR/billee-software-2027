@@ -15,7 +15,7 @@ version = "0.1.0"
 platforms = ["linux-64-cuda"]
 
 [feature.linux-cuda.tasks]
-build = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release' ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' ' -DCMAKE_CXX_FLAGS=\"-Wl,--allow-shlib-undefined\"'"
+build = { cmd = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release' ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' ' -DCMAKE_CXX_FLAGS=\"-Wl,--allow-shlib-undefined\"'", depends-on = ["submodules"] }
 
 [feature.linux-cuda.dependencies]
 ros-humble-desktop = ">=0.10.0,<0.11"
@@ -38,7 +38,7 @@ lark = "*"
 platforms = ["linux-aarch64-glibc234"]
 
 [feature.aarch64-cpu.tasks]
-build = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release'"
+build = { cmd = "colcon build --parallel-workers $(nproc) --symlink-install --event-handlers console_direct+ --base-paths src --cmake-args ' -DCMAKE_BUILD_TYPE=Release'", depends-on = ["submodules"] }
 
 [feature.aarch64-cpu.dependencies]
 ros-humble-desktop = ">=0.10.0,<0.11"
@@ -117,3 +117,7 @@ ROS_DOMAIN_ID = "42"
 
 [tasks]
 fmt = "ruff check src/ --fix"
+# Runs before every `pixi run build`: roboclaw_hardware_interface (and so pxx, the arm) builds the
+# vendored third_party/JetsonGPIO submodule, which a clone without --recursive doesn't have. A
+# no-op (no network) once it's checked out; offline and missing, it warns and the build reports it.
+submodules = "git -C .. submodule update --init third_party/JetsonGPIO || echo 'pixi: could not fetch third_party/JetsonGPIO (offline?): git submodule update --init third_party/JetsonGPIO'"
