@@ -20,6 +20,10 @@ controller_manager:
     arm_roboclaw_controller:
       type: velocity_controllers/JointGroupVelocityController
 
+    # RoboClaw duty outputs (output: duty in arm_axes.yaml, e.g. the solenoid): duty in [-1, 1].
+    arm_solenoid_controller:
+      type: forward_command_controller/ForwardCommandController
+
 arm_can_controller:
   ros__parameters:
     joints: []                       # filled by arm.launch.py
@@ -34,3 +38,8 @@ arm_can_controller:
 arm_roboclaw_controller:
   ros__parameters:
     joints: []                       # filled by arm.launch.py
+
+arm_solenoid_controller:
+  ros__parameters:
+    joints: []                       # filled by arm.launch.py
+    interface_name: duty

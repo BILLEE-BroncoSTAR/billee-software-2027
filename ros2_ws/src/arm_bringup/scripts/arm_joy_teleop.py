@@ -10,6 +10,8 @@ Controls (defaults, raw-joystick Xbox layout, same as teleop/config/joystick.yam
     B (button 1)            select next joint
     X (button 2)            select previous joint
     left stick vertical     jog the selected joint (full stick = test_velocity)
+    hold LT + A (button 0)  energise the duty outputs (output: duty, e.g. the solenoid);
+                            released, deadman released or /joy lost = off
 
 The drive teleop uses RT as its deadman, so arm and drive never share a trigger.
 Holding both is drive mode: while RT is held the arm ignores the sticks, and it stays
@@ -30,7 +32,7 @@ Safety behaviour:
 
 Parameters (ros2 run ... --ros-args -p name:=value): axes_file, deadman_axis
 (-1 = use deadman_button instead), deadman_threshold, deadman_button,
-drive_deadman_axis (-1 = no drive lockout),
+drive_deadman_axis (-1 = no drive lockout), solenoid_button,
 next_button, prev_button, jog_axis, invert_axis, speed_scale (fraction of
 test_velocity at full stick, capped at limits.max_velocity), deadzone,
 joy_timeout, rate, max_lag, arm_namespace (default /arm, arm.launch.py's).
@@ -76,11 +78,17 @@ class ArmJoyTeleop(Node):
         rate = p("rate", 50.0).value
 
         with open(axes_file) as f:
-            self.axes = yaml.safe_load(f)["axes"]
+            all_axes = yaml.safe_load(f)["axes"]
+        # Duty outputs (output: duty, e.g. the solenoid) aren't jogged: they're held on by a button.
+        self.duty_axes = [a for a in all_axes if a.get("output", "motor") == "duty"]
+        self.axes = [a for a in all_axes if a.get("output", "motor") != "duty"]
         if not self.axes:
             raise RuntimeError(f"{axes_file}: no axes")
-        # arm.launch.py fills arm_roboclaw_controller's joints in file order.
+        # arm.launch.py fills arm_roboclaw_controller's joints in file order (motors only).
         self.rc_joints = [a["joint"] for a in self.axes if a["driver"] == "roboclaw"]
+        # Held with the deadman (LT) to energise the duty outputs; released = off.
+        self.solenoid_btn = p("solenoid_button", 0).value  # A
+        self.solenoid_on = False
 
         self.selected = 0
         self.positions = {}
@@ -98,7 +106,11 @@ class ArmJoyTeleop(Node):
             JointTrajectory, f"{ns}/arm_can_controller/joint_trajectory", 10)
         self.vel_pub = self.create_publisher(
             Float64MultiArray, f"{ns}/arm_roboclaw_controller/commands", 10)
+        self.duty_pub = self.create_publisher(
+            Float64MultiArray, f"{ns}/arm_solenoid_controller/commands", 10)
         self.create_timer(self.dt, self._tick)
+        # deadzone / speed_scale can be changed while running (ros2 param set /arm_joy_teleop ...).
+        self.add_on_set_parameters_callback(self._on_params)
 
         for a in self.axes:
             if not a.get("verified", False):
@@ -110,6 +122,19 @@ class ArmJoyTeleop(Node):
             f"select joint; axis {self.jog_axis} moves it. Joints: "
             f"{[a['joint'] for a in self.axes]}")
         self._announce()
+
+    def _on_params(self, params):
+        from rcl_interfaces.msg import SetParametersResult
+        for prm in params:
+            if prm.name == "deadzone":
+                if not 0.0 <= float(prm.value) < 1.0:
+                    return SetParametersResult(successful=False, reason="deadzone must be 0-1")
+                self.deadzone = float(prm.value)
+                self.get_logger().info(f"deadzone {self.deadzone:.2f}")
+            elif prm.name == "speed_scale":
+                self.speed_scale = float(prm.value)
+                self.get_logger().info(f"speed_scale {self.speed_scale:.2f}")
+        return SetParametersResult(successful=True)
 
     # ------------------------------------------------------------------ input
     def _on_state(self, msg):
@@ -182,9 +207,14 @@ class ArmJoyTeleop(Node):
         self.traj_pub.publish(JointTrajectory(joint_names=[joint], points=[point]))
 
     def _send_rc(self, joint, velocity):
-        cmd = [0.0] * len(self.rc_joints)
-        if joint is not None:
-            cmd[self.rc_joints.index(joint)] = velocity
+        # One entry per RoboClaw motor the controller actually has: arm.launch.py leaves out the
+        # joints of a unit that didn't answer, and the controller rejects a command of the wrong
+        # size ("command size (3) does not match number of interfaces (1)"). Its joints are the
+        # configured ones that appear in /arm/joint_states, in file order.
+        present = [j for j in self.rc_joints if j in self.positions] or self.rc_joints
+        cmd = [0.0] * len(present)
+        if joint is not None and joint in present:
+            cmd[present.index(joint)] = velocity
         self.vel_pub.publish(Float64MultiArray(data=cmd))
 
     def _stop(self):
@@ -202,8 +232,23 @@ class ArmJoyTeleop(Node):
         self.get_logger().info(f"{a['joint']} stopped at "
                                f"{self.positions.get(a['joint'], float('nan')):+.3f} rad")
 
+    def _send_duty(self, on):
+        if self.duty_axes:
+            self.duty_pub.publish(Float64MultiArray(
+                data=[float(a.get("duty", 1.0)) if on else 0.0 for a in self.duty_axes]))
+
+    def _solenoid(self, allowed):
+        """Duty outputs on only while the deadman (allowed) and the solenoid button are held."""
+        b = self.joy.buttons if self.joy is not None else []
+        on = bool(allowed and 0 <= self.solenoid_btn < len(b) and b[self.solenoid_btn])
+        if on != self.solenoid_on:
+            self.get_logger().info(f"solenoid {'ON' if on else 'off'}")
+        self.solenoid_on = on
+        self._send_duty(on)  # every tick: the controller holds the last command
+
     def _tick(self):
         stick = self._command()
+        self._solenoid(stick is not None)
         a = self.axes[self.selected]
         joint = a["joint"]
         pos = self.positions.get(joint)
@@ -254,6 +299,7 @@ def main():
     finally:
         if rclpy.ok():
             node._stop()
+            node._send_duty(False)
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

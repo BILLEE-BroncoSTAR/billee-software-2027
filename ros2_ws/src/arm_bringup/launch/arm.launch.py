@@ -50,6 +50,98 @@ DISABLED = ("none", "off", "false", "")
 # /controller_manager and /joint_states; sharing the name let its spawner reach the arm's.
 NAMESPACE = "arm"
 ROBOCLAW_ADDRESSES = range(128, 136)
+# BasicMicro USB RoboClaws enumerate with the Atmel VID/PID and no USB serial number, so the
+# units are told apart by their packet-serial address (set in Motion Studio), not by port.
+ROBOCLAW_USB_IDS = {("03eb", "2404")}
+
+
+def _crc16(data):
+    """CRC16-CCITT/XMODEM, as the RoboClaw packet serial protocol uses."""
+    crc = 0
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x1021) if crc & 0x8000 else crc << 1
+            crc &= 0xFFFF
+    return crc
+
+
+def _roboclaw_usb_ports():
+    """/dev/ttyACMn of every USB RoboClaw plugged in (sorted)."""
+    ports = []
+    base = "/sys/class/tty"
+    for name in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+        if not name.startswith("ttyACM"):
+            continue
+        dev = os.path.realpath(os.path.join(base, name, "device"))
+        ids = []
+        for path in (dev, os.path.dirname(dev)):  # interface, then the USB device
+            try:
+                with open(os.path.join(path, "idVendor")) as v, \
+                        open(os.path.join(path, "idProduct")) as pr:
+                    ids = [(v.read().strip(), pr.read().strip())]
+                    break
+            except OSError:
+                continue
+        if ids and ids[0] in ROBOCLAW_USB_IDS:
+            ports.append(f"/dev/{name}")
+    return ports
+
+
+def _roboclaw_answers(port, address, timeout=0.1):
+    """True if `address` answers on `port`: read main battery voltage (command 24), CRC-checked.
+    Read-only."""
+    import select
+    import termios
+
+    try:
+        fd = os.open(port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+    except OSError:
+        return False
+    try:
+        attrs = termios.tcgetattr(fd)
+        attrs[0] = attrs[1] = attrs[3] = 0  # raw: no input/output/local processing
+        attrs[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
+        attrs[4] = attrs[5] = termios.B115200  # ignored by USB CDC, needed for a valid setting
+        termios.tcsetattr(fd, termios.TCSANOW, attrs)
+        termios.tcflush(fd, termios.TCIOFLUSH)
+        os.write(fd, bytes([address, 24]))
+        reply = b""
+        deadline = timeout
+        while len(reply) < 4:
+            ready, _, _ = select.select([fd], [], [], deadline)
+            if not ready:
+                return False
+            reply += os.read(fd, 4 - len(reply))
+        crc = _crc16(bytes([address, 24]) + reply[:2])
+        return reply[2:4] == bytes([crc >> 8, crc & 0xFF])
+    except OSError:
+        return False
+    finally:
+        os.close(fd)
+
+
+def _find_roboclaws(addresses, wait_s=3.0):
+    """-> ({address: port}, {address: [ports]} for addresses answering on more than one port).
+
+    Every configured address is asked on every USB RoboClaw port. A unit plugged in or powered
+    up just before the launch can take a moment to answer (and to enumerate), so missing
+    addresses are retried for up to wait_s. An address answering on two ports (two units left
+    on the same address, e.g. both on the factory 128) is reported, not guessed at."""
+    import time
+
+    deadline = time.monotonic() + wait_s
+    while True:
+        seen = {}
+        for port in _roboclaw_usb_ports():
+            for address in sorted(addresses):
+                if _roboclaw_answers(port, address):
+                    seen.setdefault(address, []).append(port)
+        found = {a: ports[0] for a, ports in seen.items() if len(ports) == 1}
+        duplicates = {a: ports for a, ports in seen.items() if len(ports) > 1}
+        if duplicates or set(found) >= set(addresses) or time.monotonic() >= deadline:
+            return found, duplicates
+        time.sleep(0.5)
 
 
 def _load_axes(path):
@@ -66,6 +158,20 @@ def _load_axes(path):
         if not name or name in seen_joints:
             raise RuntimeError(f"{where}: missing or duplicate joint name")
         seen_joints.add(name)
+
+        # output: duty = a RoboClaw channel driven by duty with no encoder (e.g. a solenoid).
+        axis["output"] = str(axis.get("output", "motor"))
+        if axis["output"] not in ("motor", "duty") or (
+                axis["output"] == "duty" and driver != "roboclaw"):
+            raise RuntimeError(f"{where}: output must be motor, or duty (roboclaw only)")
+        if axis["output"] == "duty":
+            address, channel = int(axis["address"]), axis["channel"]
+            if address not in ROBOCLAW_ADDRESSES or channel not in ("M1", "M2"):
+                raise RuntimeError(f"{where}: address must be 128-135 and channel M1/M2")
+            if (address, channel) in seen_channels:
+                raise RuntimeError(f"{where}: {address}/{channel} already used")
+            seen_channels.add((address, channel))
+            continue
 
         reduction = float(axis["builtin_reduction"]) * float(axis.get("external_reduction", 1.0))
         direction = int(axis.get("direction", 1))
@@ -129,21 +235,35 @@ def _robot_description(can_axes, can_interface, rc_axes, roboclaw_port, roboclaw
     </hardware>
 {joints}
   </ros2_control>""")
-    if rc_axes:
-        if roboclaw_port == "mock":
+    # One hardware system per serial port: a USB RoboClaw is its own port (roboclaw_port:=auto
+    # gives each axis the port its address answered on); a shared UART carries them all.
+    ports = []
+    for a in rc_axes:
+        if a["port"] not in ports:
+            ports.append(a["port"])
+    for port in ports:
+        on_port = [a for a in rc_axes if a["port"] == port]
+        if port == "mock":
+            name = "ArmRoboClaw"
             hardware = """      <plugin>mock_components/GenericSystem</plugin>
       <param name="calculate_dynamics">true</param>"""
         else:
+            addresses = sorted({a["address"] for a in on_port})
+            name = "ArmRoboClaw" + "_".join(str(x) for x in addresses)
             hardware = f"""      <plugin>roboclaw_hardware_interface/RoboClawHardwareInterface</plugin>
-      <param name="serial_port">{roboclaw_port}</param>
+      <param name="serial_port">{port}</param>
       <param name="baud_rate">{roboclaw_baud}</param>"""
         joints = "\n".join(
+            _joint_xml(a["joint"], {"address": a["address"], "motor_type": a["channel"]},
+                       "duty", ["duty"])
+            if a["output"] == "duty" else
             _joint_xml(a["joint"], {
                        "address": a["address"], "qppr": a["qppr"], "motor_type": a["channel"],
+                       "max_velocity": float(a["limits"]["max_velocity"]),
                        **({"limit_switch": a["limit_switch"]} if "limit_switch" in a else {})},
                        "velocity", ["position"])
-            for a in rc_axes)
-        systems.append(f"""  <ros2_control name="ArmRoboClaw" type="system">
+            for a in on_port)
+        systems.append(f"""  <ros2_control name="{name}" type="system">
     <hardware>
 {hardware}
     </hardware>
@@ -162,8 +282,11 @@ def _controllers_file(template_path, can_axes, rc_axes):
     with open(template_path) as f:
         params = yaml.safe_load(f)
     cm = params["controller_manager"]["ros__parameters"]
+    motors = [a for a in rc_axes if a["output"] == "motor"]
+    duty = [a for a in rc_axes if a["output"] == "duty"]
     for controller, axes in (("arm_can_controller", can_axes),
-                             ("arm_roboclaw_controller", rc_axes)):
+                             ("arm_roboclaw_controller", motors),
+                             ("arm_solenoid_controller", duty)):
         if axes:
             params[controller]["ros__parameters"]["joints"] = [a["joint"] for a in axes]
         else:
@@ -200,6 +323,27 @@ def launch_setup(context):
         if can_interface.lower() not in DISABLED else []
     rc_axes = [a for a in axes if a["driver"] == "roboclaw"] \
         if roboclaw_port.lower() not in DISABLED else []
+    if rc_axes and roboclaw_port == "auto":
+        # USB RoboClaws: find which port each configured address answers on.
+        found, duplicates = _find_roboclaws({a["address"] for a in rc_axes})
+        for address, ports in sorted(duplicates.items()):
+            skipped.append(LogInfo(msg=(
+                f"[arm] WARNING: RoboClaw address {address} answers on {len(ports)} ports "
+                f"({', '.join(ports)}): two units share it, so its axes are left out. Give each "
+                "unit its own address in Motion Studio (write the settings to the unit, then "
+                "power-cycle it).")))
+        missing = sorted({a["address"] for a in rc_axes} - set(found) - set(duplicates))
+        if missing:
+            skipped.append(LogInfo(msg=(
+                f"[arm] WARNING: RoboClaw address(es) {missing} didn't answer on any USB "
+                f"RoboClaw port ({_roboclaw_usb_ports() or 'none plugged in'}); their axes are "
+                "left out. Check USB, the battery and the address in Motion Studio "
+                "(roboclaw_probe.py --port /dev/ttyACMn lists who answers).")))
+        rc_axes = [dict(a, port=found[a["address"]]) for a in rc_axes if a["address"] in found]
+        for address, port in sorted(found.items()):
+            skipped.append(LogInfo(msg=f"[arm] RoboClaw {address} on {port}"))
+    else:
+        rc_axes = [dict(a, port=roboclaw_port) for a in rc_axes]
     if not can_axes and not rc_axes:
         raise RuntimeError("arm.launch.py: both halves of the arm are disabled; nothing to run")
 
@@ -232,8 +376,10 @@ def launch_setup(context):
     spawn = ["joint_state_broadcaster"]
     if can_axes:
         spawn.append("arm_can_controller")
-    if rc_axes:
+    if any(a["output"] == "motor" for a in rc_axes):
         spawn.append("arm_roboclaw_controller")
+    if any(a["output"] == "duty" for a in rc_axes):
+        spawn.append("arm_solenoid_controller")
 
     actions += [
         Node(
@@ -266,10 +412,11 @@ def generate_launch_description():
             "vcanN = virtual bus + CANopen emulator, mock = pxx loopback backend, "
             "none = leave the CAN axes out."),
         DeclareLaunchArgument(
-            "roboclaw_port", default_value="/dev/roboclaw",
-            description="Serial device of the shared RoboClaw UART (udev symlink, see "
-            "docs/ARM_BRINGUP_GUIDE.md section 1.1). mock = mock_components/GenericSystem, "
-            "none = leave the RoboClaw axes out."),
+            "roboclaw_port", default_value="auto",
+            description="auto = USB RoboClaws: each unit is found by its packet-serial address "
+            "on the USB RoboClaw ports (one hardware system per unit). A /dev/... path = one "
+            "shared packet-serial UART for every unit (docs/ARM_BRINGUP_GUIDE.md section 1.1). "
+            "mock = mock_components/GenericSystem, none = leave the RoboClaw axes out."),
         DeclareLaunchArgument(
             "roboclaw_baud", default_value="115200",
             description="Packet serial baud rate; must match every RoboClaw's Motion Studio "

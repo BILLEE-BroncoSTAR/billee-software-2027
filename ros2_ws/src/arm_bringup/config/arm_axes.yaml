@@ -99,45 +99,93 @@ axes:
       max_velocity: 0.3
     test_velocity: 0.1
 
-  - joint: joint_arm_4             # TODO: real name (e.g. wrist_pitch)
+  # RoboClaw joints: two USB RoboClaw 2x7A (addresses 128 and 129, found by address at launch,
+  # roboclaw_port:=auto). goBILDA 5203 Yellow Jacket 19.2:1 gearmotors: 28 quadrature counts
+  # per motor rev x 19.2 = 537.6 counts per output rev (the driver rounds to 538).
+  # Mapping from Motion Studio (both units 115200 baud; baud is ignored over USB):
+  #   RoboClaw 1 = address 128: M1 solenoid, M2 end effector
+  #   RoboClaw 2 = address 129: M1 axis 4,   M2 axis 5
+  # Directions are still unchecked (verified: false) until each is jogged slowly.
+  # Positions are relative: 0 rad is wherever the joint sits when the arm starts.
+  # The 5203s are 12 V motors on a ~19.5 V battery: a RoboClaw outputs PWM at battery voltage,
+  # so limits.max_velocity (clamped in the driver) keeps them at or under their 12 V speed, and
+  # Motion Studio's current limit (set it at or below the motor's rating) covers a stall.
+  # Velocity commands use the RoboClaw's velocity PID: set QPPS (~2800 counts/s at the motor
+  # encoder for a 5203 at 12 V: 6000 rpm x 28 / 60) and auto-tune in Motion Studio first.
+
+  - joint: joint_arm_4             # axis 4
     verified: false
     driver: roboclaw
-    motor: TODO                    # gearmotor part number
-    address: 128
+    motor: goBILDA 5203 Yellow Jacket 19.2:1
+    address: 129                   # RoboClaw 2, set in Motion Studio
     channel: M1
-    encoder_cpr: 48                # TODO: quadrature counts per motor rev
-    builtin_reduction: 100.0       # TODO: gearmotor gearbox ratio
-    external_reduction: 1.0        # TODO
+    encoder_cpr: 28                # quadrature counts per motor rev
+    builtin_reduction: 19.2
+    external_reduction: 1.0        # TODO: measure
     direction: 1                   # TODO
     limits:
-      min_position: -1.0           # TODO (relative to power-up pose, see guide §1.3)
-      max_position: 1.0            # TODO
-      max_velocity: 0.5            # TODO
-    test_velocity: 0.05
+      min_position: -6.28          # TODO: find by jogging (exploration range)
+      max_position: 6.28
+      max_velocity: 26.0           # rad/s: 80% of the 5203's 12 V no-load speed (312 rpm = 32.7
+                                   # rad/s at the output) so a 19.5 V battery can't overspeed it.
+                                   # Enforced by the RoboClaw driver. Divide by external_reduction.
+    test_velocity: 0.3             # ~17 deg/s at full stick
     tuning:                        # copy from Motion Studio after auto-tune
-      qpps: null                   # max measured speed, counts/s at the MOTOR encoder
+      qpps: null
       velocity_pid: {p: null, i: null, d: null}
       max_current_a: null
 
-  - joint: joint_arm_5             # TODO: real name (e.g. wrist_roll)
+  - joint: joint_arm_5             # axis 5
     verified: false
     driver: roboclaw
-    motor: TODO
-    address: 128
+    motor: goBILDA 5203 Yellow Jacket 19.2:1
+    address: 129                   # RoboClaw 2 (M2: confirm it is axis 5)
     channel: M2
-    encoder_cpr: 48                # TODO
-    builtin_reduction: 100.0       # TODO
+    encoder_cpr: 28
+    builtin_reduction: 19.2
     external_reduction: 1.0        # TODO
     direction: 1                   # TODO
     limits:
-      min_position: -3.14          # TODO
-      max_position: 3.14           # TODO
-      max_velocity: 0.5            # TODO
-    test_velocity: 0.05
+      min_position: -6.28          # TODO
+      max_position: 6.28
+      max_velocity: 26.0           # rad/s: 80% of the 5203's 12 V no-load speed (312 rpm = 32.7
+                                   # rad/s at the output) so a 19.5 V battery can't overspeed it.
+                                   # Enforced by the RoboClaw driver. Divide by external_reduction.
+    test_velocity: 0.3
     tuning:
       qpps: null
       velocity_pid: {p: null, i: null, d: null}
       max_current_a: null
+
+  - joint: end_effector            # the end effector's motor
+    verified: false
+    driver: roboclaw
+    motor: goBILDA 5203 Yellow Jacket 19.2:1
+    address: 128                   # RoboClaw 1, set in Motion Studio
+    channel: M2
+    encoder_cpr: 28
+    builtin_reduction: 19.2
+    external_reduction: 1.0        # TODO
+    direction: 1                   # TODO
+    limits:
+      min_position: -6.28          # TODO
+      max_position: 6.28
+      max_velocity: 26.0           # rad/s: 80% of the 5203's 12 V no-load speed (312 rpm = 32.7
+                                   # rad/s at the output) so a 19.5 V battery can't overspeed it.
+                                   # Enforced by the RoboClaw driver. Divide by external_reduction.
+    test_velocity: 0.3
+    tuning:
+      qpps: null
+      velocity_pid: {p: null, i: null, d: null}
+      max_current_a: null
+
+  - joint: solenoid                # 24 V solenoid, on while LT + A are held (arm_joy_teleop)
+    verified: false
+    driver: roboclaw
+    output: duty                   # duty command in [-1, 1], no encoder
+    address: 128                   # RoboClaw 1, set in Motion Studio
+    channel: M1
+    duty: 1.0                      # duty while held; 1.0 = full battery (~19.5 V), under its 24 V rating
 
   # A second RoboClaw on the same UART just uses the next address, e.g.:
   # - joint: gripper

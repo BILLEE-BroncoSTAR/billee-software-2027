@@ -41,7 +41,10 @@ def load_axes(path):
     with open(path) as f:
         axes = yaml.safe_load(f)["axes"]
     # arm.launch.py fills arm_roboclaw_controller's joints in file order.
-    return {a["joint"]: a for a in axes}, [a["joint"] for a in axes if a["driver"] == "roboclaw"]
+    # arm_roboclaw_controller holds the RoboClaw motors only (not duty outputs like the solenoid)
+    return {a["joint"]: a for a in axes}, [
+        a["joint"] for a in axes
+        if a["driver"] == "roboclaw" and a.get("output", "motor") != "duty"]
 
 
 class Jog(Node):

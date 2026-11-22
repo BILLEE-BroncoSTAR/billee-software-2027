@@ -11,6 +11,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -20,6 +21,9 @@ def generate_launch_description():
         DeclareLaunchArgument("device_id", default_value="0"),
         DeclareLaunchArgument("speed_scale", default_value="1.0",
                               description="Full-stick speed as a fraction of test_velocity."),
+        DeclareLaunchArgument("deadzone", default_value="0.1",
+                              description="Stick travel ignored around centre (0-1) by the arm "
+                              "jog; raise it if a joint creeps with the stick let go."),
         Node(
             package="joy",
             executable="joy_node",
@@ -33,7 +37,11 @@ def generate_launch_description():
         Node(
             package="arm_bringup",
             executable="arm_joy_teleop.py",
-            parameters=[{"speed_scale": LaunchConfiguration("speed_scale")}],
+            # As floats: "1" would otherwise arrive as an integer and fail the float parameter.
+            parameters=[{"speed_scale": ParameterValue(LaunchConfiguration("speed_scale"),
+                                                       value_type=float),
+                         "deadzone": ParameterValue(LaunchConfiguration("deadzone"),
+                                                    value_type=float)}],
             output="screen",
         ),
     ])
