@@ -114,6 +114,13 @@ inline constexpr std::uint16_t kQuickStop = 1u << 5;
 inline constexpr std::uint16_t kSwitchOnDisabled = 1u << 6;
 inline constexpr std::uint16_t kWarning = 1u << 7;
 inline constexpr std::uint16_t kTargetReached = 1u << 10;
+// CiA402 state machine: (status word & kStateMask) identifies the state.
+inline constexpr std::uint16_t kStateMask = 0x006F;
+inline constexpr std::uint16_t kStateReadyToSwitchOn = 0x0021;
+inline constexpr std::uint16_t kStateSwitchedOn = 0x0023;
+inline constexpr std::uint16_t kStateOperationEnabled = 0x0027;
+// How long each enable step may take before activation gives up.
+inline constexpr std::chrono::milliseconds kTransitionTimeout{500};
 }  // namespace status_word
 
 // CiA402 mode of operation (6060h) values.
@@ -133,7 +140,12 @@ namespace sdo
 inline constexpr std::uint8_t kUpload = 0x40;  // read request
 inline constexpr std::uint8_t kDownloadResponse = 0x60;  // write acknowledged
 inline constexpr std::uint8_t kAbort = 0x80;
-inline constexpr std::chrono::milliseconds kTimeout{100};
+// Per attempt. 100 ms was too tight: a drive busy with a control-word change sometimes answered
+// later (node 3's 6040h fault reset timed out at activation).
+inline constexpr std::chrono::milliseconds kTimeout{500};
+// A timed-out request is sent once more. Safe: every request the driver makes is an expedited
+// read, or a write of an absolute value, so a duplicate changes nothing.
+inline constexpr int kAttempts = 2;
 }  // namespace sdo
 
 // Drive feedback units -> SI, at the MOTOR SHAFT (before the built-in reducer).

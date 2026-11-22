@@ -1,6 +1,8 @@
 #include "pxx/socketcan_motor_backend.hpp"
 
+#include <chrono>
 #include <cmath>
+#include <thread>
 #include <cstdio>
 #include <utility>
 
@@ -117,28 +119,62 @@ bool SocketCanMotorBackend::configure_node(std::uint8_t node_id, std::string * e
     feedback_[node_id].position_counts = static_cast<std::int32_t>(position);
   }
 
-  if (!send_frame(MakeNmtFrame(NmtCommand::kStart, node_id), error) ||
-    !sdo_write(node_id, od::kControlWord, 0, control_word::kShutdown, 2, error) ||
-    !sdo_write(node_id, od::kControlWord, 0, control_word::kSwitchOn, 2, error) ||
-    !sdo_write(node_id, od::kControlWord, 0, control_word::kEnableOperation, 2, error))
-  {
+  if (!send_frame(MakeNmtFrame(NmtCommand::kStart, node_id), error)) {
     return false;
   }
 
-  std::uint32_t status{};
-  if (!sdo_read(node_id, od::kStatusWord, 0, status, error)) {
-    return false;
-  }
-  if ((status & status_word::kFault) || !(status & status_word::kOperationEnabled)) {
-    std::uint32_t error_code{};
-    sdo_read(node_id, od::kErrorCode, 0, error_code, nullptr);
-    SetError(
-      error, "node " + std::to_string(node_id) + " failed to enable (status word " +
-      Hex(status, 4) + ", error " + Hex(error_code, 4) + ": " +
-      ErrorCodeText(static_cast<std::uint16_t>(error_code)) + ")");
-    return false;
+  // CiA402 power-up: each control word only requests a transition, and the drive takes a few
+  // ms to make it, so wait for each state before asking for the next one. Reading the status
+  // word straight after the last write caught the drives still in "switched on" (0x0233).
+  struct Step
+  {
+    std::uint16_t control_word;
+    std::uint16_t state;  // (status word & kStateMask) once the transition is done
+    const char * name;
+  };
+  static constexpr Step kSteps[] = {
+    {control_word::kShutdown, status_word::kStateReadyToSwitchOn, "ready to switch on"},
+    {control_word::kSwitchOn, status_word::kStateSwitchedOn, "switched on"},
+    {control_word::kEnableOperation, status_word::kStateOperationEnabled, "operation enabled"},
+  };
+  for (const auto & step : kSteps) {
+    if (!sdo_write(node_id, od::kControlWord, 0, step.control_word, 2, error) ||
+      !wait_for_state(node_id, step.state, step.name, error))
+    {
+      return false;
+    }
   }
   return true;
+}
+
+// Polls the status word until the drive reaches `state` (after kStateMask), a fault, or the
+// timeout.
+bool SocketCanMotorBackend::wait_for_state(
+  std::uint8_t node_id, std::uint16_t state, const char * state_name, std::string * error)
+{
+  using namespace pxx_can;
+  const auto deadline = std::chrono::steady_clock::now() + status_word::kTransitionTimeout;
+  std::uint32_t status{};
+  while (true) {
+    if (!sdo_read(node_id, od::kStatusWord, 0, status, error)) {
+      return false;
+    }
+    if ((status & status_word::kStateMask) == state) {
+      return true;
+    }
+    if ((status & status_word::kFault) || std::chrono::steady_clock::now() >= deadline) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds{10});
+  }
+  std::uint32_t error_code{};
+  sdo_read(node_id, od::kErrorCode, 0, error_code, nullptr);
+  SetError(
+    error, "node " + std::to_string(node_id) + " failed to enable: not " + state_name +
+    " after " + std::to_string(status_word::kTransitionTimeout.count()) + " ms (status word " +
+    Hex(status, 4) + ", error " + Hex(error_code, 4) + ": " +
+    ErrorCodeText(static_cast<std::uint16_t>(error_code)) + ")");
+  return false;
 }
 
 bool SocketCanMotorBackend::deactivate(std::string * error)
@@ -241,17 +277,22 @@ bool SocketCanMotorBackend::sdo_transaction(
     Hex(subindex, 2);
 
   std::unique_lock<std::mutex> lock(sdo_mutex_);
-  sdo_response_.reset();
-  if (!send_frame(request, error)) {
-    return false;
+  bool answered = false;
+  for (int attempt = 1; attempt <= pxx_can::sdo::kAttempts && !answered; ++attempt) {
+    sdo_response_.reset();
+    if (!send_frame(request, error)) {
+      return false;
+    }
+    answered = sdo_cv_.wait_for(
+      lock, pxx_can::sdo::kTimeout, [&] {
+        return sdo_response_ && sdo_response_->node_id == node_id &&
+               sdo_response_->index == index && sdo_response_->subindex == subindex;
+      });
   }
-  const bool answered = sdo_cv_.wait_for(
-    lock, pxx_can::sdo::kTimeout, [&] {
-      return sdo_response_ && sdo_response_->node_id == node_id &&
-             sdo_response_->index == index && sdo_response_->subindex == subindex;
-    });
   if (!answered) {
-    SetError(error, object + " timed out");
+    SetError(
+      error, object + " timed out (" + std::to_string(pxx_can::sdo::kAttempts) + " x " +
+      std::to_string(pxx_can::sdo::kTimeout.count()) + " ms; drive powered and on the bus?)");
     return false;
   }
   if (sdo_response_->aborted) {

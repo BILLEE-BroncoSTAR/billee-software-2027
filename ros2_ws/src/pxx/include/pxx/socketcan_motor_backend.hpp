@@ -41,6 +41,8 @@ private:
   };
 
   bool configure_node(std::uint8_t node_id, std::string * error);
+  bool wait_for_state(
+    std::uint8_t node_id, std::uint16_t state, const char * state_name, std::string * error);
   bool sdo_write(
     std::uint8_t node_id, std::uint16_t index, std::uint8_t subindex, std::uint32_t value,
     std::uint8_t size, std::string * error);
