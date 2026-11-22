@@ -50,37 +50,56 @@
 # ---------------------------------------------------------------------------
 
 axes:
-  # TODO: replace this whole list with the real arm axes once the wiring is known.
+  # P-series joints on can3 (1 Mbit/s). Node IDs set and checked on the bench 2026-11-21.
+  # builtin_reduction is what each drive reports in 6091h (65536 counts per motor rev x the
+  # reduction); the two P17s have different reducers. Verify each by a measured move before
+  # flipping verified: true.
+  # Limits are WIDE ON PURPOSE (exploration): jog slowly with arm_teleop.launch.py, note the
+  # positions where each joint should stop, and write them in here.
 
-  - joint: joint_arm_1             # TODO: real name (e.g. base_yaw)
+  - joint: joint_arm_1             # axis 1
     verified: false
     driver: pxx
-    motor: P20-90-PRO-121-B
+    motor: P17 (101:1)             # product 0x00221701, serial 0x64EC7C
     node_id: 1
-    builtin_reduction: 121.0       # 121:1 reducer built into the P20-90-PRO-121-B
-    external_reduction: 1.0        # TODO: measure
+    builtin_reduction: 101.0       # drive 6091h = 101 x 65536
+    external_reduction: 1.0
     direction: 1                   # TODO: check on the bench
     limits:
-      min_position: -1.57          # TODO
-      max_position: 1.57           # TODO
-      max_velocity: 0.5            # TODO
-    test_velocity: 0.05            # ~2.9 deg/s
+      min_position: -6.28          # TODO: find by jogging (exploration range)
+      max_position: 6.28           # TODO
+      max_velocity: 0.3
+    test_velocity: 0.1             # ~5.7 deg/s at full stick
 
-  - joint: joint_arm_2             # TODO: real name (e.g. shoulder_pitch)
+  - joint: joint_arm_2             # axis 2
     verified: false
     driver: pxx
-    motor: P17                     # TODO: full part number
+    motor: P20-90-PRO-121-B        # product 0x00222001, serial 0x1747B7
     node_id: 2
-    builtin_reduction: 121.0       # TODO: P17 reducer ratio is UNKNOWN; 121 is a guess
-    external_reduction: 1.0        # TODO: measure
+    builtin_reduction: 121.0       # drive 6091h = 121 x 65536
+    external_reduction: 1.0
     direction: 1                   # TODO
     limits:
-      min_position: -1.0           # TODO
-      max_position: 1.0            # TODO
-      max_velocity: 0.5            # TODO
-    test_velocity: 0.05
+      min_position: -6.28          # TODO
+      max_position: 6.28           # TODO
+      max_velocity: 0.3
+    test_velocity: 0.1
 
-  - joint: joint_arm_3             # TODO: real name (e.g. wrist_pitch)
+  - joint: joint_arm_3             # axis 3
+    verified: false
+    driver: pxx
+    motor: P17 (51:1)              # product 0x00221701, serial 0x404176
+    node_id: 3
+    builtin_reduction: 51.0        # drive 6091h = 51 x 65536
+    external_reduction: 1.0
+    direction: 1                   # TODO
+    limits:
+      min_position: -6.28          # TODO
+      max_position: 6.28           # TODO
+      max_velocity: 0.3
+    test_velocity: 0.1
+
+  - joint: joint_arm_4             # TODO: real name (e.g. wrist_pitch)
     verified: false
     driver: roboclaw
     motor: TODO                    # gearmotor part number
@@ -100,7 +119,7 @@ axes:
       velocity_pid: {p: null, i: null, d: null}
       max_current_a: null
 
-  - joint: joint_arm_4             # TODO: real name (e.g. wrist_roll)
+  - joint: joint_arm_5             # TODO: real name (e.g. wrist_roll)
     verified: false
     driver: roboclaw
     motor: TODO

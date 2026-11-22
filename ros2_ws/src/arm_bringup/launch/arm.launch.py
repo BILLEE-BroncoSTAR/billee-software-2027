@@ -178,6 +178,13 @@ def launch_setup(context):
     roboclaw_baud = int(LaunchConfiguration("roboclaw_baud").perform(context))
 
     axes = _load_axes(axes_file)
+    skipped = []
+    if roboclaw_port.startswith("/dev/") and not os.path.exists(roboclaw_port):
+        # No RoboClaw plugged in (e.g. the CAN joints on the bench): run the CAN half alone
+        # rather than failing the whole ros2_control_node on a missing serial port.
+        skipped.append(LogInfo(msg=f"[arm] WARNING: {roboclaw_port} doesn't exist; RoboClaw axes "
+                                   "disabled (roboclaw_port:=none silences this)"))
+        roboclaw_port = "none"
     can_axes = [a for a in axes if a["driver"] == "pxx"] \
         if can_interface.lower() not in DISABLED else []
     rc_axes = [a for a in axes if a["driver"] == "roboclaw"] \
@@ -185,7 +192,7 @@ def launch_setup(context):
     if not can_axes and not rc_axes:
         raise RuntimeError("arm.launch.py: both halves of the arm are disabled; nothing to run")
 
-    actions = [LogInfo(msg=(
+    actions = skipped + [LogInfo(msg=(
         f"[arm] axes file: {axes_file}\n"
         f"[arm] CAN axes ({can_interface}): {[a['joint'] for a in can_axes] or 'disabled'}\n"
         f"[arm] RoboClaw axes ({roboclaw_port}): {[a['joint'] for a in rc_axes] or 'disabled'}"))]
