@@ -9,7 +9,11 @@ joy_tank_drive:
   ros__parameters:
     left_axis: 1
     right_axis: 4
-    # Deadman: hold to drive. 4 = LB / L1 (RB, button 5, broke). `ros2 topic echo /joy` to find others.
+    # Deadman: hold RT (right trigger, axis 5) past halfway to drive. The arm teleop uses LT, so
+    # the two never share a deadman. safety_axis: -1 goes back to a button (safety_button; 4 = LB).
+    # `ros2 topic echo /joy` to find others.
+    safety_axis: 5
+    safety_axis_threshold: -0.5
     safety_button: 4
     # Top wheel speed in m/s at full stick; turn rate scales with it. The NEO + 48:1 drivetrain
     # tops out near 1.36 m/s.

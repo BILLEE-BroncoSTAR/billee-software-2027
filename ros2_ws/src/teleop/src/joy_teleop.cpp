@@ -18,6 +18,11 @@ class JoyTankDrive : public rclcpp::Node{
             rightAxisId = this->declare_parameter("right_axis",2);
             trackWidth = this->declare_parameter("track_width",.67);
             safetyButtonId = this->declare_parameter("safety_button", 5);
+            // Deadman on an analog trigger instead of a button: safety_axis >= 0 uses that
+            // axis, held while it reads below safety_axis_threshold (Xbox LT/RT: +1 released,
+            // -1 fully pressed, and 0 from joy_node until first touched).
+            safetyAxisId = this->declare_parameter("safety_axis", -1);
+            safetyAxisThreshold = this->declare_parameter("safety_axis_threshold", -0.5);
 
             maxVel = this->declare_parameter("max_vel", 0.0);
 
@@ -30,12 +35,22 @@ class JoyTankDrive : public rclcpp::Node{
 
     private:
         void topic_callback(const sensor_msgs::msg::Joy& msg){
+            auto twistMsg = geometry_msgs::msg::Twist();
+            const auto nAxes = static_cast<int>(msg.axes.size());
+            const auto nButtons = static_cast<int>(msg.buttons.size());
+            if (leftAxisId < 0 || leftAxisId >= nAxes || rightAxisId < 0 || rightAxisId >= nAxes) {
+                twistPublisher_->publish(twistMsg);  // malformed /joy: stop
+                return;
+            }
             float leftAxis = msg.axes[leftAxisId];
             float rightAxis = msg.axes[rightAxisId];
 
-            int safetyButton = msg.buttons[safetyButtonId];
-
-            auto twistMsg = geometry_msgs::msg::Twist();
+            bool safetyButton = false;
+            if (safetyAxisId >= 0) {
+                safetyButton = safetyAxisId < nAxes && msg.axes[safetyAxisId] < safetyAxisThreshold;
+            } else if (safetyButtonId >= 0 && safetyButtonId < nButtons) {
+                safetyButton = msg.buttons[safetyButtonId] != 0;
+            }
 
             RCLCPP_DEBUG(this->get_logger(), "Got Axes Vals: %f %f", leftAxis, rightAxis);
             RCLCPP_DEBUG(this->get_logger(), "Safety Button Reading: %d", safetyButton);
@@ -56,6 +71,8 @@ class JoyTankDrive : public rclcpp::Node{
         int leftAxisId;
         int rightAxisId;
         int safetyButtonId;
+        int safetyAxisId;
+        double safetyAxisThreshold;
 
         float maxVel;
         float trackWidth;

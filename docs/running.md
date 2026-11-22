@@ -346,7 +346,7 @@ only, Foxglove connects to `ws://<jetson-ip>:8765`, and the browser reads the ga
 
 Xbox or PlayStation (PS5 DualSense tested) gamepad over USB, on the machine that runs teleop:
 
-- **Hold LB / L1** to drive. Release it and the rover stops.
+- **Hold RT / R2** (right trigger, past halfway) to drive. Release it and the rover stops.
 - **Left stick up/down** drives the left wheels, **right stick up/down** the right wheels.
 
 The deadman button, top speed (`max_vel`, m/s) and stick deadzone are in
@@ -415,7 +415,7 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | Build killed, or the Jetson hangs | Out of RAM: `pixi run build --parallel-workers 2 --executor sequential` |
 | Ground station sees no Jetson topics | Check `echo $ROS_DOMAIN_ID` is `42` on both, both are on the same subnet, and nothing blocks multicast or UDP. Foxglove to `ws://<jetson-ip>:8765` still works without DDS. |
 | Foxglove "connection refused" | No bridge on that machine, or wrong IP. On that machine, `ss -ltn \| grep 8765` should show it listening. |
-| Gamepad connected but the rover doesn't move | Hold LB. Check `ros2 topic echo /joy`, then `ros2 topic echo /diff_drive_controller/cmd_vel_unstamped`. |
+| Gamepad connected but the rover doesn't move | Hold RT (right trigger) past halfway. Check `ros2 topic echo /joy`, then `ros2 topic echo /diff_drive_controller/cmd_vel_unstamped`. |
 | `/joy` is silent | `ros2 run joy joy_enumerate_devices` lists the gamepads `joy_node` can open; set that `ID` as `device_id` in `teleop/config/joystick.yaml`. It is not the `N` of `/dev/input/jsN`. |
 | Every command seems doubled | Teleop runs on both machines. Use `rover.launch.py` (no teleop) on the Jetson, not `tooling/sim-up`. |
 | `vio:=true`: `ZED tracking <state>: not publishing /zed/vio/odom` | The ZED's tracking isn't `OK`, and the EKF runs on the wheels alone meanwhile. `FPS_TOO_LOW`: lower the load (`camera:=none`, or `depth_mode: NEURAL_LIGHT` in `zed_openpose.yaml`). Otherwise give the camera texture to track, not a blank wall or the sky. |

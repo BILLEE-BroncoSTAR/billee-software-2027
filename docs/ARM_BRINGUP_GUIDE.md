@@ -411,17 +411,18 @@ pixi run --environment l4t ros2 launch arm_bringup arm_teleop.launch.py speed_sc
 
 | Input (raw-joystick Xbox layout) | Action |
 |---|---|
-| hold **LB** (button 4) | deadman: nothing moves unless it is held |
+| hold **LT** (left trigger, axis 2) | deadman: nothing moves unless it is held past halfway |
 | **B** / **X** (buttons 1 / 2) | select the next / previous joint (it logs name, driver, position, limits) |
 | left stick vertical (axis 1) | jog the selected joint; full stick = `test_velocity` × `speed_scale` |
 
 - **Source of truth:** joints, speeds and limits come from `arm_axes.yaml`, so a re-wire or
   rename is a YAML edit only. Commands never leave `limits.min/max_position`, and speed is
   capped at `limits.max_velocity`.
-- **Stopping:** releasing LB, switching joints, or `/joy` going quiet for more than 0.3 s
+- **Stopping:** releasing LT, switching joints, or `/joy` going quiet for more than 0.3 s
   stops the arm. The quiet-`/joy` stop guards against a dropped controller.
-- **No conflict with drive:** the drive teleop uses **RB**, so the arm and the rover never
-  share a deadman.
+- **No conflict with drive:** the drive teleop uses **RT**, so the arm and the rover never
+  share a deadman. Holding **both** is drive mode: the arm ignores the sticks while RT is held,
+  and stays locked out until LT is released and pressed again.
 - **Wrong direction or mapping:** for a stick that's backwards, pass
   `--ros-args -p invert_axis:=true` to the script. For a different controller, override
   `deadman_button`, `next_button`, `prev_button` or `jog_axis` the same way. Run

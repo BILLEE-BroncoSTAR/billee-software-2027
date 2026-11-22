@@ -6,12 +6,14 @@ renaming axes is a YAML edit only. Requires arm.launch.py and a joy_node
 (arm_teleop.launch.py starts both teleop and joy_node).
 
 Controls (defaults, raw-joystick Xbox layout, same as teleop/config/joystick.yaml):
-    hold LB (button 4)      deadman: nothing moves unless it is held
+    hold LT (axis 2)        deadman: nothing moves unless it is held past halfway
     B (button 1)            select next joint
     X (button 2)            select previous joint
     left stick vertical     jog the selected joint (full stick = test_velocity)
 
-The drive teleop uses RB as its deadman, so arm and drive never share a button.
+The drive teleop uses RT as its deadman, so arm and drive never share a trigger.
+Holding both is drive mode: while RT is held the arm ignores the sticks, and it stays
+locked out until LT is released and pressed again.
 
 Safety behaviour:
   - Releasing the deadman, losing /joy for joy_timeout seconds or changing the
@@ -26,7 +28,9 @@ Safety behaviour:
     JointGroupVelocityController holds its last command, which is why the /joy
     watchdog exists.
 
-Parameters (ros2 run ... --ros-args -p name:=value): axes_file, deadman_button,
+Parameters (ros2 run ... --ros-args -p name:=value): axes_file, deadman_axis
+(-1 = use deadman_button instead), deadman_threshold, deadman_button,
+drive_deadman_axis (-1 = no drive lockout),
 next_button, prev_button, jog_axis, invert_axis, speed_scale (fraction of
 test_velocity at full stick, capped at limits.max_velocity), deadzone,
 joy_timeout, rate, max_lag.
@@ -53,7 +57,14 @@ class ArmJoyTeleop(Node):
             get_package_share_directory("arm_bringup"), "config", "arm_axes.yaml")
         p = self.declare_parameter
         axes_file = p("axes_file", default_axes).value
+        # LT on the raw Xbox layout: +1 released, -1 fully pressed (0 from joy_node until
+        # first touched, which counts as released).
+        self.deadman_axis = p("deadman_axis", 2).value
+        self.deadman_threshold = p("deadman_threshold", -0.5).value
         self.deadman = p("deadman_button", 4).value
+        # The drive teleop's deadman (RT). While it is held the arm ignores the sticks.
+        self.drive_deadman_axis = p("drive_deadman_axis", 5).value
+        self.drive_lock = False
         self.next_btn = p("next_button", 1).value
         self.prev_btn = p("prev_button", 2).value
         self.jog_axis = p("jog_axis", 1).value
@@ -91,8 +102,10 @@ class ArmJoyTeleop(Node):
         for a in self.axes:
             if not a.get("verified", False):
                 self.get_logger().warn(f"axis '{a['joint']}' is not verified in arm_axes.yaml")
+        hold = (f"axis {self.deadman_axis} (LT)" if self.deadman_axis >= 0
+                else f"button {self.deadman}")
         self.get_logger().info(
-            f"hold button {self.deadman} to jog; buttons {self.next_btn}/{self.prev_btn} "
+            f"hold {hold} to jog; buttons {self.next_btn}/{self.prev_btn} "
             f"select joint; axis {self.jog_axis} moves it. Joints: "
             f"{[a['joint'] for a in self.axes]}")
         self._announce()
@@ -109,7 +122,12 @@ class ArmJoyTeleop(Node):
         step = int(pressed(self.next_btn)) - int(pressed(self.prev_btn))
         if step:
             self._stop()
-            self.selected = (self.selected + step) % len(self.axes)
+            # Skip joints that aren't running (e.g. the RoboClaw half launched with
+            # roboclaw_port:=none), once /joint_states has shown which ones are.
+            for _ in range(len(self.axes)):
+                self.selected = (self.selected + step) % len(self.axes)
+                if not self.positions or self.axes[self.selected]["joint"] in self.positions:
+                    break
             self._announce()
         self.prev_buttons = list(msg.buttons)
         self.joy = msg
@@ -132,7 +150,24 @@ class ArmJoyTeleop(Node):
         if age > self.joy_timeout:
             return None
         b, ax = self.joy.buttons, self.joy.axes
-        if not (0 <= self.deadman < len(b) and b[self.deadman]):
+        if self.deadman_axis >= 0:
+            held = (0 <= self.deadman_axis < len(ax)
+                    and ax[self.deadman_axis] < self.deadman_threshold)
+        else:
+            held = 0 <= self.deadman < len(b) and bool(b[self.deadman])
+        driving = (0 <= self.drive_deadman_axis < len(ax)
+                   and ax[self.drive_deadman_axis] < self.deadman_threshold)
+        if driving and held and not self.drive_lock:
+            self.get_logger().info("drive deadman held: arm locked out until LT is released")
+        # Both deadmen held = drive mode: the drive teleop uses the same left stick. The lockout
+        # lasts until the arm deadman is released, so letting go of RT with the stick still
+        # pushed doesn't start an arm jog.
+        if driving:
+            self.drive_lock = True
+        if not held:
+            self.drive_lock = False
+            return None
+        if self.drive_lock:
             return None
         if not 0 <= self.jog_axis < len(ax):
             return None
@@ -180,6 +215,9 @@ class ArmJoyTeleop(Node):
 
         lim = a["limits"]
         lo, hi = lim["min_position"], lim["max_position"]
+        # A joint that starts outside its limits may only move back toward them. Clamping
+        # its target into [lo, hi] would make a position drive (CSP) jump there at full speed.
+        lo, hi = min(lo, pos), max(hi, pos)
         speed = min(a["test_velocity"] * self.speed_scale, lim["max_velocity"])
         velocity = stick * speed
 

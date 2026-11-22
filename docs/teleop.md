@@ -26,7 +26,8 @@ Parameters (`config/joystick.yaml`, which you can edit without rebuilding):
 | `deadzone` | `0.15` | stick travel ignored around centre; the Xbox One S pad drifts ~0.09 at rest |
 | `left_axis` | `1` | left stick Y |
 | `right_axis` | `4` | right stick Y |
-| `safety_button` | `4` | LB / L1, the deadman (code default `5`, RB / R1, broke on the Xbox One S pad) |
+| `safety_axis` | `5` | RT / R2, the deadman: held while the trigger reads below `safety_axis_threshold` (`-0.5`, past halfway). `-1` uses `safety_button` instead. The arm teleop uses LT |
+| `safety_button` | `4` | LB / L1, used only when `safety_axis` is `-1` (code default `5`, RB / R1, broke on the Xbox One S pad) |
 | `max_vel` | `1.0` | top wheel speed in m/s at full stick; scales both linear and angular output. The drivetrain tops out near 1.36 m/s |
 | `track_width` | `0.67` | m |
 
