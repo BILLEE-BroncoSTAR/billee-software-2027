@@ -136,11 +136,14 @@ inline constexpr std::uint8_t kAbort = 0x80;
 inline constexpr std::chrono::milliseconds kTimeout{100};
 }  // namespace sdo
 
-// Drive feedback units -> SI.
-// encoder counts per motor revolution assumes the P20-90-PRO-121-B, which 
-// includes a 1:121 reducer, resulting in an encoder resolution of 7929856 per rotation
-inline constexpr double kPositionCountsPerRev = 7929856.0;
-inline constexpr double kVelocityCountsPerRevPerSec = 7929856.0;  // assumes counts/s
+// Drive feedback units -> SI, at the MOTOR SHAFT (before the built-in reducer).
+// 6064h / 606Ch report motor-side encoder counts: 2^16 counts per motor-shaft
+// revolution. The built-in reducer (e.g. 121:1 on the P20-90-PRO-121-B, i.e.
+// 65536 * 121 = 7929856 counts per output revolution) and any external gearing
+// belong in the per-joint gear_ratio URDF param, not here.
+// TODO: hardware — confirm the 16-bit encoder is common to the P17 and P20.
+inline constexpr double kPositionCountsPerRev = 65536.0;
+inline constexpr double kVelocityCountsPerRevPerSec = 65536.0;  // assumes counts/s
 inline constexpr double kTwoPi = 6.283185307179586;
 
 inline double CountsToRad(std::int32_t counts) {return counts * kTwoPi / kPositionCountsPerRev;}

@@ -1,10 +1,7 @@
-[submodule "ros2_ws/src/roboclaw_hardware_interface"]
-	path = ros2_ws/src/roboclaw_hardware_interface
-	url = https://github.com/dumbotics/roboclaw_hardware_interface.git
-[submodule "ros2_ws/src/roboclaw_serial"]
-	path = ros2_ws/src/roboclaw_serial
-	url = https://github.com/dumbotics/roboclaw_serial.git
 [submodule "BILLEE-dashboard-tool"]
 	path = BILLEE-dashboard-tool
 	url = https://github.com/LucaLanzi/BILLEE-dashboard-tool.git
 	branch = main
+[submodule "third_party/JetsonGPIO"]
+	path = third_party/JetsonGPIO
+	url = https://github.com/pjueon/JetsonGPIO.git
