@@ -79,6 +79,14 @@ install(FILES
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install and export the headers so other packages (pxx uses LimitSwitch)
+# can include them and link this library.
+install(DIRECTORY include/
+  DESTINATION include
+)
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
