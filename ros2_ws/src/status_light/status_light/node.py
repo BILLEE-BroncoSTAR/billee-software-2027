@@ -15,15 +15,20 @@ Topics
 
 Without a blink(1) plugged in (or without permission to open it) the node keeps running, logs a
 warning every 30 s and retries every 3 s, so a missing light never stops a launch.
+
+Only one status_light runs per machine: a starting node stops the previous one (single.py), so
+a leftover node can't keep the blink(1) and lock every later one out.
 """
 
 import time
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from std_msgs.msg import String
 
+from status_light import single
 from status_light.patterns import Player
 
 RETRY_S = 3.0
@@ -120,11 +125,13 @@ class StatusLight(Node):
 
 
 def main(args=None):
+    # One light, one owner: stop a leftover status_light before opening the blink(1).
+    single.take_over(log=lambda m: print(f'[status_light] {m}', flush=True))
     rclpy.init(args=args)
     node = StatusLight()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.close(off=node.off_on_exit)
