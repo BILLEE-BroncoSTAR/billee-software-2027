@@ -18,6 +18,7 @@
 #include <math.h>
 
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -35,6 +36,16 @@ private:
   // Desired velocity of the wheel in radians per second
   double velocity_command_ = 0;
 
+  // BILLEE: |velocity command| is clamped to this (rad/s; <= 0 = no limit). Keeps a 12 V motor
+  // on a higher-voltage battery at or under its rated speed whatever a controller sends.
+  const double max_velocity_;
+
+  // BILLEE: duty-output channel (e.g. a solenoid on M2): no encoder, commanded by duty in
+  // [-1, 1] (sent as signed duty -32767..32767). Its state mirrors the command.
+  const bool duty_output_;
+  double duty_command_ = 0;
+  double duty_state_ = 0;
+
   // Position of the wheel in radians
   double position_state_ = 0;
 
@@ -51,10 +62,23 @@ public:
   // Name of the parent joint
   const std::string name;
 
-  // Constructor
+  // Constructor. duty_output: a channel driven by duty with no encoder (qppr unused).
   MotorJoint(
     const std::string joint_name, const int32_t qppr,
-    std::optional<int> limit_switch_pin = std::nullopt);
+    std::optional<int> limit_switch_pin = std::nullopt, bool duty_output = false,
+    double max_velocity = 0.0);
+
+  // BILLEE: true for a duty-output channel (command "duty"), false for a motor ("velocity").
+  bool isDutyOutput() const {return duty_output_;}
+
+  // BILLEE: the duty command as the RoboClaw's signed 16-bit duty, clamped to [-1, 1].
+  int16_t getDutyCommand() const;
+
+  // BILLEE: zero the command (whichever kind this joint has).
+  void zeroCommand() {velocity_command_ = 0; duty_command_ = 0;}
+
+  // BILLEE: called after a duty command was sent, so the state reports what's applied.
+  void setDutyState() {duty_state_ = duty_command_;}
 
   // Return the tick rate required to execute the current velocity command
   int32_t getTickRateCommand() const;
@@ -65,6 +89,14 @@ public:
   // Accessor methods to enable ros2_control to access joint interface pointers
   inline double * getPositionStatePtr() {return &position_state_;}
   inline double * getVelocityCommandPtr() {return &velocity_command_;}
+  inline double * getDutyCommandPtr() {return &duty_command_;}
+  inline double * getDutyStatePtr() {return &duty_state_;}
+  // The interface ros2_control sees: "velocity"/"position" for a motor, "duty"/"duty" for a
+  // duty output.
+  inline const char * commandInterfaceName() const {return duty_output_ ? "duty" : "velocity";}
+  inline const char * stateInterfaceName() const {return duty_output_ ? "duty" : "position";}
+  inline double * getCommandPtr() {return duty_output_ ? &duty_command_ : &velocity_command_;}
+  inline double * getStatePtr() {return duty_output_ ? &duty_state_ : &position_state_;}
   const LimitSwitch * getLimitSwitch() const {return limit_switch_.get();}
 };
 }  // namespace roboclaw_hardware_interface

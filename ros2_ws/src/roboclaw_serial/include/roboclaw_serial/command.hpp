@@ -228,6 +228,15 @@ using VelocityPIDConstantsM2 = Request<
 using DriveM1M2WithSignedSpeed =
   Request<Command::NONE, Command::DRIVE_M1_M2_SGN_SPD, int32_t, int32_t>;
 
+// BILLEE: per-channel drive commands, for a unit whose M1 and M2 are driven differently
+// (e.g. a motor on M1 and a solenoid on M2), where DriveM1M2WithSignedSpeed can't be used.
+// Signed duty: -32767 (full reverse) .. +32767 (full forward), no encoder needed.
+using DriveM1WithSignedDuty = Request<Command::NONE, Command::DRIVE_M1_SGN_DUTY, int16_t>;
+using DriveM2WithSignedDuty = Request<Command::NONE, Command::DRIVE_M2_SGN_DUTY_CYCLE, int16_t>;
+// Signed speed in quadrature pulses per second, as DriveM1M2WithSignedSpeed, one channel.
+using DriveM1WithSignedSpeed = Request<Command::NONE, Command::DRIVE_M1_SGN_SPD, int32_t>;
+using DriveM2WithSignedSpeed = Request<Command::NONE, Command::DRIVE_M2_SGN_SPD, int32_t>;
+
 // Add additional commands here. See BasicMicro user manual for examples
 // https://downloads.basicmicro.com/docs/roboclaw_user_manual.pdf
 

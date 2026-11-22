@@ -99,7 +99,8 @@ std::vector<StateInterface> RoboClawHardwareInterface::export_state_interfaces()
   for (auto roboclaw : roboclaw_units_) {
     for (auto & joint : roboclaw.joints) {
       if (joint) {
-        state_interfaces.emplace_back(joint->name, "position", joint->getPositionStatePtr());
+        state_interfaces.emplace_back(
+          joint->name, joint->stateInterfaceName(), joint->getStatePtr());
       }
     }
   }
@@ -112,7 +113,8 @@ std::vector<CommandInterface> RoboClawHardwareInterface::export_command_interfac
   for (auto roboclaw : roboclaw_units_) {
     for (auto & joint : roboclaw.joints) {
       if (joint) {
-        command_interfaces.emplace_back(joint->name, "velocity", joint->getVelocityCommandPtr());
+        command_interfaces.emplace_back(
+          joint->name, joint->commandInterfaceName(), joint->getCommandPtr());
       }
     }
   }
@@ -133,7 +135,7 @@ return_type RoboClawHardwareInterface::write(const rclcpp::Time &, const rclcpp:
     for (auto & roboclaw : roboclaw_units_) {
       for (auto & joint : roboclaw.joints) {
         if (joint) {
-          *joint->getVelocityCommandPtr() = 0.0;
+          joint->zeroCommand();
         }
       }
     }
@@ -187,7 +189,7 @@ CallbackReturn RoboClawHardwareInterface::on_deactivate(const rclcpp_lifecycle::
   for (auto & roboclaw : roboclaw_units_) {
     for (auto & joint : roboclaw.joints) {
       if (joint) {
-        *joint->getVelocityCommandPtr() = 0.0;
+        joint->zeroCommand();  // motors stop, duty outputs (solenoid) release
       }
     }
     try {
@@ -209,18 +211,19 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
 
   // Loop over all motors and associate them with their respective roboclaws
   for (auto joint : hardware_info.joints) {
-    // We currently only support velocity command interfaces
-    if (joint.command_interfaces.size() != 1 || joint.command_interfaces[0].name != "velocity") {
+    // A motor: velocity command + position state (encoder). BILLEE: a duty output (e.g. a
+    // solenoid): duty command + duty state, no encoder.
+    const bool one_each = joint.command_interfaces.size() == 1 &&
+      joint.state_interfaces.size() == 1;
+    const bool motor = one_each && joint.command_interfaces[0].name == "velocity" &&
+      joint.state_interfaces[0].name == "position";
+    const bool duty_output = one_each && joint.command_interfaces[0].name == "duty" &&
+      joint.state_interfaces[0].name == "duty";
+    if (!motor && !duty_output) {
       throw std::runtime_error(
-              "Invalid command interface for " + joint.name +
-              ". Only velocity command interfaces are supported.");
-    }
-
-    // We currently only support position state interfaces
-    if (joint.state_interfaces.size() != 1 || joint.state_interfaces[0].name != "position") {
-      throw std::runtime_error(
-              "Invalid state interface for " + joint.name +
-              ". Only position state interfaces are supported.");
+              "Invalid interfaces for " + joint.name +
+              ": a motor has one velocity command and one position state, a duty output one "
+              "duty command and one duty state.");
     }
 
     // Capture and validate parameters
@@ -239,14 +242,16 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
       throw std::runtime_error("Problem looking up address and converting to uint8_t");
     }
 
-    // Get the tick count per wheel rotation value
-    int qppr;
-    try {
-      qppr = stoi(joint.parameters.at("qppr"));
-    } catch (const std::out_of_range &) {
-      throw std::runtime_error("qppr is not set for " + joint.name);
-    } catch (const std::invalid_argument &) {
-      throw std::runtime_error("qppr is not numeric for " + joint.name);
+    // Get the tick count per wheel rotation value (motors only: a duty output has no encoder)
+    int qppr = 1;
+    if (motor) {
+      try {
+        qppr = stoi(joint.parameters.at("qppr"));
+      } catch (const std::out_of_range &) {
+        throw std::runtime_error("qppr is not set for " + joint.name);
+      } catch (const std::invalid_argument &) {
+        throw std::runtime_error("qppr is not numeric for " + joint.name);
+      }
     }
 
     // Get the type of motor from joint parameters
@@ -263,6 +268,17 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
       throw std::runtime_error(
               "Motor type for " + joint.name + " must be either M1 or M2 (" + motor_type +
               " provided).");
+    }
+
+    // BILLEE: optional max_velocity (rad/s): velocity commands are clamped to it.
+    double max_velocity = 0.0;
+    const auto max_velocity_it = joint.parameters.find("max_velocity");
+    if (max_velocity_it != joint.parameters.end()) {
+      try {
+        max_velocity = std::stod(max_velocity_it->second);
+      } catch (const std::exception &) {
+        throw std::runtime_error("max_velocity is not numeric for " + joint.name);
+      }
     }
 
     std::optional<int> limit_switch_pin;
@@ -290,7 +306,8 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
     if (!roboclaw_config[roboclaw_address][motor_type]) {
       // Set configuration parameters for this motor
       roboclaw_config[roboclaw_address][motor_type] =
-        std::make_shared<MotorJoint>(joint.name, qppr, limit_switch_pin);
+        std::make_shared<MotorJoint>(
+        joint.name, qppr, limit_switch_pin, duty_output, max_velocity);
     } else {
       throw std::runtime_error(
               "Bad motor type " + motor_type + " specified for joint " + joint.name);

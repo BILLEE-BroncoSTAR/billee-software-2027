@@ -18,17 +18,37 @@ namespace roboclaw_hardware_interface
 {
 
 MotorJoint::MotorJoint(
-  const std::string joint_name, const int32_t qppr, std::optional<int> limit_switch_pin)
-: ticks_per_radian_(static_cast<double>(qppr) * 0.5 * M_1_PI), name(joint_name)
+  const std::string joint_name, const int32_t qppr, std::optional<int> limit_switch_pin,
+  bool duty_output, double max_velocity)
+: ticks_per_radian_(static_cast<double>(qppr) * 0.5 * M_1_PI), max_velocity_(max_velocity),
+  duty_output_(duty_output), name(joint_name)
 {
   if (limit_switch_pin) {
     limit_switch_ = std::make_unique<LimitSwitch>(*limit_switch_pin);
   }
 }
 
+int16_t MotorJoint::getDutyCommand() const
+{
+  double duty = duty_command_;
+  if (!(duty == duty)) {  // NaN: no controller has claimed it yet
+    duty = 0.0;
+  }
+  duty = duty < -1.0 ? -1.0 : (duty > 1.0 ? 1.0 : duty);
+  return static_cast<int16_t>(duty * 32767.0);
+}
+
 int32_t MotorJoint::getTickRateCommand() const
 {
-  return static_cast<int32_t>(velocity_command_ * ticks_per_radian_);
+  double velocity = velocity_command_;
+  if (!(velocity == velocity)) {  // NaN: no controller has claimed it yet
+    velocity = 0.0;
+  }
+  if (max_velocity_ > 0.0) {
+    velocity = velocity < -max_velocity_ ? -max_velocity_ :
+      (velocity > max_velocity_ ? max_velocity_ : velocity);
+  }
+  return static_cast<int32_t>(velocity * ticks_per_radian_);
 }
 
 // Set the position given the current wheel encoder count

@@ -48,6 +48,11 @@ private:
 
   // RoboClaw serial driver messages
   roboclaw_serial::DriveM1M2WithSignedSpeed tick_rate_command_;
+  // BILLEE: per-channel commands, for a unit with a duty output (or only one motor)
+  roboclaw_serial::DriveM1WithSignedSpeed m1_speed_command_;
+  roboclaw_serial::DriveM2WithSignedSpeed m2_speed_command_;
+  roboclaw_serial::DriveM1WithSignedDuty m1_duty_command_;
+  roboclaw_serial::DriveM2WithSignedDuty m2_duty_command_;
   roboclaw_serial::EncoderCounters encoder_state_;
 };
 }  // namespace roboclaw_hardware_interface
