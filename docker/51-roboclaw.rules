@@ -1,0 +1,6 @@
+# BasicMicro USB RoboClaws (Atmel VID, 03eb:2404): the arm's RoboClaw motors (and solenoid).
+# They enumerate as /dev/ttyACMn, root:dialout 0660, and the dev container's ros_user isn't in
+# dialout, so arm.launch.py couldn't open them. The units report no USB serial number, so there
+# is no stable by-id name either: arm.launch.py (roboclaw_port:=auto) finds each unit by asking
+# every RoboClaw port which packet-serial address (128, 129, ...) answers.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="03eb", ATTRS{idProduct}=="2404", MODE:="0666"
