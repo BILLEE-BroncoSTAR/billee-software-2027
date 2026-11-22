@@ -3,7 +3,7 @@
 Everything is generated from config/arm_axes.yaml (the physical constants), so
 adding, renaming or re-gearing an axis is a YAML edit only.
 
-    # real hardware (arm CAN bus on can1, RoboClaws on the /dev/roboclaw UART):
+    # real hardware (arm CAN bus on can3, RoboClaws on the /dev/roboclaw UART):
     ros2 launch arm_bringup arm.launch.py
 
     # no hardware at all (pxx mock backend + mock RoboClaw):
@@ -237,7 +237,7 @@ def launch_setup(context):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
-            "can_interface", default_value="can1",
+            "can_interface", default_value="can3",
             description="SocketCAN interface for the P17/P20 axes: canN = real bus, "
             "vcanN = virtual bus + CANopen emulator, mock = pxx loopback backend, "
             "none = leave the CAN axes out."),

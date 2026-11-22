@@ -180,18 +180,18 @@ other's SDO replies.
 ### 3.2 Choose the bus and bitrate
 
 The drives default to **1 Mbit/s**. Supported rates are 1M, 500k, 250k, 125k, 100k, 50k, 20k
-and 10k. The ODESC drivetrain uses `can0` at **500 kbit/s**, and `tooling/can0.service` pins
-that.
+and 10k. The ODESC drivetrain uses `can2` at **500 kbit/s** (`tooling/can2.service`).
 
-**Put the arm on its own bus** (a second Jetson CAN controller or a USB-CAN adapter, e.g.
-`can1`). Sharing `can0` would mean retuning every drive to 500k. It would also risk ID
+**The arm has its own bus:** its own USB-CAN dongle, pinned to `can3` by its USB serial
+(`sudo tooling/can-pin install`, once per Jetson; `tooling/can-pin status` shows which dongle
+is which). `tooling/can-up can3` defaults to 1 Mbit/s. Sharing the drivetrain bus would mean retuning every drive to 500k. It would also risk ID
 collisions: ODrive CANSimple IDs are `(node << 5) | cmd`, so drivetrain nodes 0–5 produce
 IDs `0x000–0x0BF`. That range overlaps CANopen NMT (`0x000`), SYNC (`0x080`) and EMCY
 (`0x081+`).
 
 ```bash
-~/billee-software-2027/tooling/can-up can1 1000000
-~/billee-software-2027/tooling/can-up status can1     # state UP, bitrate 1000000
+~/billee-software-2027/tooling/can-up can3 1000000
+~/billee-software-2027/tooling/can-up status can3     # state UP, bitrate 1000000
 ```
 
 ### 3.3 Find the node ID
@@ -199,7 +199,7 @@ IDs `0x000–0x0BF`. That range overlaps CANopen NMT (`0x000`), SYNC (`0x080`) a
 Run `candump` first, then power the drive on:
 
 ```bash
-candump -tz can1
+candump -tz can3
 #   7XX#00   ← CANopen boot-up message; node ID = 0xXX - 0x700
 ```
 
@@ -207,7 +207,7 @@ If you missed the boot-up message, probe with an SDO read of `1000h` (device typ
 candidate ID. Only the right one answers on `0x580+id`:
 
 ```bash
-cansend can1 601#4000100000000000      # ask node 1
+cansend can3 601#4000100000000000      # ask node 1
 #   581#43001000xxxxxxxx               ← node 1 is present
 ```
 
@@ -217,8 +217,8 @@ Assignments come from `ros2_ws/src/arm_bringup/config/arm_axes.yaml`. Example: c
 node 2.
 
 ```bash
-cansend can1 601#2F01200102000000      # 2001h:01 (servo ID) = 0x02
-cansend can1 601#2310100173617665      # 1010h:01 = "save" (0x65766173), stores to flash
+cansend can3 601#2F01200102000000      # 2001h:01 (servo ID) = 0x02
+cansend can3 601#2310100173617665      # 1010h:01 = "save" (0x65766173), stores to flash
 # power-cycle the drive, then confirm it boots as 702#00
 ```
 
@@ -271,8 +271,8 @@ needs to release it after enable and engage it before shutdown. That is the open
 Manual release, **only with the shaft unloaded**:
 
 ```bash
-cansend can1 601#2F14200101000000      # release
-cansend can1 601#2F14200100000000      # engage
+cansend can3 601#2F14200101000000      # release
+cansend can3 601#2F14200100000000      # engage
 ```
 
 ### 3.8 Heartbeat
@@ -291,8 +291,8 @@ motor, keep a single entry and shorten `joints:` in `config/pxx_test_controllers
 match. Rebuild.
 
 ```bash
-~/billee-software-2027/tooling/can-up can1 1000000
-pixi run --environment l4t ros2 launch pxx pxx_test.launch.py can_interface:=can1
+~/billee-software-2027/tooling/can-up can3 1000000
+pixi run --environment l4t ros2 launch pxx pxx_test.launch.py can_interface:=can3
 ```
 
 The launch only starts the emulator for `vcan*` interfaces, so no emulator runs here.
@@ -300,7 +300,7 @@ The launch only starts the emulator for `vcan*` interfaces, so no emulator runs 
 **Pass criteria, in order:**
 
 1. Activation completes with no SDO timeouts or aborts.
-2. `candump can1` shows `080#` / `18X#` / `28X#` at the update rate.
+2. `candump can3` shows `080#` / `18X#` / `28X#` at the update rate.
 3. `/joint_states` position matches the `6064h` reading from 3.5 (after unit conversion),
    and velocity reads ≈0 at rest.
 4. **Small move first.** Read the current position from `/joint_states` and command
@@ -329,15 +329,15 @@ The `arm_bringup` package does this. The full procedure, RoboClaw axes included,
    node ID, reductions and direction for every joint. It's the single source of truth:
    `arm.launch.py` derives `gear_ratio` and generates the `<ros2_control>` block from it,
    so nothing is transcribed by hand.
-2. **Launch** with `ros2 launch arm_bringup arm.launch.py` (`can_interface:=can1` by
+2. **Launch** with `ros2 launch arm_bringup arm.launch.py` (`can_interface:=can3` by
    default; `mock` / `vcanN` / `none` work as here). It runs a `joint_trajectory_controller`
    (`arm_can_controller`) on the CAN axes, not `JointGroupPositionController`. JTC
    interpolates between points and seeds its commands from the current state, which works
    well with the driver's NaN-until-commanded behaviour.
 3. **Move slowly** with `ros2 run arm_bringup arm_slow_jog.py <joint> <delta> --speed 0.02`.
    It checks the limits from `arm_axes.yaml`.
-4. **Persist the bus.** Copy `tooling/can0.service` to a `can1.service` with
-   `bitrate 1000000`, or extend `can-up` with an arm default.
+4. **Persist the bus.** `sudo tooling/can-pin install` keeps the dongle on `can3`;
+   `tooling/can-up can3` brings it up at 1 Mbit/s.
 5. Do the first full-arm activation with the arm **physically supported**.
 
 ---

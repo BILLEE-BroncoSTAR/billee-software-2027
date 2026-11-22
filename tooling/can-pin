@@ -1,0 +1,174 @@
+#!/bin/sh
+# can-pin — give each USB-CAN dongle the same interface name every time.
+#
+# The kernel numbers USB-CAN adapters in the order it finds them, so the drivetrain and the
+# arm dongles swap between can2 and can3 across replugs and reboots. This pins them by their
+# USB serial number:
+#
+#   drivetrain (ODESC, 500 kbit/s)       candleLight 002D001F5246571820363138  -> can2
+#   arm (P17/P20 CANopen, 1 Mbit/s)      candleLight 004C003C5746571820353437  -> can3
+#
+#   sudo tooling/can-pin install   # once per Jetson: udev rule + this script on the host, then pin now
+#   tooling/can-pin status         # which dongle is which interface
+#   sudo tooling/can-pin           # re-pin now (what the udev rule runs on every plug-in)
+#   sudo tooling/can-pin uninstall
+#
+# A replacement dongle has a different serial: add it to MAP below, then `sudo tooling/can-pin
+# install` again. `cat /sys/bus/usb/devices/*/serial` (or `tooling/can-pin status`) shows it.
+#
+# Runs on the Jetson HOST (udev lives there), not in the container. POSIX sh: udev runs it with
+# the host's /bin/sh and no PATH guarantees.
+set -u
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+# Overridable only for tests (fake sysfs + fake ip).
+NET=${CAN_PIN_SYSFS_NET:-/sys/class/net}
+IP=${CAN_PIN_IP:-ip}
+
+# serial=interface. Interfaces must be canN names other than can0/can1 (the Tegra's mttcan).
+MAP="002D001F5246571820363138=can2 004C003C5746571820353437=can3"
+
+INSTALL_BIN=/usr/local/sbin/billee-can-pin
+INSTALL_RULE=/etc/udev/rules.d/80-billee-can.rules
+LOCK=${CAN_PIN_LOCK:-/run/billee-can-pin.lock}
+SELF_DIR=$(cd "$(dirname "$0")" && pwd)
+
+log() {
+  echo "can-pin: $*"
+  command -v logger >/dev/null 2>&1 && logger -t billee-can-pin -- "$*"
+}
+
+# USB serial of the adapter behind a net interface, or nothing (mttcan, vcan).
+serial_of() {
+  dev=$(readlink -f "$NET/$1/device" 2>/dev/null) || return 0
+  [ -r "$dev/../serial" ] && cat "$dev/../serial"
+  return 0
+}
+
+want_of() {
+  for pair in $MAP; do
+    [ "${pair%%=*}" = "$1" ] && { echo "${pair#*=}"; return 0; }
+  done
+  return 0
+}
+
+role_of() {
+  case "$1" in
+    can2) echo "drivetrain" ;;
+    can3) echo "arm" ;;
+    *) echo "?" ;;
+  esac
+}
+
+is_up() { $IP -o link show "$1" 2>/dev/null | grep -q '[<,]UP[,>]'; }
+
+# Rename $1 to $2. CAN interfaces can only be renamed while down; an up one is taken down and
+# brought back up (it keeps its bitrate, and sockets bound to it keep working: they bind by
+# ifindex, not name).
+rename() {
+  was_up=0
+  if is_up "$1"; then was_up=1; $IP link set "$1" down || return 1; fi
+  $IP link set "$1" name "$2" || { [ $was_up = 1 ] && $IP link set "$1" up; return 1; }
+  [ $was_up = 1 ] && $IP link set "$2" up
+  log "renamed $1 -> $2"
+}
+
+free_name() {  # first unused canN from 4 up, for an unknown dongle sitting on a pinned name
+  n=4
+  while [ -e "$NET/can$n" ]; do n=$((n + 1)); done
+  echo "can$n"
+}
+
+pin() {
+  # Two passes: the first may park a dongle on a temporary name to break a can2<->can3 swap;
+  # the second moves it to its own name.
+  pass=0
+  while [ $pass -lt 3 ]; do
+    pass=$((pass + 1))
+    changed=0
+    for path in $NET/*; do
+      ifc=${path##*/}
+      [ -e "$path" ] || continue
+      serial=$(serial_of "$ifc")
+      [ -n "$serial" ] || continue
+      want=$(want_of "$serial")
+      [ -n "$want" ] && [ "$want" != "$ifc" ] || continue
+
+      if [ -e "$NET/$want" ]; then
+        occupant_want=$(want_of "$(serial_of "$want")")
+        if [ -n "$occupant_want" ]; then
+          parking="canpin$pass$(printf '%s' "$want" | tr -dc 0-9)"
+        else
+          parking=$(free_name)  # an unknown adapter: give it a name off the pinned ones
+        fi
+        rename "$want" "$parking" || { log "could not move $want out of the way"; continue; }
+      fi
+      rename "$ifc" "$want" && changed=1
+    done
+    [ $changed = 0 ] && return 0
+  done
+}
+
+status() {
+  found=0
+  for path in $NET/*; do
+    ifc=${path##*/}
+    serial=$(serial_of "$ifc")
+    [ -n "$serial" ] || continue
+    found=1
+    want=$(want_of "$serial")
+    state=$(cat "$path/operstate" 2>/dev/null)
+    if [ -z "$want" ]; then
+      note="not in MAP (unpinned)"
+    elif [ "$want" = "$ifc" ]; then
+      note="pinned ($(role_of "$want"))"
+    else
+      note="SHOULD BE $want ($(role_of "$want")): run sudo tooling/can-pin"
+    fi
+    printf '%-8s %-6s serial %s  %s\n' "$ifc" "$state" "$serial" "$note"
+  done
+  [ $found = 1 ] || echo "no USB-CAN adapters plugged in"
+  if [ -f "$INSTALL_RULE" ]; then
+    echo "udev rule: installed ($INSTALL_RULE)"
+  else
+    echo "udev rule: NOT installed (sudo tooling/can-pin install)"
+  fi
+}
+
+need_root() {
+  [ -n "${CAN_PIN_SYSFS_NET:-}" ] && return 0  # test mode
+  [ "$(id -u)" = 0 ] || { echo "can-pin: $1 needs root: sudo $0 $*" >&2; exit 1; }
+}
+
+case "${1:-}" in
+  install)
+    need_root install
+    install -m 755 "$SELF_DIR/can-pin" "$INSTALL_BIN"
+    install -m 644 "$SELF_DIR/80-billee-can.rules" "$INSTALL_RULE"
+    udevadm control --reload-rules
+    log "installed $INSTALL_BIN and $INSTALL_RULE"
+    exec 9>"$LOCK"; flock 9
+    pin
+    status
+    ;;
+  uninstall)
+    need_root uninstall
+    rm -f "$INSTALL_BIN" "$INSTALL_RULE"
+    udevadm control --reload-rules
+    log "removed $INSTALL_BIN and $INSTALL_RULE"
+    ;;
+  status)
+    status
+    ;;
+  "")
+    need_root ""
+    exec 9>"$LOCK"; flock 9
+    pin
+    ;;
+  -h|--help)
+    sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
+    ;;
+  *)
+    echo "usage: $0 [install|uninstall|status]" >&2
+    exit 2
+    ;;
+esac

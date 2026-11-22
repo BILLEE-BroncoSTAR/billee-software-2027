@@ -3,13 +3,15 @@
 #
 #   tooling/can-up                 # bring up can2 @ 500 kbit/s (real ODESC bus)
 #   tooling/can-up can2            # same, explicit
+#   tooling/can-up can3            # the arm's bus (P17/P20 CANopen) @ 1 Mbit/s
 #   tooling/can-up can2 250000     # override bitrate
 #   tooling/can-up vcan0           # create + bring up a virtual CAN bus (testing)
 #   tooling/can-up down [iface]    # take the interface down (vcanN is also deleted)
 #   tooling/can-up status [iface]  # show state
 #
-# Bitrate default is 500000 to match the ODESC boards' can.config.baud_rate
-# (configs/odesc/motor_*.json).
+# Bitrate default is per interface: can2 (drivetrain) 500000 to match the ODESC boards'
+# can.config.baud_rate (configs/odesc/motor_*.json); can3 (arm) 1000000, the P17/P20 drives'
+# bitrate. `sudo tooling/can-pin install` keeps the dongles on those names (by USB serial).
 #
 # Uses sudo for the `ip` calls. Idempotent: re-running on an already-up interface
 # just reports state. Real `canN` interfaces must already exist in the kernel
@@ -35,6 +37,7 @@ if ! command -v ip &>/dev/null; then
 fi
 
 BITRATE_DEFAULT=500000
+BITRATE_ARM=1000000
 RESTART_MS=100
 TXQUEUELEN=100
 
@@ -93,7 +96,14 @@ if [[ "$ifc" == vcan* ]]; then
 fi
 
 # Real CAN interface.
-bitrate="${arg2:-$BITRATE_DEFAULT}"
+case "$ifc" in
+  can3) default_bitrate=$BITRATE_ARM ;;
+  *) default_bitrate=$BITRATE_DEFAULT ;;
+esac
+bitrate="${arg2:-$default_bitrate}"
+if [[ -n "$arg2" && "$arg2" != "$default_bitrate" && ( "$ifc" == can2 || "$ifc" == can3 ) ]]; then
+  echo "WARNING: $ifc is normally ${default_bitrate} bit/s ($([[ $ifc == can3 ]] && echo arm || echo drivetrain)); using ${bitrate} as asked." >&2
+fi
 
 if ! ip link show "$ifc" &>/dev/null; then
   echo "ERROR: $ifc does not exist in the kernel." >&2
@@ -101,6 +111,12 @@ if ! ip link show "$ifc" &>/dev/null; then
   echo "  - USB-CAN adapter: plug it in; it usually enumerates as can0/can1." >&2
   echo "  - For a hardware-free test bus use:  tooling/can-up vcan0" >&2
   exit 1
+fi
+
+# Which dongle is behind this name (tooling/can-pin pins them by USB serial).
+pin="$(dirname "$0")/can-pin"
+if [[ -x "$pin" ]]; then
+  "$pin" status | grep -E "^$ifc |udev rule: NOT" || true
 fi
 
 # Safe while the interface is up, so it is applied on both paths below.
@@ -116,4 +132,8 @@ fi
 echo ">> bringing $ifc up @ ${bitrate} bit/s (restart-ms ${RESTART_MS}, txqueuelen ${TXQUEUELEN})"
 sudo ip link set "$ifc" up type can bitrate "$bitrate" restart-ms "$RESTART_MS"
 _status "$ifc"
-echo ">> tip: 'candump $ifc' should show ODESC heartbeat frames (cmd 0x01) once nodes are powered."
+if [[ "$ifc" == can3 ]]; then
+  echo ">> tip: the arm drives don't send heartbeats; 'ros2 run arm_bringup pxx_probe.py scan --interface can3' polls them."
+else
+  echo ">> tip: 'candump $ifc' should show ODESC heartbeat frames (cmd 0x01) once nodes are powered."
+fi

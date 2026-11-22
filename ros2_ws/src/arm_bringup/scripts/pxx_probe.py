@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Check the P17 / P20 CANopen bus: find drives, read their state, decode traffic.
 
-    pxx_probe.py scan    [--interface can1] [--nodes 1 2]   # who is on the bus + state
-    pxx_probe.py monitor [--interface can1]                 # decode every frame live
-    pxx_probe.py rates   [--interface can1]                 # per-node frames/s, once a second
+    pxx_probe.py scan    [--interface can3] [--nodes 1 2]   # who is on the bus + state
+    pxx_probe.py monitor [--interface can3]                 # decode every frame live
+    pxx_probe.py rates   [--interface can3]                 # per-node frames/s, once a second
 
 `scan` sends SDO reads, so run it with arm.launch.py STOPPED (its SDO replies
 would race the driver's). `monitor` and `rates` only listen and are safe to run
@@ -192,7 +192,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["scan", "monitor", "rates"])
-    parser.add_argument("--interface", default="can1")
+    parser.add_argument("--interface", default="can3")
     parser.add_argument("--nodes", type=int, nargs="+", default=list(range(1, 128)),
                         help="node IDs to scan (default: all 1-127)")
     args = parser.parse_args()

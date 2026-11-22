@@ -5,17 +5,42 @@ Scripts run from the repository root. Only the CAN ones touch the rover's hardwa
 | Script | Runs on | Does |
 |---|---|---|
 | [`can-up`](#can-up) | Jetson **host** | brings a CAN interface up or down |
+| [`can-pin`, `80-billee-can.rules`](#can-pin) | Jetson **host** (udev) | keeps the drivetrain dongle on `can2` and the arm dongle on `can3` |
 | [`can2.service`](#can2service) | Jetson **host** (systemd) | brings `can2` up at every boot |
 | [`argus-watchdog`, `argus-watchdog.service`](#argus-watchdog) | Jetson **host** (systemd) | restarts `nvargus-daemon` when it's down, wedged or leaking camera sessions |
 | [`can-clear-faults`](#can-clear-faults) | host or container | clears latched ODESC errors, optionally reboots a board |
 | [`sim-up`](#sim-up) | container | one-command Gazebo sim |
 | [`desktop-ros2`, `rover-ros2`](#desktop-ros2-rover-ros2) | host | build and run the dev images without VS Code |
 
+## can-pin
+
+```bash
+sudo tooling/can-pin install    # once per Jetson: udev rule + /usr/local/sbin/billee-can-pin, pins now
+tooling/can-pin status          # which dongle is which interface, and whether the rule is installed
+sudo tooling/can-pin            # re-pin now (what the udev rule runs on every plug-in)
+sudo tooling/can-pin uninstall
+```
+
+The kernel numbers USB-CAN adapters in the order it finds them, so without this the drivetrain
+and arm dongles swap between `can2` and `can3`. The rule (`80-billee-can.rules`, candleLight
+`1d50:606f`) runs `billee-can-pin` whenever one appears. It renames each dongle by its USB serial:
+
+| Serial | Name | Bus |
+|---|---|---|
+| `002D001F5246571820363138` | `can2` | drivetrain (ODESC, 500 kbit/s) |
+| `004C003C5746571820353437` | `can3` | arm (P17/P20 CANopen, 1 Mbit/s) |
+
+It handles a swap at boot (one is parked on a temporary name first). An unknown adapter sitting
+on `can2`/`can3` is moved to `can4` or above. An interface that's already up is taken down,
+renamed and brought back up. The map is `MAP` at the top of `tooling/can-pin`. For a replacement
+dongle, add its serial there (`tooling/can-pin status` prints it) and run `sudo tooling/can-pin
+install` again. `can-up` prints the `can-pin status` line for the interface it brings up.
+
 ## can-up
 
 ```bash
 tooling/can-up                  # can2 @ 500 kbit/s, restart-ms 100, txqueuelen 100
-tooling/can-up can3             # another interface (the USB-CAN adapter's number can change)
+tooling/can-up can3             # the arm's bus, @ 1 Mbit/s by default
 tooling/can-up can2 250000      # another bitrate
 tooling/can-up vcan0            # create and bring up a virtual bus
 tooling/can-up status [iface]   # show the state (default can2)

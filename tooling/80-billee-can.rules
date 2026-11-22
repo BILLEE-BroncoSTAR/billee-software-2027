@@ -1,0 +1,4 @@
+# Pin the USB-CAN dongles to fixed names by serial: drivetrain -> can2, arm -> can3.
+# The serial -> name map lives in tooling/can-pin. Installed by `sudo tooling/can-pin install`.
+# candleLight / gs_usb adapters enumerate as 1d50:606f.
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="can*", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="606f", RUN+="/usr/local/sbin/billee-can-pin"

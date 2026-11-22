@@ -24,7 +24,7 @@ machine, node-ID assignment, raw SDO frames), see [PXX_BRINGUP_GUIDE.md](PXX_BRI
                 Jetson
    ┌────────────────────────────────┐
    │  ros2_control_node             │
-   │   ├─ ArmCan      (pxx)  ───────┼── can1 @ 1 Mbit/s ──┬── P20 (node 1) ── P17 (node 2) ── …
+   │   ├─ ArmCan      (pxx)  ───────┼── can3 @ 1 Mbit/s ──┬── P20 (node 1) ── P17 (node 2) ── …
    │   │                            │   120 Ω each end    │
    │   └─ ArmRoboClaw (roboclaw) ───┼── UART (/dev/roboclaw) ── RoboClaw 128 ── RoboClaw 129 ── …
    └────────────────────────────────┘   packet serial, multi-unit mode, 115200 baud
@@ -123,12 +123,12 @@ for the procedure.
 
 ### 1.4 P17 / P20: CAN bus
 
-Use a dedicated arm bus, separate from the drivetrain's `can0`. The drives default to 1 Mbit/s,
-and the ODrive CAN IDs on `can0` collide with CANopen NMT/SYNC. The details are in
+Use a dedicated arm bus, separate from the drivetrain's `can2`. The drives default to 1 Mbit/s,
+and the ODrive CAN IDs on `can2` collide with CANopen NMT/SYNC. The details are in
 [PXX_BRINGUP_GUIDE.md §3](PXX_BRINGUP_GUIDE.md#3-bench-one-motor-raw-can-no-ros). In short:
 
 ```bash
-~/billee-software-2027/tooling/can-up can1 1000000
+~/billee-software-2027/tooling/can-up can3 1000000
 ```
 
 - 120 Ω termination at **each** end of the bus (≈ 60 Ω between CAN-H and CAN-L, measured
@@ -224,7 +224,7 @@ its own probe. Both probes are stdlib-only Python, installed with `arm_bringup`.
 
 ```bash
 # with the arm launch STOPPED (scan sends SDOs):
-pixi run --environment l4t ros2 run arm_bringup pxx_probe.py scan --interface can1
+pixi run --environment l4t ros2 run arm_bringup pxx_probe.py scan --interface can3
 #   drives on the bus: [1, 2]
 #   node 1:
 #     status word 6041h      0x0250 (switch on disabled)
@@ -233,9 +233,9 @@ pixi run --environment l4t ros2 run arm_bringup pxx_probe.py scan --interface ca
 #     gear ratio  6091h:01   …
 
 # while the arm launch is RUNNING (listen-only):
-pixi run --environment l4t ros2 run arm_bringup pxx_probe.py rates   --interface can1
+pixi run --environment l4t ros2 run arm_bringup pxx_probe.py rates   --interface can3
 #   RPDO1 n1:100  SYNC:100  TPDO1 n1:100  TPDO1 n2:100  TPDO2 n1:100  TPDO2 n2:100
-pixi run --environment l4t ros2 run arm_bringup pxx_probe.py monitor --interface can1
+pixi run --environment l4t ros2 run arm_bringup pxx_probe.py monitor --interface can3
 #   0.0102  080  SYNC
 #   0.0104  181  TPDO1     node 1: position 123456 (+1.884 motor rev), velocity 0
 #   0.0105  281  TPDO2     node 1: status 0x0427 (operation enabled)
@@ -243,7 +243,7 @@ pixi run --environment l4t ros2 run arm_bringup pxx_probe.py monitor --interface
 
 **Pass:** every `node_id` in `arm_axes.yaml` shows up in `scan`. With the launch running,
 `rates` shows **TPDO1 and TPDO2 at the update rate (100/s) for every node.** A node missing
-from `rates` isn't sending feedback. The plain `candump -tz can1` (can-utils) works too.
+from `rates` isn't sending feedback. The plain `candump -tz can3` (can-utils) works too.
 
 **Message formats on the arm CAN bus.** These are 11-bit CAN 2.0A IDs, COB-ID = function
 code + node ID, little-endian payloads. `pxx` configures the PDO layouts at activation.
@@ -345,7 +345,7 @@ Keep these backstops on during bring-up, in case someone bypasses the tool:
 ## 5. Launching the arm
 
 ```bash
-# real arm: P17/P20 on can1, RoboClaws on /dev/roboclaw
+# real arm: P17/P20 on can3, RoboClaws on /dev/roboclaw
 pixi run --environment l4t ros2 launch arm_bringup arm.launch.py
 
 # no hardware: pxx mock backend + mock RoboClaw (mock_components/GenericSystem)
@@ -362,7 +362,7 @@ pixi run --environment l4t ros2 launch arm_bringup arm.launch.py can_interface:=
 
 | arg | default | values |
 |---|---|---|
-| `can_interface` | `can1` | `canN` real · `vcanN` virtual + emulator · `mock` · `none` |
+| `can_interface` | `can3` | `canN` real · `vcanN` virtual + emulator · `mock` · `none` |
 | `roboclaw_port` | `/dev/roboclaw` | serial device · `mock` · `none` |
 | `roboclaw_baud` | `115200` | must match every RoboClaw's Motion Studio baud |
 | `axes_file` | `arm_bringup/config/arm_axes.yaml` | another constants file |
@@ -476,7 +476,7 @@ The launch derives everything else:
 3. [ ] RoboClaws configured in Motion Studio (§1.2), each tuned (§2.1), settings recorded
 4. [ ] UART wired, udev name, `roboclaw_probe.py` finds every address (§3.2)
 5. [ ] Every RoboClaw at 115200 baud with a serial timeout set; first real-hardware run of the vendored driver ([§1.5](#15-roboclaw-driver-notes)), with joints free to move
-6. [ ] `can1` up at 1 Mbit/s, node IDs set, `pxx_probe.py scan` finds every node (§3.1)
+6. [ ] `can3` up at 1 Mbit/s, node IDs set, `pxx_probe.py scan` finds every node (§3.1)
 7. [ ] Total ratio measured for every axis, `arm_axes.yaml` filled in, `verified: true` (§6)
 8. [ ] Real launch, arm supported: each joint moved with `--speed 0.02` (±0.05 rad), direction checked
 9. [ ] Limits walked out at `test_velocity`, then recorded in `arm_axes.yaml`
