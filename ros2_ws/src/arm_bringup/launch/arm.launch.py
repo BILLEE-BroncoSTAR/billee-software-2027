@@ -26,7 +26,11 @@ What it starts:
   - pxx_vcan_emulator.py when can_interface is a vcanN interface
 
 There is no arm kinematic model yet, so no robot_state_publisher / TF: the
-generated URDF only carries the <ros2_control> blocks. /joint_states is published.
+generated URDF only carries the <ros2_control> blocks. /arm/joint_states is published.
+
+Namespace: /arm (/arm/controller_manager, /arm/arm_can_controller/joint_trajectory and
+/arm/arm_can_controller/follow_joint_trajectory, /arm/arm_roboclaw_controller/commands,
+/arm/joint_states), apart from the drivetrain's /controller_manager and /joint_states.
 """
 
 import os
@@ -35,11 +39,16 @@ import tempfile
 import yaml
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, LogInfo, OpaqueFunction
+from launch.actions import (DeclareLaunchArgument, ExecuteProcess, LogInfo, OpaqueFunction,
+                            Shutdown)
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 DISABLED = ("none", "off", "false", "")
+# Everything of the arm's ros2_control lives under this namespace: /arm/controller_manager,
+# /arm/arm_can_controller/..., /arm/joint_states. The drivetrain (rover.launch.py) has its own
+# /controller_manager and /joint_states; sharing the name let its spawner reach the arm's.
+NAMESPACE = "arm"
 ROBOCLAW_ADDRESSES = range(128, 136)
 
 
@@ -160,6 +169,8 @@ def _controllers_file(template_path, can_axes, rc_axes):
         else:
             cm.pop(controller, None)
             params.pop(controller, None)
+    # Parameter-file keys are node names; namespaced nodes need the full name.
+    params = {f"/{NAMESPACE}/{name}": value for name, value in params.items()}
     out = tempfile.NamedTemporaryFile(
         "w", prefix="arm_controllers_", suffix=".yaml", delete=False)
     yaml.safe_dump(params, out)
@@ -228,13 +239,19 @@ def launch_setup(context):
         Node(
             package="controller_manager",
             executable="ros2_control_node",
+            namespace=NAMESPACE,
             parameters=[{"robot_description": description}, controllers],
             output="screen",
+            # Without it a dead driver (e.g. a drive that won't enable) left the spawner waiting
+            # forever and the launch looking alive; this ends the whole launch so it shows.
+            on_exit=Shutdown(reason="ros2_control_node exited: the arm driver is not running "
+                                    "(see its FATAL line above)"),
         ),
         Node(
             package="controller_manager",
             executable="spawner",
-            arguments=[*spawn, "--controller-manager", "/controller_manager"],
+            namespace=NAMESPACE,
+            arguments=[*spawn, "--controller-manager", f"/{NAMESPACE}/controller_manager"],
             output="screen",
         ),
     ]

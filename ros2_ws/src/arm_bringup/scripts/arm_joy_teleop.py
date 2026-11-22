@@ -33,7 +33,7 @@ Parameters (ros2 run ... --ros-args -p name:=value): axes_file, deadman_axis
 drive_deadman_axis (-1 = no drive lockout),
 next_button, prev_button, jog_axis, invert_axis, speed_scale (fraction of
 test_velocity at full stick, capped at limits.max_velocity), deadzone,
-joy_timeout, rate, max_lag.
+joy_timeout, rate, max_lag, arm_namespace (default /arm, arm.launch.py's).
 """
 
 import os
@@ -92,11 +92,12 @@ class ArmJoyTeleop(Node):
         self.dt = 1.0 / rate
 
         self.create_subscription(Joy, "/joy", self._on_joy, 10)
-        self.create_subscription(JointState, "/joint_states", self._on_state, 10)
+        ns = p("arm_namespace", "/arm").value.rstrip("/")  # arm.launch.py's namespace
+        self.create_subscription(JointState, f"{ns}/joint_states", self._on_state, 10)
         self.traj_pub = self.create_publisher(
-            JointTrajectory, "/arm_can_controller/joint_trajectory", 10)
+            JointTrajectory, f"{ns}/arm_can_controller/joint_trajectory", 10)
         self.vel_pub = self.create_publisher(
-            Float64MultiArray, "/arm_roboclaw_controller/commands", 10)
+            Float64MultiArray, f"{ns}/arm_roboclaw_controller/commands", 10)
         self.create_timer(self.dt, self._tick)
 
         for a in self.axes:
@@ -208,7 +209,7 @@ class ArmJoyTeleop(Node):
         pos = self.positions.get(joint)
         if stick is None or pos is None:
             if stick is not None and pos is None:
-                self.get_logger().warn(f"no /joint_states for {joint}",
+                self.get_logger().warn(f"no arm joint_states for {joint}",
                                        throttle_duration_sec=2.0)
             self._stop()
             return

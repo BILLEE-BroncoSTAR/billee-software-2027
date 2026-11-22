@@ -282,7 +282,7 @@ pixi run --environment l4t ros2 run arm_bringup roboclaw_probe.py --addresses 12
 **Pass:** every `address` in `arm_axes.yaml` answers. Turning each joint by hand changes the
 right channel (M1 vs M2), in the direction you expect. A *bad CRC* reply means a baud
 mismatch, or two units sharing an address. While the arm launch runs, check RoboClaw axes
-on `/joint_states` (position only).
+on `/arm/joint_states` (position only).
 
 **Packet-serial format** (all multi-byte fields **big-endian**, CRC16-CCITT/XMODEM: poly
 `0x1021`, init 0):
@@ -376,14 +376,17 @@ axis is a YAML edit only.
     `gear_ratio`.
   - **`ArmRoboClaw`** runs `roboclaw_hardware_interface/RoboClawHardwareInterface`. Each
     joint gets `address`, `channel`, and the derived `qppr` (counts per joint revolution).
+- **Namespace `/arm`:** the controller manager is `/arm/controller_manager` and every arm
+  topic below starts with `/arm`, so the drivetrain's `/controller_manager` and `/joint_states`
+  stay separate (`ros2 control list_controllers -c /arm/controller_manager`).
 - **Controllers:**
-  - `joint_state_broadcaster` → `/joint_states`
+  - `joint_state_broadcaster` → `/arm/joint_states`
   - `arm_can_controller`, a `JointTrajectoryController` with position commands and partial
     goals allowed:
-    - action `/arm_can_controller/follow_joint_trajectory`
-    - topic `/arm_can_controller/joint_trajectory`
+    - action `/arm/arm_can_controller/follow_joint_trajectory`
+    - topic `/arm/arm_can_controller/joint_trajectory`
   - `arm_roboclaw_controller`, a `JointGroupVelocityController`: topic
-    `/arm_roboclaw_controller/commands`, `Float64MultiArray` in rad/s, with one entry per
+    `/arm/arm_roboclaw_controller/commands`, `Float64MultiArray` in rad/s, with one entry per
     RoboClaw joint in `arm_axes.yaml` order.
 
 There is no arm kinematic model yet, so there's no `robot_state_publisher` or TF. The

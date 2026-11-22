@@ -33,6 +33,8 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 from trajectory_msgs.msg import JointTrajectoryPoint
 
+ARM_NS = "/arm"  # arm.launch.py's namespace
+
 
 def load_axes(path):
     """Return ({joint: axis}, [roboclaw joints in controller order])."""
@@ -46,7 +48,7 @@ class Jog(Node):
     def __init__(self):
         super().__init__("arm_slow_jog")
         self.positions = {}
-        self.create_subscription(JointState, "/joint_states", self._on_state, 10)
+        self.create_subscription(JointState, f"{ARM_NS}/joint_states", self._on_state, 10)
 
     def _on_state(self, msg):
         self.positions.update(zip(msg.name, msg.position))
@@ -56,12 +58,12 @@ class Jog(Node):
         while rclpy.ok() and joint not in self.positions and time.monotonic() < end:
             rclpy.spin_once(self, timeout_sec=0.1)
         if joint not in self.positions:
-            raise RuntimeError(f"no /joint_states for '{joint}' (is arm.launch.py running?)")
+            raise RuntimeError(f"no {ARM_NS}/joint_states for '{joint}' (is arm.launch.py running?)")
         return self.positions[joint]
 
     def move_pxx(self, joint, start, target, speed):
         client = ActionClient(self, FollowJointTrajectory,
-                              "/arm_can_controller/follow_joint_trajectory")
+                              f"{ARM_NS}/arm_can_controller/follow_joint_trajectory")
         if not client.wait_for_server(timeout_sec=5.0):
             raise RuntimeError("arm_can_controller action server not available")
         duration = max(abs(target - start) / speed, 0.5)
@@ -93,7 +95,7 @@ class Jog(Node):
                                f"{result.result().result.error_string}")
 
     def move_roboclaw(self, joint, rc_joints, start, target, speed, limits):
-        pub = self.create_publisher(Float64MultiArray, "/arm_roboclaw_controller/commands", 10)
+        pub = self.create_publisher(Float64MultiArray, f"{ARM_NS}/arm_roboclaw_controller/commands", 10)
         index = rc_joints.index(joint)
         velocity = math.copysign(speed, target - start)
         duration = abs(target - start) / speed
