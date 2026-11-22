@@ -166,7 +166,8 @@ tooling/can-clear-faults  # clear latched ODESC errors (e.g. after power-up); --
 ```
 
 The drivetrain and arm each have a USB-CAN dongle. The kernel numbers them in the order it finds
-them, so pin them once per Jetson: `sudo tooling/can-pin install`. A udev rule then names them by
+them, so they're pinned: the l4t dev container installs a host udev rule at every start
+(`docker/can_udev.sh`; by hand: `sudo tooling/can-pin install`). The rule names them by
 USB serial on every plug-in and boot: the drivetrain is always `can2`, the arm always `can3`.
 `tooling/can-pin status` shows which dongle is which. `tooling/can-up can3` brings the arm bus up
 at 1 Mbit/s. Without the rule, the drivetrain can show up as `can3`; pass its interface to both
@@ -423,7 +424,7 @@ ros2 launch chassis_bringup real.launch.py can_interface:=vcan0
 | RViz/Foxglove: `Frame [odom] does not exist`, RobotModel errors, rover doesn't move in the view | Real drivetrain: `odom` comes from the Jetson's controllers (`odom_tf:=true`, the default) or its EKF (`vio:=true`). First, on the Jetson, `ros2 control list_controllers` must show both `active`. If not, see the CAN rows below. Then `ros2 run tf2_ros tf2_echo odom base_footprint` on the ground station must print a transform. If the controllers are fine and it doesn't, rebuild `chassis_bringup` on both machines and relaunch: an old install still opens RViz on a frame the rover doesn't publish. Sim: don't pass `navigation:=false`. |
 | Sim: `Switch controller timed out`, or `Couldn't open X display` | No usable display. On the Jetson, prefix the launch with `xvfb-run -a vglrun -d egl`. |
 | Real: controllers `inactive`, wheels dead | CAN down or wrong bitrate. Run `tooling/can-up` on the host and check `dmesg`. |
-| Real: `CAN interface 'can2' doesn't exist` (or `is down`), or `ros2_control_node` died with exit code -6 | The USB-CAN dongles aren't pinned, so the drivetrain came up as another number (`sudo tooling/can-pin install` fixes that for good; `tooling/can-pin status` shows which dongle is which). The error lists the CAN interfaces that exist; pass the drivetrain's, e.g. `rover.launch.py mode:=real can_interface:=can3`, and bring it up with `tooling/can-up can3`. With no controllers there is no driving and no `odom` frame, so RViz also reports `Frame [odom] does not exist`. |
+| Real: `CAN interface 'can2' doesn't exist` (or `is down`), or `ros2_control_node` died with exit code -6 | The USB-CAN dongles aren't pinned, so the drivetrain came up as another number (start the l4t dev container once, or `sudo tooling/can-pin install`, to fix that for good; `tooling/can-pin status` shows which dongle is which). The error lists the CAN interfaces that exist; pass the drivetrain's, e.g. `rover.launch.py mode:=real can_interface:=can3`, and bring it up with `tooling/can-up can3`. With no controllers there is no driving and no `odom` frame, so RViz also reports `Frame [odom] does not exist`. |
 | Real: `/joint_states` positions stay 0, or `wheel … unhealthy: no encoder reply` errors | The bus or that node isn't answering. On the host, run `tooling/can-up status` (the interface must be UP), then check that node's power and CAN wiring. |
 | Real: the drivetrain stopped by itself (`fault_policy:=fault`) | Read the driver's last `wheel … (node N) unhealthy: …` error for the joint, node and reason. Fix that, then relaunch. |
 | Real: `wheel … (node N) unhealthy: axis_error 0x…` | A latched ODESC error. Run `tooling/can-clear-faults --nodes N` (host or container); it prints the error names. If it reports `error still present`, the fault is still there: check that board's power and wiring. The driver also clears errors each time it activates. |

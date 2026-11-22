@@ -15,7 +15,8 @@ Scripts run from the repository root. Only the CAN ones touch the rover's hardwa
 ## can-pin
 
 ```bash
-sudo tooling/can-pin install    # once per Jetson: udev rule + /usr/local/sbin/billee-can-pin, pins now
+# automatic: the l4t dev container installs it on the host at every start (docker/can_udev.sh)
+sudo tooling/can-pin install    # the same by hand: rule + helper in /etc/udev/rules.d, pins now
 tooling/can-pin status          # which dongle is which interface, and whether the rule is installed
 sudo tooling/can-pin            # re-pin now (what the udev rule runs on every plug-in)
 sudo tooling/can-pin uninstall

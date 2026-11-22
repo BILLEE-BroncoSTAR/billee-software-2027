@@ -183,7 +183,7 @@ The drives default to **1 Mbit/s**. Supported rates are 1M, 500k, 250k, 125k, 10
 and 10k. The ODESC drivetrain uses `can2` at **500 kbit/s** (`tooling/can2.service`).
 
 **The arm has its own bus:** its own USB-CAN dongle, pinned to `can3` by its USB serial
-(`sudo tooling/can-pin install`, once per Jetson; `tooling/can-pin status` shows which dongle
+(installed at every l4t dev-container start by `docker/can_udev.sh`; `tooling/can-pin status` shows which dongle
 is which). `tooling/can-up can3` defaults to 1 Mbit/s. Sharing the drivetrain bus would mean retuning every drive to 500k. It would also risk ID
 collisions: ODrive CANSimple IDs are `(node << 5) | cmd`, so drivetrain nodes 0–5 produce
 IDs `0x000–0x0BF`. That range overlaps CANopen NMT (`0x000`), SYNC (`0x080`) and EMCY
@@ -336,7 +336,7 @@ The `arm_bringup` package does this. The full procedure, RoboClaw axes included,
    well with the driver's NaN-until-commanded behaviour.
 3. **Move slowly** with `ros2 run arm_bringup arm_slow_jog.py <joint> <delta> --speed 0.02`.
    It checks the limits from `arm_axes.yaml`.
-4. **Persist the bus.** `sudo tooling/can-pin install` keeps the dongle on `can3`;
+4. **Persist the bus.** The container's udev rule (`docker/can_udev.sh`) keeps the dongle on `can3`;
    `tooling/can-up can3` brings it up at 1 Mbit/s.
 5. Do the first full-arm activation with the arm **physically supported**.
 

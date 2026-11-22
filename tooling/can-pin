@@ -8,7 +8,8 @@
 #   drivetrain (ODESC, 500 kbit/s)       candleLight 002D001F5246571820363138  -> can2
 #   arm (P17/P20 CANopen, 1 Mbit/s)      candleLight 004C003C5746571820353437  -> can3
 #
-#   sudo tooling/can-pin install   # once per Jetson: udev rule + this script on the host, then pin now
+#   (automatic: the l4t dev container installs it on the host at start, docker/can_udev.sh)
+#   sudo tooling/can-pin install   # the same by hand, on the host: udev rule + this script, pin now
 #   tooling/can-pin status         # which dongle is which interface
 #   sudo tooling/can-pin           # re-pin now (what the udev rule runs on every plug-in)
 #   sudo tooling/can-pin uninstall
@@ -27,7 +28,9 @@ IP=${CAN_PIN_IP:-ip}
 # serial=interface. Interfaces must be canN names other than can0/can1 (the Tegra's mttcan).
 MAP="002D001F5246571820363138=can2 004C003C5746571820353437=can3"
 
-INSTALL_BIN=/usr/local/sbin/billee-can-pin
+# Next to the rule: the container's start-up (docker/can_udev.sh) can only write rules.d.
+INSTALL_BIN=/etc/udev/rules.d/billee-can-pin
+OLD_BIN=/usr/local/sbin/billee-can-pin  # where earlier versions installed it
 INSTALL_RULE=/etc/udev/rules.d/80-billee-can.rules
 LOCK=${CAN_PIN_LOCK:-/run/billee-can-pin.lock}
 SELF_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -143,6 +146,7 @@ case "${1:-}" in
   install)
     need_root install
     install -m 755 "$SELF_DIR/can-pin" "$INSTALL_BIN"
+    rm -f "$OLD_BIN"
     install -m 644 "$SELF_DIR/80-billee-can.rules" "$INSTALL_RULE"
     udevadm control --reload-rules
     log "installed $INSTALL_BIN and $INSTALL_RULE"
@@ -152,7 +156,7 @@ case "${1:-}" in
     ;;
   uninstall)
     need_root uninstall
-    rm -f "$INSTALL_BIN" "$INSTALL_RULE"
+    rm -f "$INSTALL_BIN" "$INSTALL_RULE" "$OLD_BIN"
     udevadm control --reload-rules
     log "removed $INSTALL_BIN and $INSTALL_RULE"
     ;;

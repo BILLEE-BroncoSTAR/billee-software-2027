@@ -1,4 +1,6 @@
 # Pin the USB-CAN dongles to fixed names by serial: drivetrain -> can2, arm -> can3.
-# The serial -> name map lives in tooling/can-pin. Installed by `sudo tooling/can-pin install`.
+# The serial -> name map lives in tooling/can-pin. Installed at dev-container start
+# (docker/can_udev.sh) or by `sudo tooling/can-pin install`. The helper sits next to this rule in
+# /etc/udev/rules.d (udev only reads *.rules there), the one host directory the container mounts.
 # candleLight / gs_usb adapters enumerate as 1d50:606f.
-ACTION=="add", SUBSYSTEM=="net", KERNEL=="can*", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="606f", RUN+="/usr/local/sbin/billee-can-pin"
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="can*", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="606f", RUN+="/bin/sh /etc/udev/rules.d/billee-can-pin"

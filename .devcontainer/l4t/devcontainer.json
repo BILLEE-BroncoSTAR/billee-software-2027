@@ -52,11 +52,13 @@
   // realsense_udev.sh: same for the arm's RealSense D435i (Intel's rule; libusb needs rw on its
   // /dev/bus/usb node).
   // docker/blink1_udev.sh (from the repo, no image rebuild): same for the blink(1) mode light
+  // docker/can_udev.sh (from the repo): pins the USB-CAN dongles by serial (drivetrain can2,
+  // arm can3) with a host udev rule
   // (ros2_ws/src/status_light).
   // configs/zed/SN*.conf: the ZED's factory calibration; without it the SDK downloads it on the
   // first open, which needs internet.
   // /tmp/argus_socket: the host's Argus socket, for the CSI cameras (see runArgs).
-  "postStartCommand": "ln -sfn /host/tmp/argus_socket /tmp/argus_socket && sudo /usr/local/bin/gpu_groups.sh && sudo /usr/local/bin/zed_udev.sh && sudo /usr/local/bin/realsense_udev.sh && sudo sh docker/blink1_udev.sh && cp -n configs/zed/SN*.conf /usr/local/zed/settings/ && cd ros2_ws && pixi install --environment l4t",
+  "postStartCommand": "ln -sfn /host/tmp/argus_socket /tmp/argus_socket && sudo /usr/local/bin/gpu_groups.sh && sudo /usr/local/bin/zed_udev.sh && sudo /usr/local/bin/realsense_udev.sh && sudo sh docker/blink1_udev.sh && sudo sh docker/can_udev.sh && cp -n configs/zed/SN*.conf /usr/local/zed/settings/ && cd ros2_ws && pixi install --environment l4t",
 
   "containerEnv": {
     "ROS_DISTRO": "humble",
