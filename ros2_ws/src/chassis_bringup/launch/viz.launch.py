@@ -88,7 +88,7 @@ def generate_launch_description():
                 "address": "0.0.0.0",
                 "use_sim_time": use_sim_time,
                 "topic_whitelist": [".*"],
-                "send_buffer_limit": 10000000,
+                "send_buffer_limit": 2000000,  # bytes queued per client before dropping: 10 MB held ~1 s of lag on a slow link
             }
         ],
         output="screen",

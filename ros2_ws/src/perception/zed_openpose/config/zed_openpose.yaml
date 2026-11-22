@@ -17,7 +17,7 @@ zed_openpose:
 
     # Modes. enable_pose: false = camera only (no OpenPose), launch arg openpose:= overrides.
     enable_pose: true
-    cloud_max_hz: 10.0           # cap on /zed/points rate; 0 = every frame (~290 kB each)
+    cloud_max_hz: 5.0            # cap on /zed/points rate; 0 = every frame (~290 kB each). 10 Hz was ~23 Mbit/s, more than all five CSI cameras
     # The ZED's video on /zed/image/compressed (launch arg video:= overrides): OpenPose's rendering
     # while OpenPose runs, else the left image (JPEG, jpeg_quality) at most video_max_hz.
     publish_video: false

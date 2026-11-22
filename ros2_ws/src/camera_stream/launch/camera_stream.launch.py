@@ -27,7 +27,7 @@ def generate_launch_description():
         executable="foxglove_bridge",
         name="foxglove_bridge",
         parameters=[{"port": 8765, "address": "0.0.0.0", "topic_whitelist": [".*"],
-                     "send_buffer_limit": 10000000}],
+                     "send_buffer_limit": 2000000}],
         output="screen",
     )
     return LaunchDescription([cameras, bridge])

@@ -60,18 +60,22 @@ declare_args = [
         "encoders (no cameras needed)."),
     DeclareLaunchArgument("width", default_value="1280", description="H.264 width."),
     DeclareLaunchArgument("height", default_value="720", description="H.264 height."),
-    DeclareLaunchArgument("fps", default_value="30", description="Camera and H.264 frame rate."),
+    # Defaults are for the long-range radio link: as few bits as a usable teleop view needs.
+    # On a LAN, e.g. fps:=30 bitrate:=3000000 min_qp:=22 for the old near-lossless streams.
+    DeclareLaunchArgument("fps", default_value="15", description="Camera and H.264 frame rate."),
     DeclareLaunchArgument(
-        "bitrate", default_value="3000000",
+        "bitrate", default_value="1000000",
         description="H.264 cap per camera, bits/s (Foxglove). A calm scene uses far less "
-        "(min_qp); a busy one never more. 5 x 3 Mbit/s fits on Wi-Fi."),
+        "(min_qp); a busy one never more. 5 x 1 Mbit/s for the radio link."),
     DeclareLaunchArgument(
-        "min_qp", default_value="22",
+        "min_qp", default_value="28",
         description="H.264 quality floor (0-51, lower = finer): the encoder spends no bits "
-        "beyond this quality. 22 is close to visually lossless; 0 = no floor (always ~bitrate)."),
+        "beyond this quality. 28 is clean for teleop at about half the bits of 22 (close to "
+        "visually lossless); 0 = no floor (always ~bitrate)."),
     DeclareLaunchArgument(
-        "jpeg_fps", default_value="10",
-        description="JPEG frame rate per camera (RViz); 0 = no JPEG topics."),
+        "jpeg_fps", default_value="5",
+        description="JPEG frame rate per camera (RViz; JPEG costs ~5x the bits of H.264, so use "
+        "Foxglove over the radio); 0 = no JPEG topics."),
     DeclareLaunchArgument("jpeg_width", default_value="640", description="JPEG width."),
     DeclareLaunchArgument("jpeg_height", default_value="360", description="JPEG height."),
     DeclareLaunchArgument(

@@ -104,7 +104,7 @@ def generate_launch_description():
                 "port": 8765,
                 "address": "0.0.0.0",
                 "topic_whitelist": [".*"],
-                "send_buffer_limit": 10000000,
+                "send_buffer_limit": 2000000,  # bytes queued per client before dropping: 10 MB held ~1 s of lag on a slow link
             }],
             condition=IfCondition(standalone),
         ),
