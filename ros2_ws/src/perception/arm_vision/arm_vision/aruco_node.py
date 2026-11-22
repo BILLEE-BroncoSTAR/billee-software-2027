@@ -31,7 +31,7 @@ from builtin_interfaces.msg import Duration
 from geometry_msgs.msg import Point, Pose, Quaternion, TransformStamped, Vector3
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import ColorRGBA
 from tf2_ros import TransformBroadcaster
@@ -77,8 +77,13 @@ class ArucoNode(Node):
             depth_sync_slop=p("depth_sync_slop", 0.02).value,
         )
         self.markers_pub = self.create_publisher(ArucoMarkers, "aruco/markers", 10)
-        self.image_pub = self.create_publisher(CompressedImage, "aruco/image/compressed",
-                                               qos_profile_sensor_data)
+        # Reliable, keep last 1: a reliable publisher serves best-effort AND reliable subscribers
+        # (best effort refused reliable ones: "requesting incompatible QoS ... RELIABILITY", and
+        # that viewer got no image). One-deep history, so a slow link can't queue stale frames.
+        self.image_pub = self.create_publisher(
+            CompressedImage, "aruco/image/compressed",
+            QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
+                       reliability=ReliabilityPolicy.RELIABLE))
         self.viz_pub = self.create_publisher(MarkerArray, "aruco/visualization", 10)
         self.tf = TransformBroadcaster(self) if self.publish_tf else None
 

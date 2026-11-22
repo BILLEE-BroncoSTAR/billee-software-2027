@@ -359,6 +359,11 @@ def _arm_camera(context, mode):
             PathJoinSubstitution(
                 [FindPackageShare("arm_vision"), "launch", "arm_camera.launch.py"])),
         launch_arguments={
+            # An included launch inherits the parent's arguments, and this file's camera:= is the
+            # ZED mode (camera:=cloud). arm_camera.launch.py's camera:= means "start
+            # realsense2_camera", so "cloud" silently switched the RealSense driver off. Set it.
+            "camera": "true",
+            "aruco": "true",
             "standalone": "false",  # the drivetrain launch already runs the foxglove bridge
             "use_sim_time": "true" if mode == "sim" else "false",
         }.items(),
