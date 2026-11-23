@@ -104,6 +104,12 @@ ros2 launch arm_vision arm_camera.launch.py arm_tf:=zero      # keyboard in base
 ros2 launch arm_vision arm_camera.launch.py target_frame:=    # keyboard in the camera frame only
 ```
 
+**From the BILLEE dashboard:** **Teleop · Arm** runs all of this. Set **Drivetrain** to Real or Sim
+(Gazebo on the Jetson) and **Arm** to Real, Mock (no hardware: jogging moves the arm model and the
+camera) or Off (joints held at 0, e.g. a RealSense on a testbed Jetson). See the dashboard's README,
+"Teleop · Arm: real or sim". In `mode:=sim` the arm camera and the arm's TF stay on the wall clock,
+since the RealSense is real hardware.
+
 The arm's TF comes up with `rover.launch.py` (`arm_tf:=auto`) or `arm_camera.launch.py`
 (`arm_tf:=auto`), and moves with `/arm/joint_states` from `arm_bringup`'s `arm.launch.py`, which is
 started separately. See [Arm URDF](#arm-urdf-the-camera-on-the-rover).

@@ -48,7 +48,10 @@ base_link -> keyboard) from the ArUco markers on it.
 The arm's TF (arm_description/launch/arm_description.launch.py, arm_tf:=auto) places the arm and
 the RealSense on the rover: base_link -> arm_base_link -> ... -> arm_cam_link from the joint
 angles on /arm/joint_states (arm_bringup's arm.launch.py, started separately). auto = arm in
-mode:=real, zero (every joint at 0 rad) in mode:=sim, where nothing publishes the arm's joints.
+mode:=real, zero (every joint at 0 rad) in mode:=sim; pass arm_tf:=arm in mode:=sim when
+arm.launch.py runs (real or mock arm), or the two publish /arm/joint_states over each other.
+The arm camera and the arm TF run on the wall clock in both modes (the RealSense is real
+hardware), so in mode:=sim their frames carry wall-clock stamps next to the sim's.
 """
 
 import importlib.util
@@ -383,7 +386,9 @@ def _arm_camera(context, mode):
             "aruco": "true",
             "standalone": "false",  # the drivetrain launch already runs the foxglove bridge
             "arm_tf": "false",      # _arm_tf() starts it, camera or not
-            "use_sim_time": "true" if mode == "sim" else "false",
+            # Wall clock even in mode:=sim: the RealSense is real hardware and stamps its frames
+            # with the system time, and keyboard_node looks TF up at those stamps (see _arm_tf).
+            "use_sim_time": "false",
         }.items(),
     )]
 
@@ -407,7 +412,10 @@ def _arm_tf(context, mode):
         launch_arguments={
             "joint_states": wanted,
             "rviz": "false",
-            "use_sim_time": "true" if mode == "sim" else "false",
+            # Wall clock in both modes, like the arm camera: the chain base_link -> arm ->
+            # arm_cam_link has to share the RealSense's clock for keyboard_node's TF lookups,
+            # and arm.launch.py (real or mock) runs on the wall clock too.
+            "use_sim_time": "false",
         }.items(),
     )]
 
