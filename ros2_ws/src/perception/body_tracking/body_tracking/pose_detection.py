@@ -174,3 +174,24 @@ def classify_objects(
         return SKELETON_POSITION.UNKNOWN
     return classify_body(
         objects[0], angle_tolerance_degrees, level_tolerance_ratio)
+
+
+def distance_from_objects(objects: Sequence[object]) -> float:
+    """
+    Return the depth-derived range to one object's centroid in metres.
+
+    ZED's ``Object.position`` is a three-dimensional centroid derived from
+    depth data. A frame without exactly one finite centroid has no usable
+    range, represented by ``NaN``.
+    """
+    if len(objects) != 1:
+        return math.nan
+
+    try:
+        x, y, z = objects[0].position
+    except (AttributeError, TypeError, ValueError):
+        return math.nan
+
+    if not all(math.isfinite(coordinate) for coordinate in (x, y, z)):
+        return math.nan
+    return math.sqrt(x * x + y * y + z * z)

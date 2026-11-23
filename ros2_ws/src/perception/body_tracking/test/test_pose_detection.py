@@ -10,6 +10,7 @@ from body_tracking.pose_detection import (
     classify_body,
     classify_keypoints,
     classify_objects,
+    distance_from_objects,
 )
 
 
@@ -30,12 +31,16 @@ def make_keypoints(points: dict[int, tuple[float, float]]) -> list[Keypoint]:
 
 
 def make_body(
-    keypoints: list[Keypoint], available: bool = True, body_format: int = 0
+    keypoints: list[Keypoint],
+    available: bool = True,
+    body_format: int = 0,
+    position: tuple[float, float, float] = (0.0, 0.0, 0.0),
 ) -> SimpleNamespace:
     """Build the portion of a ZED body object used by classification."""
     return SimpleNamespace(
         skeleton_available=available,
         body_format=body_format,
+        position=position,
         skeleton_2d=SimpleNamespace(keypoints=keypoints),
     )
 
@@ -113,3 +118,26 @@ def test_requires_exactly_one_tracked_person(
 ) -> None:
     """A frame must contain exactly one object before it is classified."""
     assert classify_objects(bodies) == SKELETON_POSITION.UNKNOWN
+
+
+def test_returns_depth_derived_centroid_distance() -> None:
+    """The published range is the Euclidean distance to ZED's centroid."""
+    body = make_body(make_keypoints(T_POSE_POINTS), position=(3.0, 4.0, 12.0))
+    assert distance_from_objects([body]) == 13.0
+
+
+@pytest.mark.parametrize(
+    "bodies",
+    [[], [make_body(make_keypoints(T_POSE_POINTS))] * 2],
+)
+def test_marks_distance_unavailable_without_exactly_one_body(
+    bodies: list[SimpleNamespace]
+) -> None:
+    """No unique object centroid yields an unavailable distance."""
+    assert distance_from_objects(bodies) != distance_from_objects(bodies)
+
+
+def test_marks_distance_unavailable_for_non_finite_centroid() -> None:
+    """Invalid depth coordinates do not produce a range."""
+    body = make_body(make_keypoints(T_POSE_POINTS), position=(nan, 0.0, 0.0))
+    assert distance_from_objects([body]) != distance_from_objects([body])

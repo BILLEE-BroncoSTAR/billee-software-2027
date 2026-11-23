@@ -8,6 +8,7 @@
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>
+  <depend>body_tracking_msgs</depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>zed_msgs</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
