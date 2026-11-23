@@ -38,7 +38,7 @@ from tf2_ros import TransformBroadcaster
 from visualization_msgs.msg import Marker as VizMarker
 from visualization_msgs.msg import MarkerArray
 
-from arm_vision.aruco import ArucoDetector, draw_markers
+from arm_vision.aruco import ArucoDetector, draw_markers, parse_marker_sizes
 from arm_vision.rgbd import RgbdFrame, RgbdSubscriber
 
 STATS_PERIOD = 10.0  # s between status log lines
@@ -60,6 +60,7 @@ class ArucoNode(Node):
             position_source=p("position_source", "auto").value,
             min_depth=p("min_depth", 0.1).value,
             max_depth=p("max_depth", 6.0).value,
+            marker_sizes=parse_marker_sizes(p("marker_sizes", [""]).value),
         )
         self.marker_ids = set(p("marker_ids", [-1]).value) - {-1}  # [-1] = every id
         self.publish_tf = p("publish_tf", True).value
@@ -121,7 +122,8 @@ class ArucoNode(Node):
                 or now - self._last_image < 1.0 / self.image_rate):
             return
         self._last_image = now
-        image = draw_markers(frame.color, markers, frame.intrinsics, self.detector.marker_size)
+        image = draw_markers(frame.color, markers, frame.intrinsics, self.detector.marker_size,
+                             self.detector.marker_sizes)
         if frame.intrinsics is None:
             cv2.putText(image, "no camera_info: 2D only", (10, 25), cv2.FONT_HERSHEY_SIMPLEX,
                         0.7, (0, 0, 255), 2, cv2.LINE_AA)
@@ -161,9 +163,9 @@ class ArucoNode(Node):
 
     def to_viz(self, frame: RgbdFrame, markers) -> MarkerArray:
         out = MarkerArray(markers=[VizMarker(header=frame.header, action=VizMarker.DELETEALL)])
-        size = self.detector.marker_size if self.detector.marker_size > 0 else 0.05
         lifetime = Duration(sec=0, nanosec=500_000_000)
         for m in markers:
+            size = self.detector.size_of(m.id) or 0.05
             pose = pose_of(m)
             plate = VizMarker(header=frame.header, ns="aruco", id=m.id, type=VizMarker.CUBE,
                               pose=pose, scale=Vector3(x=size, y=size, z=0.004),

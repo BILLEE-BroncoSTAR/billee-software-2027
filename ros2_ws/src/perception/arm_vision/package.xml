@@ -3,7 +3,7 @@
 <package format="3">
   <name>arm_vision</name>
   <version>0.0.0</version>
-  <description>The arm's Intel RealSense D435i: driver launch, an RGB-D input layer for CV nodes, and ArUco marker detection with 3D poses (after zptang1210/RealsenseArUcoTracking), plus a Foxglove layout for the ground station.</description>
+  <description>The arm's Intel RealSense D435i: driver launch, an RGB-D input layer for CV nodes, and ArUco marker detection with 3D poses (after zptang1210/RealsenseArUcoTracking), keyboard localization from markers on it, plus a Foxglove layout for the ground station.</description>
   <maintainer email="luquilanzi@gmail.com">LucaLanzi</maintainer>
   <license>Apache-2.0</license>
 
@@ -16,6 +16,9 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
   <!-- arm_camera.launch.py -->
@@ -24,6 +27,8 @@
   <exec_depend>foxglove_bridge</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <!-- arm_tf: the arm's robot_state_publisher (optional: arm_camera.launch.py skips it if missing) -->
+  <exec_depend>arm_description</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
 

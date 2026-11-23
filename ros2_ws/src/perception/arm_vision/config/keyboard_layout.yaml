@@ -1,0 +1,51 @@
+# One keyboard, in its own frame, for keyboard_node (arm_vision/keyboard.py).
+#
+# Keyboard frame: origin at the FRONT-LEFT corner of the key field (outer corner of the bottom-
+# left key, the left Ctrl, nearest the typist). x to the right along the rows, y away from the
+# typist (toward the number row), z up; z = 0 is the top of the keys. Metres, degrees.
+#
+#        y
+#        ^   [11]                                        [13]
+#        |     Esc  F1 ...                                F12
+#        |     `  1  2  3 ...                     Backspace
+#        |     ...
+#        |     Ctrl Win Alt        Space          ... RCtrl
+#   origin +--------------------------------------------------> x
+#            [10]                                        [12]
+#
+# To set it up for the real keyboard:
+#   1. Print the markers at their `size` (aruco_generate --ids 10 11 12 13 --size-mm 30, at 100 %),
+#      and stick them flat on the keyboard case (or on a plate the keyboard is fixed to), upright
+#      to the typist (yaw 0), so they don't move relative to the keys.
+#   2. Measure each marker's centre from the origin with a ruler/calipers: x, y, and z (height
+#      of the marker's surface relative to the key tops: negative when it's lower).
+#   3. Check key_unit (centre-to-centre distance of two neighbouring letter keys) and the rows.
+#   4. keyboard_node logs the reprojection error: under ~1-2 px means the layout matches.
+
+name: ansi_us
+dictionary: DICT_5X5_50   # informational: aruco_node's `dictionary` must be the same
+key_unit: 0.01905         # m between neighbouring key centres (0.75 in)
+key_size: 0.95            # keycap top / pitch, for drawing only
+marker_size: 0.030        # m, default black-square size for the markers below
+
+# PLACEHOLDER positions: four markers just outside the corners of a 15 u x 6.5 u key field,
+# on the case 15 mm below the key tops. Measure yours.
+markers:
+  - {id: 10, x: -0.025, y: -0.025, z: -0.015}               # front left
+  - {id: 11, x: -0.025, y: 0.149,  z: -0.015}               # back left
+  - {id: 12, x: 0.311,  y: -0.025, z: -0.015}               # front right
+  - {id: 13, x: 0.311,  y: 0.149,  z: -0.015}               # back right
+  # - {id: 14, x: 0.10, y: 0.16, z: -0.01, yaw: 90, size: 0.04}  # a rotated / bigger one
+
+# Rows from the far side (first) to the typist (last). "Tab:1.5" = 1.5 u wide; "_:0.5" = gap;
+# gap: extra space (u) between that row and the next. Labels are what keys_for_text() and the
+# keyboard/keys message use: letters as capitals, digits, punctuation as printed unshifted.
+# Only the main block: arrows / numpad are to the right of x = 15 u if you need them, e.g.
+#   {keys: "_:15.25 Left Down Right"} as an extra bottom row.
+rows:
+  - {keys: "Esc _:1 F1 F2 F3 F4 _:0.5 F5 F6 F7 F8 _:0.5 F9 F10 F11 F12", gap: 0.5}
+  - "` 1 2 3 4 5 6 7 8 9 0 - = Backspace:2"
+  - "Tab:1.5 Q W E R T Y U I O P [ ] \\:1.5"
+  - "Caps:1.75 A S D F G H J K L ; ' Enter:2.25"
+  - "Shift:2.25 Z X C V B N M , . / RShift:2.75"
+  - "Ctrl:1.25 Win:1.25 Alt:1.25 Space:6.25 RAlt:1.25 Fn:1.25 Menu:1.25 RCtrl:1.25"

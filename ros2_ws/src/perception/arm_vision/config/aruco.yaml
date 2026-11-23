@@ -8,6 +8,9 @@
     # wrong orientation and wrong PnP distance (depth-based positions are unaffected).
     # 0 = unknown: positions from depth only, no orientation.
     marker_size: 0.05
+    # Markers printed at another size, as "id:size_m": the keyboard's (config/keyboard_layout.yaml,
+    # 30 mm). [""] = none.
+    marker_sizes: ["10:0.03", "11:0.03", "12:0.03", "13:0.03"]
     # Only these ids; [-1] = every id in the dictionary.
     marker_ids: [-1]
 

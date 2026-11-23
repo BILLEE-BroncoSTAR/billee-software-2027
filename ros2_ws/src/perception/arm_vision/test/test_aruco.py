@@ -15,6 +15,7 @@ from arm_vision.aruco import (
     generate_marker,
     marker_center,
     marker_depth,
+    parse_marker_sizes,
     rotation_to_quaternion,
 )
 from arm_vision.generate_markers import main as generate_main
@@ -90,6 +91,22 @@ def test_no_depth_falls_back_to_pnp(detector):
     assert m.position_source == "pnp"
     assert np.isnan(m.depth)
     assert np.linalg.norm(m.position - t) < 0.01
+
+
+def test_per_id_marker_size():
+    """marker_sizes overrides marker_size for its ids (the keyboard's smaller markers)."""
+    color, _, _, t = render(size=SIZE / 2)
+    wrong = ArucoDetector(DICT, marker_size=SIZE).process(color, INTR, None)[0]
+    right = ArucoDetector(DICT, marker_size=SIZE, marker_sizes={7: SIZE / 2}).process(
+        color, INTR, None)[0]
+    assert np.linalg.norm(wrong.position - t) > 0.2   # PnP twice as far
+    assert np.linalg.norm(right.position - t) < 0.01
+
+
+def test_parse_marker_sizes():
+    assert parse_marker_sizes(["10:0.03", " ", "4:0.1"]) == {10: 0.03, 4: 0.1}
+    with pytest.raises(ValueError):
+        parse_marker_sizes(["10"])
 
 
 def test_mostly_missing_depth_falls_back_to_pnp(detector):

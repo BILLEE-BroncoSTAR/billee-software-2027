@@ -20,7 +20,7 @@ setup(
     zip_safe=True,
     maintainer='LucaLanzi',
     maintainer_email='luquilanzi@gmail.com',
-    description='Arm RealSense D435i: driver launch, RGB-D input for CV nodes, ArUco detection.',
+    description='Arm RealSense D435i: driver launch, RGB-D input for CV nodes, ArUco detection, keyboard localization.',
     license='Apache-2.0',
     extras_require={
         'test': [
@@ -31,6 +31,7 @@ setup(
         'console_scripts': [
             'aruco_node = arm_vision.aruco_node:main',
             'aruco_generate = arm_vision.generate_markers:main',
+            'keyboard_node = arm_vision.keyboard_node:main',
         ],
     },
 )

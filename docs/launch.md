@@ -40,7 +40,8 @@ rover.launch.py
 ├─ people/people_rover.launch.py standalone:=false   (camera:=video|cloud|openpose|both, or vio:=true) → people-pose.md
 ├─ robot_localization ekf_node, navigation/config/ekf_real.yaml   (mode:=real vio:=true) → navigation.md
 ├─ camera_stream/csi_cameras.launch.py   (always, every camera in cameras.yaml) → cameras.md
-├─ arm_vision/arm_camera.launch.py standalone:=false   (arm_camera:=auto if a RealSense is on USB, or true) → arm-camera.md
+├─ arm_description/arm_description.launch.py   (arm_tf:=auto: the arm's TF, joint_states arm|zero) → arm-camera.md
+├─ arm_vision/arm_camera.launch.py standalone:=false arm_tf:=false   (arm_camera:=auto if a RealSense is on USB, or true) → arm-camera.md
 └─ status_light node   (status_light:=idle|teleop|autonomous|arrived|off; default none) → ros2_ws/src/status_light/README.md
 ```
 
@@ -62,7 +63,8 @@ driver waits for the camera.
 | `viz.launch.py` | `rviz` / `foxglove` | `true` / `true` | RViz2 / foxglove_bridge on `:8765` |
 | | `use_sim_time` | `false` | `true` when viewing the sim |
 | | `rviz_config` / `fixed_frame` | `rviz/drivetrain.rviz` / config's own | `fixed_frame` overrides the config (`rviz2 -f`) |
-| `arm_vision/arm_camera.launch.py` | `camera` / `aruco` / `standalone` | `true` / `true` / `true` | RealSense driver / ArUco node / foxglove_bridge ([arm-camera.md](arm-camera.md#run)) |
+| `arm_vision/arm_camera.launch.py` | `camera` / `aruco` / `keyboard` / `arm_tf` / `standalone` | `true` / `true` / `true` / `auto` / `true` | RealSense driver / ArUco node / keyboard node / the arm's TF / foxglove_bridge ([arm-camera.md](arm-camera.md#run)) |
+| `arm_description/arm_description.launch.py` | `joint_states` | `arm` | the arm's robot_state_publisher in `/arm`: `arm` = `/arm/joint_states`, `zero`, `gui` ([arm-camera.md](arm-camera.md#arm-urdf-the-camera-on-the-rover)) |
 | | `marker_size` / `dictionary` | from `config/aruco.yaml` | printed marker size (m) and ArUco dictionary |
 | | `serial_no` / `parent_frame` + `mount_*` | none | a specific camera / a static TF `parent_frame → arm_cam_link` |
 | `odesc_shadow.launch.py` | `can_interface` | `vcan0` | the shadow driver's bus |

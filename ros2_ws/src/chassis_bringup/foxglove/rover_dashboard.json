@@ -37,7 +37,7 @@
       }
     },
     "3D!odometry": {
-      "foxglovePanelTitle": "3D: odometry, ZED point cloud, OpenPose skeletons",
+      "foxglovePanelTitle": "3D: odometry, ZED point cloud, OpenPose skeletons, arm + keyboard",
       "cameraState": {
         "perspective": true,
         "distance": 12,
@@ -115,6 +115,12 @@
         },
         "/people/gesture_marker": {
           "visible": true
+        },
+        "/arm_cam/aruco/visualization": {
+          "visible": true
+        },
+        "/arm_cam/keyboard/visualization": {
+          "visible": true
         }
       },
       "layers": {
@@ -150,6 +156,16 @@
           "order": 2,
           "sourceType": "topic",
           "topic": "/robot_description"
+        },
+        "urdf_arm": {
+          "layerId": "foxglove.Urdf",
+          "instanceId": "urdf_arm",
+          "label": "Arm Model (arm_description)",
+          "visible": true,
+          "frameLocked": false,
+          "order": 3,
+          "sourceType": "topic",
+          "topic": "/arm/robot_description"
         }
       },
       "publish": {
@@ -179,9 +195,122 @@
       }
     },
     "Image!arm_cam": {
-      "foxglovePanelTitle": "Arm RealSense D435i + ArUco (arm_camera:=auto/true)",
+      "foxglovePanelTitle": "Arm RealSense D435i + ArUco + keyboard overlay (arm_camera:=auto/true)",
       "imageMode": {
-        "imageTopic": "/arm_cam/aruco/image/compressed"
+        "imageTopic": "/arm_cam/aruco/image/compressed",
+        "calibrationTopic": "/arm_cam/color/camera_info"
+      },
+      "topics": {
+        "/arm_cam/keyboard/visualization": {
+          "visible": true
+        }
+      }
+    },
+    "3D!arm": {
+      "foxglovePanelTitle": "3D: arm, RealSense, ArUco markers, keyboard (base_link)",
+      "cameraState": {
+        "perspective": true,
+        "distance": 2.0,
+        "phi": 55,
+        "thetaOffset": 135,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.01,
+        "far": 100
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_link",
+      "scene": {
+        "transforms": {
+          "showLabel": true,
+          "labelSize": 0.02,
+          "axisScale": 0.08
+        },
+        "backgroundColor": "#303030",
+        "meshUpAxis": "z_up"
+      },
+      "transforms": {},
+      "topics": {
+        "/arm_cam/aruco/visualization": {
+          "visible": true
+        },
+        "/arm_cam/keyboard/visualization": {
+          "visible": true
+        },
+        "/arm_cam/keyboard/pose": {
+          "visible": true,
+          "type": "axis",
+          "axisScale": 0.1
+        }
+      },
+      "layers": {
+        "grid": {
+          "layerId": "foxglove.Grid",
+          "instanceId": "grid",
+          "label": "Grid",
+          "visible": true,
+          "frameId": "base_link",
+          "frameLocked": true,
+          "order": 1,
+          "size": 4,
+          "divisions": 40,
+          "lineWidth": 1,
+          "color": "#a0a0a4ff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "urdf": {
+          "layerId": "foxglove.Urdf",
+          "instanceId": "urdf",
+          "label": "Robot Model",
+          "visible": true,
+          "frameLocked": false,
+          "order": 2,
+          "sourceType": "topic",
+          "topic": "/robot_description"
+        },
+        "urdf_arm": {
+          "layerId": "foxglove.Urdf",
+          "instanceId": "urdf_arm",
+          "label": "Arm Model (arm_description)",
+          "visible": true,
+          "frameLocked": false,
+          "order": 3,
+          "sourceType": "topic",
+          "topic": "/arm/robot_description"
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26
       }
     }
   },
@@ -223,7 +352,12 @@
       "first": "3D!odometry",
       "second": {
         "direction": "column",
-        "first": "Image!arm_cam",
+        "first": {
+          "direction": "row",
+          "first": "Image!arm_cam",
+          "second": "3D!arm",
+          "splitPercentage": 50
+        },
         "second": "map!gps",
         "splitPercentage": 55
       },

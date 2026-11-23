@@ -1,4 +1,4 @@
-"""The arm's Intel RealSense D435i: realsense2_camera + the ArUco node (+ Foxglove bridge).
+"""The arm's RealSense D435i: realsense2_camera, ArUco, keyboard (+ arm TF, Foxglove bridge).
 
     # on its own (Jetson, l4t container): camera + ArUco + foxglove_bridge on :8765
     ros2 launch arm_vision arm_camera.launch.py
@@ -13,8 +13,13 @@
     ros2 launch arm_vision arm_camera.launch.py aruco:=false
     ros2 launch arm_vision arm_camera.launch.py camera:=false
 
-    # until the arm's URDF has the camera: where it sits on the end effector (m, rad)
-    ros2 launch arm_vision arm_camera.launch.py parent_frame:=end_effector mount_z:=0.04
+    # keyboard: relative to the rover (default, needs the arm's TF) or just to the camera
+    ros2 launch arm_vision arm_camera.launch.py                          # arm_tf:=auto
+    ros2 launch arm_vision arm_camera.launch.py arm_tf:=zero             # bench: arm not running
+    ros2 launch arm_vision arm_camera.launch.py target_frame:=           # camera frame only
+
+    # no arm URDF at all: a fixed camera mount instead (m, rad); turns arm_tf off
+    ros2 launch arm_vision arm_camera.launch.py parent_frame:=base_link mount_z:=0.5
 
 Topics (/arm_cam = the realsense2_camera node; config/realsense_d435i.yaml)
   /arm_cam/color/image_raw (+ /compressed)               colour, 640x480 @ 30, rgb8
@@ -25,7 +30,12 @@ Topics (/arm_cam = the realsense2_camera node; config/realsense_d435i.yaml)
   /arm_cam/aruco/markers                                 arm_vision_msgs/ArucoMarkers
   /arm_cam/aruco/image/compressed                        annotated JPEG: the ground station's feed
   /arm_cam/aruco/visualization                           MarkerArray for 3D panels
-TF: arm_cam_link -> arm_cam_{color,depth,...}_optical_frame (driver), optical frame -> aruco_<id>.
+  /arm_cam/keyboard/keys                                 arm_vision_msgs/Keyboard: every key
+  /arm_cam/keyboard/pose                                 PoseStamped in target_frame
+  /arm_cam/keyboard/visualization                        MarkerArray (keyboard frame)
+TF: arm_cam_link -> arm_cam_{color,depth,...}_optical_frame (driver), optical frame -> aruco_<id>,
+    target_frame -> keyboard (keyboard_node), base_link -> ... -> arm_cam_link (arm_tf: the arm's
+    robot_state_publisher, arm_description/launch/arm_description.launch.py).
 
 realsense2_camera waits for the camera and reconnects after a USB drop, so the launch can start
 before the camera is plugged in. Foxglove layout: chassis_bringup/foxglove/rover_dashboard.json.
@@ -33,10 +43,19 @@ before the camera is plugged in. Foxglove layout: chassis_bringup/foxglove/rover
 
 import os
 
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import (
+    PackageNotFoundError,
+    get_package_share_directory,
+)
 from arm_vision.usb import camera_warnings, realsense_cameras
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    LogInfo,
+    OpaqueFunction,
+)
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -66,10 +85,30 @@ declare_args = [
     DeclareLaunchArgument("marker_size", default_value="",
                           description="Printed marker side in metres, black square only "
                           "(empty = aruco_config)."),
+    DeclareLaunchArgument("keyboard", default_value="true",
+                          description="Start keyboard_node: the keyboard's pose and keys from "
+                          "the ArUco markers on it (config/keyboard_layout.yaml)."),
+    DeclareLaunchArgument("keyboard_config",
+                          default_value=os.path.join(SHARE, "config", "keyboard.yaml"),
+                          description="keyboard_node parameter file."),
+    DeclareLaunchArgument("keyboard_layout", default_value="",
+                          description="Keyboard layout YAML (empty = keyboard_config's, i.e. "
+                          "config/keyboard_layout.yaml)."),
+    DeclareLaunchArgument("target_frame", default_value="base_link",
+                          description="Frame keyboard_node reports the keyboard in (base_link: "
+                          "relative to the rover, through the arm's TF). Empty = the camera's "
+                          "optical frame."),
+    DeclareLaunchArgument("arm_tf", default_value="auto",
+                          choices=["auto", "arm", "zero", "gui", "false"],
+                          description="Start the arm's robot_state_publisher (arm_description) "
+                          "so the camera is placed on the rover: arm = joint angles from "
+                          "arm.launch.py (/arm/joint_states); zero = every joint held at 0 (bench, "
+                          "arm not running); gui = sliders; auto = arm if arm_description is "
+                          "built; false = none (rover.launch.py starts it itself)."),
     DeclareLaunchArgument("parent_frame", default_value="",
-                          description="Publish a static TF parent_frame -> arm_cam_link with the "
-                          "mount_* offsets (e.g. the end effector link). Empty = none: the arm's "
-                          "URDF attaches arm_cam_link instead."),
+                          description="No arm URDF: publish a static TF parent_frame -> "
+                          "arm_cam_link with the mount_* offsets instead, and skip arm_tf. Empty "
+                          "= none: the arm's URDF (arm_tf) attaches arm_cam_link."),
     *[DeclareLaunchArgument(f"mount_{k}", default_value="0.0",
                             description=f"parent_frame:= only. Camera mount {k} "
                             f"({'m' if k in 'xyz' else 'rad'}).")
@@ -139,7 +178,25 @@ def _setup(context):
             parameters=[LaunchConfiguration("aruco_config").perform(context), overrides],
         ))
 
+    if _truthy(context, "keyboard"):
+        overrides = {"use_sim_time": sim_time,
+                     "target_frame": LaunchConfiguration("target_frame").perform(context)}
+        layout = LaunchConfiguration("keyboard_layout").perform(context)
+        if layout:
+            overrides["layout_file"] = layout
+        actions.append(Node(
+            package="arm_vision",
+            executable="keyboard_node",
+            name="keyboard_node",
+            namespace=CAMERA_NAME,
+            output="screen",
+            respawn=True,
+            respawn_delay=3.0,
+            parameters=[LaunchConfiguration("keyboard_config").perform(context), overrides],
+        ))
+
     parent = LaunchConfiguration("parent_frame").perform(context)
+    actions += arm_tf_actions(LaunchConfiguration("arm_tf").perform(context), parent, sim_time)
     if parent:
         mount = []
         for k in ("x", "y", "z", "roll", "pitch", "yaw"):
@@ -168,6 +225,30 @@ def _setup(context):
             }],
         ))
     return actions
+
+
+def arm_tf_actions(mode, parent_frame="", sim_time=False):
+    """arm_description.launch.py (the arm's robot_state_publisher), or why it's skipped."""
+    if mode == "false":
+        return []
+    if parent_frame:
+        return [LogInfo(msg=(f"arm_camera.launch.py: parent_frame:={parent_frame} mounts the "
+                             "camera, so the arm's TF (arm_tf) is not started."))]
+    try:
+        share = get_package_share_directory("arm_description")
+    except PackageNotFoundError:
+        if mode == "auto":
+            return [LogInfo(msg=(
+                "arm_camera.launch.py: arm_description isn't built, so nothing places the "
+                "camera on the rover (pixi run build --packages-up-to arm_description)."))]
+        raise
+    return [IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(share, "launch",
+                                                   "arm_description.launch.py")),
+        launch_arguments={"joint_states": "arm" if mode == "auto" else mode,
+                          "with_camera": "true", "rviz": "false",
+                          "use_sim_time": "true" if sim_time else "false"}.items(),
+    )]
 
 
 def generate_launch_description():

@@ -376,6 +376,7 @@ ros2 topic pub -r 10 /diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 | | `camera` | `none` | The ZED 2i: `video` (its video, `/zed/image/compressed`), `cloud` (video + point cloud), `openpose` (video + OpenPose) or `both` (video + point cloud + OpenPose). Jetson container only. |
 | | `vio` | `false` | `mode:=real` only: ZED visual-inertial odometry (`/zed/vio/odom`) + the EKF, which then publishes `odom → base_footprint` (forces `odom_tf:=false`). Jetson container only. |
 | | `arm_camera` | `auto` | The arm's RealSense D435i + ArUco (`/arm_cam/*`, [arm-camera.md](arm-camera.md)): `auto` = if a RealSense is on USB at launch, `true` = always (waits for it), `false` = never. Both modes. |
+| | `arm_tf` | `auto` | The arm's TF (arm_description, [arm-camera.md](arm-camera.md#arm-urdf-the-camera-on-the-rover)): `base_link` → arm → `arm_cam_link` from `/arm/joint_states`. `auto` = `arm` (real) / `zero` (sim); `zero` = joints at 0; `gui` = sliders; `false` = none. |
 | | `status_light` | `none` | The blink(1) mode light ([status_light](../ros2_ws/src/status_light/README.md)): `teleop` solid blue, `autonomous` solid red, `idle` slow yellow pulse, `arrived` flashing green, `none` = not started. The dashboard sets it per mode. |
 | `ground_station.launch.py` | `use_sim_time` | `true` | `false` when the Jetson runs `mode:=real` |
 | | `view` | `drivetrain` | RViz layout: `drivetrain`, `video`, `cloud`, `openpose` or `both` (match the Jetson's `camera:=`) |

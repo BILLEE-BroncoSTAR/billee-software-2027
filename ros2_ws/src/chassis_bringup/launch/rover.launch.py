@@ -11,6 +11,7 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + video + cloud + OpenPose
     ros2 launch chassis_bringup rover.launch.py mode:=real vio:=true         # + ZED VIO + EKF
     ros2 launch chassis_bringup rover.launch.py mode:=real arm_camera:=false # no arm RealSense
+    ros2 launch chassis_bringup rover.launch.py mode:=real arm_tf:=zero      # arm TF, arm off
     ros2 launch chassis_bringup rover.launch.py mode:=real status_light:=teleop  # blink(1): blue
 
 `mode:=sim`  -> sim_gz.launch.py  (Gazebo + ign_ros2_control, no CAN)
@@ -41,7 +42,13 @@ arm_camera:=auto (default) starts realsense2_camera + the ArUco node when a Real
 launch, true starts them regardless (the driver waits for the camera), false never. The ground
 station's view of it: /arm_cam/aruco/image/compressed (annotated JPEG) and
 /arm_cam/color/image_raw/compressed, in Foxglove (chassis_bringup/foxglove/rover_dashboard.json)
-or RViz.
+or RViz. With it comes keyboard_node: the keyboard's pose and keys (/arm_cam/keyboard/*, TF
+base_link -> keyboard) from the ArUco markers on it.
+
+The arm's TF (arm_description/launch/arm_description.launch.py, arm_tf:=auto) places the arm and
+the RealSense on the rover: base_link -> arm_base_link -> ... -> arm_cam_link from the joint
+angles on /arm/joint_states (arm_bringup's arm.launch.py, started separately). auto = arm in
+mode:=real, zero (every joint at 0 rad) in mode:=sim, where nothing publishes the arm's joints.
 """
 
 import importlib.util
@@ -137,6 +144,15 @@ declare_args = [
         "Both modes.",
     ),
     DeclareLaunchArgument(
+        "arm_tf",
+        default_value="auto",
+        choices=["auto", "arm", "zero", "gui", "false"],
+        description="The arm's robot_state_publisher (arm_description): base_link -> arm links "
+        "-> arm_cam_link. arm = joint angles from arm.launch.py (/arm/joint_states); zero = all "
+        "joints at 0 rad (arm not running); gui = sliders; auto = arm (real) / zero (sim); "
+        "false = none.",
+    ),
+    DeclareLaunchArgument(
         "status_light",
         default_value="none",
         choices=["none", "idle", "teleop", "autonomous", "arrived", "off"],
@@ -228,6 +244,7 @@ def _setup(context):
             )
         )
     actions = _csi_cameras(context, mode) + actions
+    actions += _arm_tf(context, mode)
     actions += _arm_camera(context, mode)
     actions += _status_light(context)
     if vio:
@@ -365,6 +382,31 @@ def _arm_camera(context, mode):
             "camera": "true",
             "aruco": "true",
             "standalone": "false",  # the drivetrain launch already runs the foxglove bridge
+            "arm_tf": "false",      # _arm_tf() starts it, camera or not
+            "use_sim_time": "true" if mode == "sim" else "false",
+        }.items(),
+    )]
+
+
+def _arm_tf(context, mode):
+    """arm_description.launch.py (the arm's robot_state_publisher), or why it's skipped."""
+    wanted = LaunchConfiguration("arm_tf").perform(context)
+    if wanted == "false":
+        return []
+    try:
+        share = get_package_share_directory("arm_description")
+    except PackageNotFoundError:
+        return [LogInfo(msg=(
+            "rover.launch.py: arm_description isn't built, so the arm (and the RealSense on it) "
+            "has no TF (pixi run build --packages-up-to arm_description)."))]
+    if wanted == "auto":
+        wanted = "zero" if mode == "sim" else "arm"
+    return [IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(share, "launch", "arm_description.launch.py")),
+        launch_arguments={
+            "joint_states": wanted,
+            "rviz": "false",
             "use_sim_time": "true" if mode == "sim" else "false",
         }.items(),
     )]

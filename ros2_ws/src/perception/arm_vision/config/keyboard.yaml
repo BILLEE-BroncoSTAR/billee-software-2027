@@ -1,0 +1,35 @@
+# keyboard_node parameters (arm_camera.launch.py keyboard:=true; launch arguments override
+# target_frame and layout_file). See docs/arm-camera.md "Keyboard".
+/**:
+  ros__parameters:
+    # Keyboard description: markers + key rows. Empty = config/keyboard_layout.yaml.
+    layout_file: ""
+    # Frame the keyboard is reported in. base_link = relative to the rover, through the arm's
+    # TF (arm_description: joint angles + camera mount); "" = the camera's optical frame.
+    target_frame: base_link
+    keyboard_frame: keyboard          # TF child frame
+
+    # Fit: at least this many layout markers in view (4 on the keyboard; 1 works, 2+ is much
+    # steadier). Reprojection error above max_reprojection_error (px RMS) rejects the fit: the
+    # layout doesn't match what the camera sees (a marker moved, wrong position or size).
+    min_markers: 1
+    max_reprojection_error: 4.0
+    # Correct the PnP distance with the markers' aligned depth (aruco_node position "depth"),
+    # unless they disagree by more than max_depth_correction (m).
+    use_depth: true
+    max_depth_correction: 0.05
+
+    # Smoothing in target_frame (the keyboard is assumed still there): weight of each new
+    # estimate (1 = none). A jump over reset_distance (m) / reset_angle (deg) restarts it.
+    smoothing: 0.3
+    reset_distance: 0.05
+    reset_angle: 10.0
+    # Keep publishing the last estimate while no marker is in view (the arm too close to see
+    # them while typing): hold_timeout s, 0 = until ~/reset. Republished at publish_rate Hz.
+    hold_timeout: 0.0
+    publish_rate: 10.0
+    # s to wait for TF target_frame <- camera at the image's stamp.
+    tf_timeout: 0.1
+
+    markers_topic: aruco/markers
+    camera_info_topic: color/camera_info

@@ -107,6 +107,7 @@ class ArucoDetector:
 
     marker_size: printed side length of the black square (m), outer edge to outer edge, not
     counting the white margin. 0 = unknown: no orientation and no PnP position.
+    marker_sizes: {id: size} for markers printed at another size (e.g. the keyboard's).
     """
 
     def __init__(
@@ -119,6 +120,7 @@ class ArucoDetector:
         max_depth: float = 6.0,
         depth_inner_fraction: float = 0.6,
         min_valid_depth_fraction: float = 0.25,
+        marker_sizes: dict[int, float] | None = None,
     ):
         if position_source not in POSITION_SOURCES:
             raise ValueError(f"position_source {position_source!r}, expected {POSITION_SOURCES}")
@@ -128,6 +130,7 @@ class ArucoDetector:
         self.dictionary_name = dictionary
         self.dictionary = get_dictionary(dictionary)
         self.marker_size = float(marker_size)
+        self.marker_sizes = {int(k): float(v) for k, v in (marker_sizes or {}).items()}
         self.position_source = position_source
         self.min_depth = float(min_depth)
         self.max_depth = float(max_depth)
@@ -169,8 +172,9 @@ class ArucoDetector:
                                        self.min_valid_depth_fraction)
             if intrinsics is None or not intrinsics.valid:
                 continue
-            if self.marker_size > 0:
-                pose = estimate_pose(m.corners, self.marker_size, intrinsics)
+            size = self.size_of(m.id)
+            if size > 0:
+                pose = estimate_pose(m.corners, size, intrinsics)
                 if pose is not None:
                     m.rvec, m.tvec, m.reprojection_error = pose
                     m.quaternion = rotation_to_quaternion(cv2.Rodrigues(m.rvec)[0])
@@ -183,8 +187,24 @@ class ArucoDetector:
                 m.position_source = POSITION_PNP
         return markers
 
+    def size_of(self, marker_id: int) -> float:
+        return self.marker_sizes.get(marker_id, self.marker_size)
+
     def process(self, image, intrinsics=None, depth=None) -> list[Marker]:
         return self.locate(self.detect(image), intrinsics, depth)
+
+
+def parse_marker_sizes(items) -> dict[int, float]:
+    """["10:0.03", "11:0.03"] -> {10: 0.03, 11: 0.03} (ROS parameters can't be maps)."""
+    sizes = {}
+    for item in items:
+        if not item.strip():
+            continue
+        marker_id, sep, size = item.partition(":")
+        if not sep:
+            raise ValueError(f"marker_sizes entry {item!r}: expected 'id:size_m'")
+        sizes[int(marker_id)] = float(size)
+    return sizes
 
 
 def marker_center(corners: np.ndarray) -> np.ndarray:
@@ -288,6 +308,7 @@ def draw_markers(
     markers: list[Marker],
     intrinsics: Intrinsics | None = None,
     marker_size: float = 0.0,
+    marker_sizes: dict[int, float] | None = None,
 ) -> np.ndarray:
     """Annotated copy of a BGR image: outline, id and distance of each marker, plus its axes
     (x red, y green, z blue) where it has a pose."""
@@ -297,10 +318,9 @@ def draw_markers(
     corners = [m.corners.reshape(1, 4, 2).astype(np.float32) for m in markers]
     cv2.aruco.drawDetectedMarkers(out, corners, None, borderColor=(0, 255, 0))
     for m in markers:
-        if (m.rvec is not None and intrinsics is not None and intrinsics.valid
-                and marker_size > 0):
-            cv2.drawFrameAxes(out, intrinsics.K, intrinsics.D, m.rvec, m.tvec,
-                              marker_size * 0.75, 2)
+        size = (marker_sizes or {}).get(m.id, marker_size)
+        if m.rvec is not None and intrinsics is not None and intrinsics.valid and size > 0:
+            cv2.drawFrameAxes(out, intrinsics.K, intrinsics.D, m.rvec, m.tvec, size * 0.75, 2)
         cx, cy = round(m.center[0]), round(m.center[1])
         cv2.circle(out, (cx, cy), 4, (0, 0, 255), -1)
         label = f"id {m.id}"

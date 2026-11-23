@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!-- The arm's own robot_description, for the arm's robot_state_publisher (/arm namespace,
+     launch/arm_description.launch.py). Its root is the rover's base_link, as an empty link: the
+     rover's robot_state_publisher owns everything else under base_link, so the two trees join in
+     TF without either URDF containing the other (and without touching robot_description, which
+     the Gazebo sim builds from).
+
+       xacro arm_standalone.urdf.xacro mount_xyz:="0.25 0 0.329" camera_xyz:="-0.09 0 0.045"
+
+     Every default below is a PLACEHOLDER until the new arm is measured: mount_* is where the
+     arm's base sits on the rover (base_link: midway between the centre wheel axles, x forward,
+     z up; 0.329 m is the top of the chassis mesh), camera_* where the D435i sits on the end
+     effector (see arm.urdf.xacro). -->
+<robot name="billee_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="parent" default="base_link"/>
+  <xacro:arg name="prefix" default="arm_"/>
+  <xacro:arg name="mount_xyz" default="0.25 0 0.329"/>
+  <xacro:arg name="mount_rpy" default="0 0 0"/>
+  <xacro:arg name="camera" default="true"/>
+  <xacro:arg name="camera_xyz" default="-0.09 0 0.045"/>
+  <xacro:arg name="camera_rpy" default="0 0 3.14159265"/>
+
+  <xacro:include filename="$(find arm_description)/urdf/arm.urdf.xacro"/>
+
+  <link name="$(arg parent)"/>
+  <xacro:billee_arm parent="$(arg parent)" prefix="$(arg prefix)" camera="$(arg camera)"
+                    camera_xyz="$(arg camera_xyz)" camera_rpy="$(arg camera_rpy)">
+    <origin xyz="$(arg mount_xyz)" rpy="$(arg mount_rpy)"/>
+  </xacro:billee_arm>
+</robot>
