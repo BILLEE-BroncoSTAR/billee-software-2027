@@ -1,0 +1,14 @@
+{
+  "configurations": [
+    {
+      "name": "ROS 2 workspace",
+      "includePath": [
+        "${workspaceFolder}/ros2_ws/src/roboclaw_hardware_interface/include",
+        "${workspaceFolder}/third_party/JetsonGPIO/include",
+        "${workspaceFolder}/ros2_ws/.pixi/envs/default/include/**"
+      ],
+      "cppStandard": "c++17"
+    }
+  ],
+  "version": 4
+}
