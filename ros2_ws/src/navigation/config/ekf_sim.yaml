@@ -3,11 +3,13 @@ ekf_filter_node_odom:
     ros__parameters:
         frequency: 30.0
 
-        # The sim world is flat and nothing measures z/roll/pitch (VIO and wheel odom both
-        # report 1e6 variance for them). Revisit when a real IMU supplies roll and pitch.
+        # Planar rover: nothing measures z/roll/pitch (VIO and wheel odom both report
+        # 1e6 variance for them, and there is no IMU).
         two_d_mode: true
         publish_acceleration: true
         publish_tf: true
+        # Publishes filter health on /diagnostics (for Foxglove / rqt_runtime_monitor)
+        print_diagnostics: true
 
 # 1. Set the map_frame, odom_frame, and base_link frames to the appropriate frame names for your system.
 #     1a. If your system does not have a map_frame, just remove it, and make sure "world_frame" is set to the value of odom_frame.
@@ -20,7 +22,9 @@ ekf_filter_node_odom:
 #         from robot_localization! However, that instance should *not* fuse the global data.
         map_frame: map              # Defaults to "map" if unspecified
         odom_frame: odom            # Defaults to "odom" if unspecified
-        base_link_frame: base_link  # Defaults to "base_link" if unspecified
+        # base_footprint is the URDF root. It can't be base_link: robot_state_publisher already
+        # publishes base_footprint -> base_link, and a TF frame can have only one parent.
+        base_link_frame: base_footprint
         world_frame: odom           # Defaults to the value of odom_frame if unspecified
 
         #odom 0 = wheel odometry velocities only; VIO is the single absolute pose source,
@@ -32,10 +36,11 @@ ekf_filter_node_odom:
                       false, false, true,
                       false, false, false]
 
-        #odom 1 = visual odometry
+        #odom 1 = visual odometry: pose only (x, y, yaw). Its z/roll/pitch carry 1e6 variance
+        #and two_d_mode drops them anyway.
         odom1: /depth_cam/vio/odom
-        odom1_config: [true,  true,  true,  # X, Y, Z
-                    true,  true,  true,  # Roll, Pitch, Yaw
+        odom1_config: [true,  true,  false,  # X, Y, Z
+                    false, false, true,  # Roll, Pitch, Yaw
                     false, false, false, # Vx, Vy, Vz
                     false, false, false,  # Vroll, Vpitch, Vyaw
                     false, false, false] # Ax, Ay, Az
@@ -52,12 +57,13 @@ ekf_filter_node_map:
         two_d_mode: true
         publish_acceleration: true
         publish_tf: true
+        print_diagnostics: true
 
         #Same as the local EKF filter, except the world frame is set to the map frame
         #global pushes map -> odom, ensuring that the local EKF filter can continue to provide smooth odometry updates
         map_frame: map
         odom_frame: odom
-        base_link_frame: base_link
+        base_link_frame: base_footprint
         world_frame: map
 
         #odom 0 = GPS odometry
@@ -73,7 +79,8 @@ ekf_filter_node_map:
         odom0_queue_size: 2
 
         #odom 1 = wheel odometry velocities
-        #initializes the filter before GPS arrives (navsat needs /odometry/global to start) and supplies yaw until an IMU is fused
+        #initializes the filter before GPS arrives (navsat needs /odometry/global to start) and supplies yaw rate.
+        #There is no IMU on the rover.
         odom1: /diff_drive_controller/odom
         odom1_config: [false, false, false,  # x, y, z
                     false, false, false,  # roll, pitch, yaw
@@ -93,8 +100,10 @@ navsat_transform_node:
         delay: 3.0
         # matches the 2D global filter
         zero_altitude: true
-        # no IMU yet: take heading from /odometry/global (relative to spawn, which faces east in sim)
-        # set to false once an IMU publishes /imu/data
+        # No IMU or compass: heading comes from /odometry/global, whose yaw is relative to
+        # startup. navsat treats yaw 0 as east, so this is only correct if the rover starts
+        # facing east (true in sim, where it spawns facing east). On the real rover any other
+        # start heading rotates the GPS points in the map frame until a heading-init step
+        # (e.g. heading from GPS while driving straight) is added.
         use_odometry_yaw: true
         publish_filtered_gps: true
-        use_sim_time: true

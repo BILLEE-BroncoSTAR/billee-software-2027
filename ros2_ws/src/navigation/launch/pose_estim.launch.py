@@ -5,8 +5,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.substitutions import PathJoinSubstitution, PythonExpression
-from launch.conditions import IfCondition
+from launch.substitutions import PathJoinSubstitution
 from ament_index_python.packages import get_package_share_directory
 import os
 
@@ -77,22 +76,19 @@ def generate_launch_description():
 
         )
     )
-    # Sim only: the Gazebo bridge publishes /gps with zero covariance, which the EKF
-    # treats as exact. The relay republishes it with covariance on /gps/with_cov.
-    # On hardware, comms/GpsNode already fills covariance on /gps.
+    # Fills covariance on GPS fixes that arrive without one, republishing on /gps/with_cov.
+    # Sim: the Gazebo bridge always publishes zero covariance. Real: comms/GpsNode publishes
+    # zero covariance (type UNKNOWN) when no covariance message has arrived yet. The EKF
+    # treats zero as exact. Fixes that already carry covariance pass through unchanged.
     launch_nodes.append(
         Node(
             package='navigation',
             executable='gps_covariance_relay',
             name='gps_covariance_relay',
             output='screen',
-            condition=IfCondition(use_sim),
             parameters=[{'use_sim_time': use_sim}],
             remappings=[('gps', '/gps'), ('gps/with_cov', '/gps/with_cov')],
         )
-    )
-    gps_fix_topic = PythonExpression(
-        ["'/gps/with_cov' if '", use_sim, "'.lower() == 'true' else '/gps'"]
     )
 
     # Navsat transform node
@@ -106,14 +102,14 @@ def generate_launch_description():
                 os.path.join(pkg_share, 'config/ekf_sim.yaml'),
                 {'use_sim_time': use_sim},
             ],
+            # No imu remap: there is no IMU, and use_odometry_yaw takes heading from
+            # /odometry/global instead.
             remappings=[
-            ('imu', '/imu/data'),
-            ('gps/fix', gps_fix_topic),
-            ('odometry/filtered', '/odometry/global'),
-            ('odometry/gps', '/odometry/gps'),
-            ('gps/filtered', '/gps/filtered'),],
-
-
+                ('gps/fix', '/gps/with_cov'),
+                ('odometry/filtered', '/odometry/global'),
+                ('odometry/gps', '/odometry/gps'),
+                ('gps/filtered', '/gps/filtered'),
+            ],
         )
     )
     # ControllerServer owns the local_costmap.

@@ -162,7 +162,8 @@ class Gps : public rclcpp::Node{
                 gpsMsg.position_covariance[5] = -pendingCov->posCovND;
                 gpsMsg.position_covariance[6] = -pendingCov->posCovED;
                 gpsMsg.position_covariance[7] = -pendingCov->posCovND;
-                gpsMsg.position_covariance[8] = -pendingCov->posCovDD;
+                // Variance: flipping D to U negates the cross terms above, never the variance.
+                gpsMsg.position_covariance[8] = pendingCov->posCovDD;
 
                 gpsMsg.position_covariance_type = gpsMsg.COVARIANCE_TYPE_KNOWN;
             }
