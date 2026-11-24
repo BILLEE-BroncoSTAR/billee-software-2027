@@ -71,6 +71,16 @@ declare_args = [
                           description="Start realsense2_camera (the D435i driver)."),
     DeclareLaunchArgument("aruco", default_value="true",
                           description="Start the ArUco node on the camera's colour + depth."),
+    DeclareLaunchArgument("video", default_value="true",
+                          description="H.264 of every colour frame on /arm_cam/color/video "
+                          "(camera_stream image_video_publisher: the Jetson's hardware encoder, "
+                          "else x264): the smooth feed Foxglove shows, ArUco and keyboard drawn "
+                          "over it."),
+    DeclareLaunchArgument("video_bitrate", default_value="1000000",
+                          description="H.264 bitrate cap, bits/s (1 Mbit/s: the radio link)."),
+    DeclareLaunchArgument("video_encoder", default_value="auto", choices=["auto", "nvenc", "x264"],
+                          description="auto = the hardware encoder if the Jetson has one (Orin "
+                          "AGX / NX), else x264 in software (Orin Nano)."),
     DeclareLaunchArgument("standalone", default_value="true",
                           description="Also start foxglove_bridge on :8765 (false inside "
                           "rover.launch.py, which already runs it)."),
@@ -188,6 +198,29 @@ def _setup(context):
             parameters=[LaunchConfiguration("realsense_config").perform(context), overrides],
             arguments=["--ros-args", "--log-level",
                        LaunchConfiguration("log_level").perform(context)],
+        ))
+
+    if _truthy(context, "video"):
+        actions.append(Node(
+            package="camera_stream",
+            executable="image_video_publisher",
+            name="color_video",
+            namespace=CAMERA_NAME,
+            output="screen",
+            respawn=True,
+            respawn_delay=3.0,
+            parameters=[{
+                "image_topic": "color/image_raw",
+                "video_topic": "color/video",
+                "encoder": LaunchConfiguration("video_encoder").perform(context),
+                "bitrate": int(LaunchConfiguration("video_bitrate").perform(context)),
+                "fps": 30,
+                "gop": 30,
+                # Like the ArUco node: on the sim clock with use_sim_time, so Foxglove (on
+                # Gazebo's time) can draw the keyboard over the video through TF.
+                "use_sim_time": sim_time,
+                "restamp": sim_time,
+            }],
         ))
 
     if _truthy(context, "aruco"):

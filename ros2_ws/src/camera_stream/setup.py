@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'csi_compressed_video_pub = camera_stream.csi_compressed_video_publisher:main',
+            'image_video_publisher = camera_stream.image_video_publisher:main',
             'yolov8_detector = camera_stream.yolov8_object_detector:main',
         ],
     },

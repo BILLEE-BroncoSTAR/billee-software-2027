@@ -135,10 +135,15 @@ station runs its own bridge, as with `ground_station.launch.py`).
   the marker and keyboard MarkerArrays and the annotated feed; `ros2 launch arm_description arm_description.launch.py
   rviz:=true` opens a view of just the arm (`arm_description/rviz/arm.rviz`).
 
-Bandwidth: the bridge sends only what a panel subscribes to. The annotated JPEG is about 10-40 kB
-at 15 Hz (well under 1 Mbit/s). `/arm_cam/color/image_raw/compressed` is JPEG at 30 Hz. **Don't
-subscribe to the raw images or `aligned_depth_to_color/image_raw` from the ground station**: that's
-27 MB/s of colour over Wi-Fi.
+Bandwidth and smoothness: the bridge sends only what a panel subscribes to. Foxglove's **Arm
+RealSense** panel (`rover_arm.json`) shows `/arm_cam/color/video`, H.264 of every colour frame at
+30 fps capped at 1 Mbit/s (`video_bitrate:=`), with the ArUco outlines (`aruco/annotations`) and the
+keyboard drawn over it. The video is encoded from the camera's frames independently of the ArUco
+node, so it stays smooth while detection runs slower. The encoder is the Jetson's hardware one
+when it has one (Orin AGX / NX), else x264 (the Orin Nano: ~14 % of one core); `video_encoder:=`
+forces either. `/arm_cam/aruco/image/compressed` (the annotated JPEG, RViz) still runs at the
+ArUco node's rate. **Don't subscribe to the raw images or `aligned_depth_to_color/image_raw` from
+the ground station**: that's 27 MB/s of colour over Wi-Fi.
 
 **Clocks in `mode:=sim`.** Gazebo's `/clock` drives the rover's TF and the viewers (Foxglove
 takes the bridge's time, RViz runs with `use_sim_time`), while the RealSense and `arm.launch.py`
@@ -168,6 +173,8 @@ and the arm hangs in a TF tree of its own.
 | `/arm_cam/aruco/markers` | `arm_vision_msgs/ArucoMarkers` | every processed frame; empty list = no marker |
 | `/arm_cam/aruco/image/compressed` | `sensor_msgs/CompressedImage` | annotated JPEG (only encoded while subscribed) |
 | `/arm_cam/aruco/visualization` | `visualization_msgs/MarkerArray` | plate + label per marker |
+| `/arm_cam/aruco/annotations` | `foxglove_msgs/ImageAnnotations` | each marker's outline and id in pixels, drawn by Foxglove over `color/video` |
+| `/arm_cam/color/video` | `foxglove_msgs/CompressedVideo` | H.264 of every colour frame, ~1 Mbit/s (`camera_stream` `image_video_publisher`): the feed Foxglove shows |
 | `/arm_cam/keyboard/keys` | `arm_vision_msgs/Keyboard` | keyboard pose + every key, in `target_frame` (`base_link`) |
 | `/arm_cam/keyboard/pose` | `geometry_msgs/PoseStamped` | the keyboard frame in `target_frame` |
 | `/arm_cam/keyboard/visualization` | `visualization_msgs/MarkerArray` | outline, keycaps, labels, the layout's markers (keyboard frame) |
@@ -528,5 +535,10 @@ cd ../../arm_description && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
 - **`Hardware Notification: Motion Module force pause ... Hardware Error`** at startup: seen once
   on firmware 5.15.1; `/arm_cam/imu` still published at 200 Hz. If the IMU stops, update the
   firmware.
+- **The arm camera stutters** (`ros2 topic hz /arm_cam/color/camera_info` ~30 but the ArUco node
+  or the video gets ~12-20 fps with half-second gaps): check that `ros2_ws/dds_env.sh`'s Fast DDS
+  profile has `<segment_size>` on the SHM transport. With Fast DDS's default 512 KB shared-memory
+  segment, a 900 KB colour frame falls back to fragmented UDP and best-effort frames get lost on a
+  busy Jetson (measured: 12 of 30 fps; with 16 MB, 30 of 30). Restart the launch after changing it.
 - **`parameter 'serial_no' has invalid type`:** pass it through `arm_camera.launch.py serial_no:=`,
   which quotes it; a bare numeric serial in a YAML file becomes a number.

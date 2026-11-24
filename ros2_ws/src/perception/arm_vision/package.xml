@@ -23,6 +23,8 @@
   <exec_depend>python3-opencv</exec_depend>
   <!-- arm_camera.launch.py -->
   <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>camera_stream</exec_depend>  <!-- image_video_publisher: color/video -->
+  <exec_depend>foxglove_msgs</exec_depend>  <!-- aruco/annotations -->
   <exec_depend>image_transport_plugins</exec_depend>
   <exec_depend>foxglove_bridge</exec_depend>
   <exec_depend>launch</exec_depend>

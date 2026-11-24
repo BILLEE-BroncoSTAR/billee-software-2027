@@ -42,6 +42,17 @@ from visualization_msgs.msg import MarkerArray
 from arm_vision.aruco import ArucoDetector, draw_markers, parse_marker_sizes
 from arm_vision.rgbd import RgbdFrame, RgbdSubscriber
 
+try:  # overlay for Foxglove's Image panel; optional, foxglove_msgs is built from third_party
+    from foxglove_msgs.msg import Color as FoxColor
+    from foxglove_msgs.msg import (
+        ImageAnnotations,
+        Point2,
+        PointsAnnotation,
+        TextAnnotation,
+    )
+except ImportError:
+    ImageAnnotations = None
+
 STATS_PERIOD = 10.0  # s between status log lines
 
 
@@ -91,6 +102,11 @@ class ArucoNode(Node):
             QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
                        reliability=ReliabilityPolicy.RELIABLE))
         self.viz_pub = self.create_publisher(MarkerArray, "aruco/visualization", 10)
+        # Marker outlines and ids in image coordinates, drawn by Foxglove over the camera's own
+        # video (camera_stream image_video_publisher, color/video): the video then runs at the
+        # camera's frame rate, however long detection takes on a busy Jetson.
+        self.annotations_pub = (self.create_publisher(ImageAnnotations, "aruco/annotations", 10)
+                                if ImageAnnotations is not None else None)
         self.tf = TransformBroadcaster(self) if self.publish_tf else None
 
         self._last_image = 0.0
@@ -120,6 +136,8 @@ class ArucoNode(Node):
         if self.tf is not None and located:
             self.tf.sendTransform([self.to_tf(frame, m) for m in located])
         self.viz_pub.publish(self.to_viz(frame, located))
+        if self.annotations_pub is not None:
+            self.annotations_pub.publish(to_annotations(frame, markers))
         self.publish_image(frame, markers)
 
         s = self._stats
@@ -217,6 +235,29 @@ class ArucoNode(Node):
             f"{depth}, {'' if rgbd.intrinsics else 'NO camera_info, '}markers seen: {ids}")
         self._stats = {"frames": 0, "seconds": 0.0, "ids": set(), "since": time.monotonic()}
         rgbd.frames = rgbd.frames_with_depth = 0
+
+
+def to_annotations(frame: RgbdFrame, markers) -> ImageAnnotations:
+    """Each marker's outline (green; orange without a 3D position) and "id · distance" label, in
+    the colour image's pixels. Empty when no marker is in view, which clears the overlay."""
+    out = ImageAnnotations()
+    stamp = frame.header.stamp
+    for m in markers:
+        located = m.position is not None
+        color = (FoxColor(r=0.1, g=0.9, b=0.2, a=1.0) if located
+                 else FoxColor(r=1.0, g=0.6, b=0.0, a=1.0))
+        corners = [Point2(x=float(x), y=float(y)) for x, y in m.corners]
+        out.points.append(PointsAnnotation(
+            timestamp=stamp, type=PointsAnnotation.LINE_LOOP, points=corners,
+            outline_color=color, thickness=3.0))
+        top = min(corners, key=lambda c: c.y)
+        label = f"{m.id}" + (f" · {m.distance:.2f} m" if located else "")
+        out.texts.append(TextAnnotation(
+            timestamp=stamp, position=Point2(x=top.x, y=max(top.y - 8.0, 12.0)), text=label,
+            font_size=14.0, text_color=FoxColor(r=1.0, g=1.0, b=1.0, a=1.0),
+            background_color=FoxColor(r=0.0, g=0.0, b=0.0, a=0.6)))
+    out.timestamp = stamp
+    return out
 
 
 def pose_of(m) -> Pose:

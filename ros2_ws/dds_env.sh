@@ -47,6 +47,11 @@ xml = f"""<?xml version="1.0" encoding="UTF-8"?>
     <transport_descriptor>
       <transport_id>billee_shm</transport_id>
       <type>SHM</type>
+      <!-- Fast DDS's default 512 KB segment is smaller than one RealSense colour frame
+           (640x480 rgb8 = 900 KB): every frame then fell back to fragmented UDP on loopback,
+           and with best-effort QoS on a busy Jetson a third of them were lost (12 of 30 fps,
+           gaps up to 0.8 s: the stuttering arm camera). 16 MB holds several frames: 30 of 30. -->
+      <segment_size>16777216</segment_size>
     </transport_descriptor>
     <transport_descriptor>
       <transport_id>billee_wired_udp</transport_id>

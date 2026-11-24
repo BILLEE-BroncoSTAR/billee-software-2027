@@ -9,6 +9,8 @@
 
   <depend>rclpy</depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>ffmpeg</exec_depend>
   <!-- Vendored in src/third_party/foxglove_msgs. Optional at run time: without it the
        node publishes JPEG only. -->
   <exec_depend>foxglove_msgs</exec_depend>

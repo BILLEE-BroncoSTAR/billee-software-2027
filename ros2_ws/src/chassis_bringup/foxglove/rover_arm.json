@@ -195,10 +195,16 @@
       }
     },
     "Image!arm_cam": {
-      "foxglovePanelTitle": "Arm RealSense D435i + ArUco + keyboard overlay",
+      "foxglovePanelTitle": "Arm RealSense D435i (H.264) + ArUco + keyboard overlay",
       "imageMode": {
-        "imageTopic": "/arm_cam/aruco/image/compressed",
-        "calibrationTopic": "/arm_cam/color/camera_info"
+        "imageTopic": "/arm_cam/color/video",
+        "calibrationTopic": "/arm_cam/color/camera_info",
+        "synchronize": false,
+        "annotations": {
+          "/arm_cam/aruco/annotations": {
+            "visible": true
+          }
+        }
       },
       "topics": {
         "/arm_cam/keyboard/visualization": {
