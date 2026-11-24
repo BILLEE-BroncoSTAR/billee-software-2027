@@ -58,6 +58,7 @@ case "$action" in
       --volume /dev/shm:/dev/shm
       --volume /tmp/.X11-unix:/tmp/.X11-unix
       --mount "type=bind,source=$repo_root/ros2_ws,target=/home/ros_user/ros2_ws"
+      --workdir /home/ros_user/ros2_ws
       --env ROS_DISTRO=humble
       --env "DISPLAY=${DISPLAY:-}"
     )

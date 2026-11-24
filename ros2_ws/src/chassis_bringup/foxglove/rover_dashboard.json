@@ -1,0 +1,222 @@
+{
+  "configById": {
+    "Image!cam0": {
+      "foxglovePanelTitle": "Front (cam0)",
+      "imageMode": {
+        "imageTopic": "/cam0/video"
+      }
+    },
+    "Image!cam3": {
+      "foxglovePanelTitle": "Top front (cam3)",
+      "imageMode": {
+        "imageTopic": "/cam3/video"
+      }
+    },
+    "Image!cam1": {
+      "foxglovePanelTitle": "Rear left (cam1)",
+      "imageMode": {
+        "imageTopic": "/cam1/video"
+      }
+    },
+    "Image!cam4": {
+      "foxglovePanelTitle": "Reverse (cam4)",
+      "imageMode": {
+        "imageTopic": "/cam4/video"
+      }
+    },
+    "Image!cam2": {
+      "foxglovePanelTitle": "Rear right (cam2)",
+      "imageMode": {
+        "imageTopic": "/cam2/video"
+      }
+    },
+    "Image!zed": {
+      "foxglovePanelTitle": "Front ZED 2i + OpenPose (camera:=openpose/both)",
+      "imageMode": {
+        "imageTopic": "/people/debug_image/compressed"
+      }
+    },
+    "3D!odometry": {
+      "foxglovePanelTitle": "3D: odometry, ZED point cloud, OpenPose skeletons",
+      "cameraState": {
+        "perspective": true,
+        "distance": 12,
+        "phi": 45,
+        "thetaOffset": 46,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.01,
+        "far": 5000
+      },
+      "followMode": "follow-position",
+      "followTf": "odom",
+      "scene": {
+        "transforms": {
+          "showLabel": true,
+          "labelSize": 0.06,
+          "axisScale": 0.3
+        },
+        "backgroundColor": "#303030",
+        "meshUpAxis": "z_up"
+      },
+      "transforms": {},
+      "topics": {
+        "/diff_drive_controller/odom": {
+          "visible": true,
+          "type": "axis",
+          "axisScale": 0.2,
+          "historySize": 100
+        },
+        "/odometry/filtered": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#4a90e2ff",
+          "arrowScale": [
+            0.6,
+            0.12,
+            0.12
+          ],
+          "historySize": 100
+        },
+        "/odometry/global": {
+          "visible": true,
+          "type": "arrow",
+          "color": "#7ed321ff",
+          "arrowScale": [
+            0.6,
+            0.12,
+            0.12
+          ],
+          "historySize": 100
+        },
+        "/zed/points": {
+          "visible": true,
+          "pointSize": 2,
+          "colorMode": "rgb",
+          "colorField": "rgb"
+        },
+        "/people/markers": {
+          "visible": true
+        },
+        "/people/gesture_marker": {
+          "visible": true
+        }
+      },
+      "layers": {
+        "grid": {
+          "layerId": "foxglove.Grid",
+          "instanceId": "grid",
+          "label": "Grid",
+          "visible": true,
+          "frameLocked": true,
+          "order": 1,
+          "size": 20,
+          "divisions": 20,
+          "lineWidth": 1,
+          "color": "#a0a0a4ff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "urdf": {
+          "layerId": "foxglove.Urdf",
+          "instanceId": "urdf",
+          "label": "Robot Model",
+          "visible": true,
+          "frameLocked": false,
+          "order": 2,
+          "sourceType": "topic",
+          "topic": "/robot_description"
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26
+      }
+    },
+    "map!gps": {
+      "foxglovePanelTitle": "GPS Map",
+      "center": {
+        "lat": 38.418,
+        "lon": -110.777
+      },
+      "zoomLevel": 18,
+      "customTileUrl": "",
+      "disabledTopics": [],
+      "followTopic": "/gps",
+      "layer": "map",
+      "topicColors": {
+        "/gps": "#f5a623",
+        "/gps/filtered": "#4a90e2"
+      }
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "direction": "column",
+      "first": {
+        "direction": "row",
+        "first": "Image!cam0",
+        "second": {
+          "direction": "row",
+          "first": "Image!zed",
+          "second": "Image!cam3",
+          "splitPercentage": 50
+        },
+        "splitPercentage": 33.3
+      },
+      "second": {
+        "direction": "row",
+        "first": "Image!cam1",
+        "second": {
+          "direction": "row",
+          "first": "Image!cam4",
+          "second": "Image!cam2",
+          "splitPercentage": 50
+        },
+        "splitPercentage": 33.3
+      },
+      "splitPercentage": 50
+    },
+    "second": {
+      "direction": "column",
+      "first": "3D!odometry",
+      "second": "map!gps",
+      "splitPercentage": 60
+    },
+    "splitPercentage": 62
+  }
+}

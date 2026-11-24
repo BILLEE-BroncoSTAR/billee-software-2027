@@ -3,7 +3,7 @@
 # Single source of truth for "which ODESC node drives which wheel joint".
 # Consumed conceptually by:
 #   - ros2_ws/src/robot_description/urdf/ros2_control.urdf.xacro  (per-joint <param name="node_id">)
-#   - the BILLEE_NEO_ODESC_Hardware_Integration_Guide drivetrain map
+#   - tooling/can-clear-faults (reads the node IDs from this file)
 # Plain xacro cannot parse this file, so the URDF values are hand-transcribed to
 # match it — keep the two in sync. If you change a node ID, change it here first.
 #
@@ -19,21 +19,21 @@
 # (2026-09-06), superseding the earlier 64:1 placeholder. Still a single
 # overridable parameter, not a baked-in constant: override via the
 # <param name="gear_ratio"> in ros2_control.urdf.xacro, or from the launch file
-# (`ros2 launch chassis_bringup real.launch.py gear_ratio:=<n>`). The full 6-node
-# drive-a-known-distance bench test (test plan §5.4) is still what confirms it
-# against the physical gearbox.
-gear_ratio: 48.0
+# (`ros2 launch chassis_bringup real.launch.py gear_ratio:=<n>`). Not yet confirmed
+# on hardware: drive a measured straight distance on all six wheels and compare it
+# with /diff_drive_controller/odom.
+gear_ratio: 48.0  
 
-nodes:
-  - joint: joint_wheel_l3   # Front Left
-    node_id: 0
-  - joint: joint_wheel_l2   # Mid Left
-    node_id: 1
-  - joint: joint_wheel_l1   # Rear Left
-    node_id: 2
-  - joint: joint_wheel_r1   # Front Right
-    node_id: 3
-  - joint: joint_wheel_r2   # Mid Right
-    node_id: 4
-  - joint: joint_wheel_r3   # Rear Right
-    node_id: 5
+nodes:   
+  - joint: joint_wheel_l3   # Front Left     
+    node_id: 4   
+  - joint: joint_wheel_l2   # Mid Left     
+    node_id: 7   
+  - joint: joint_wheel_l1   # Rear Left     
+    node_id: 2  
+  - joint: joint_wheel_r1   # Front Right     
+    node_id: 3   
+  - joint: joint_wheel_r2   # Mid Right     
+    node_id: 6   
+  - joint: joint_wheel_r3   # Rear Right     
+    node_id: 5 
