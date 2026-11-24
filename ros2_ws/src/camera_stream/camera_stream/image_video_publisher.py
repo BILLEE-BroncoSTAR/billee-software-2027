@@ -157,7 +157,12 @@ class ImageVideoPublisher(Node):
             now = self.get_clock().now()
             if now.nanoseconds == 0:  # use_sim_time, no /clock yet
                 return
-            stamp = now.to_msg()
+            # Strictly increasing: Gazebo's clock advances in coarse steps (0.15x real time on
+            # the Orin Nano), so frames 33 ms apart often got the same sim stamp, and Foxglove's
+            # video decoder blanked (red X) until the next keyframe.
+            ns = max(now.nanoseconds, getattr(self, "_last_stamp_ns", 0) + 1000)
+            self._last_stamp_ns = ns
+            stamp = TimeMsg(sec=ns // 1_000_000_000, nanosec=ns % 1_000_000_000)
         else:
             stamp = msg.header.stamp
         frame = (data, (msg.width, msg.height, msg.encoding), stamp,
