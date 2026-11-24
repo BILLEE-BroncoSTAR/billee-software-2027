@@ -22,7 +22,7 @@ translation is shifted so the markers' predicted centres meet the measured ones 
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import cv2
 import numpy as np
@@ -87,6 +87,14 @@ class KeyboardLayout:
                                       float(data.get("key_size", 1.0)))
         return cls(name=str(data.get("name", "keyboard")), markers=markers, keys=keys,
                    key_unit=unit, size=extent)
+
+    def with_marker_sizes(self, sizes: dict[int, float]) -> KeyboardLayout:
+        """This layout with the printed size of some markers replaced ({id: m}; ids that aren't
+        the layout's are ignored): the sizes an operator sets at launch (marker_sizes:=), which
+        aruco_node uses too."""
+        markers = {mid: replace(m, size=float(sizes.get(mid, m.size)))
+                   for mid, m in self.markers.items()}
+        return replace(self, markers=markers)
 
     def key(self, label: str) -> Key:
         try:

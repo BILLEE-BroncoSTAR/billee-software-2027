@@ -30,7 +30,10 @@ PRODUCTS = {
 class UsbCamera:
     model: str
     product_id: str
-    serial: str
+    # The USB descriptor's serial. On a D400 that's the ASIC id (rs-enumerate-devices' "Firmware
+    # Update Id"), NOT the camera serial that realsense2_camera's serial_no and
+    # `rs-enumerate-devices -s` use, so it's not printed where someone could copy it into serial_no.
+    usb_serial: str
     port: str         # sysfs device name, e.g. "2-1.3" (bus-port.port)
     speed_mbps: int   # 5000 / 10000 = USB 3, 480 = USB 2
 
@@ -44,7 +47,7 @@ class UsbCamera:
 
     def describe(self) -> str:
         link = f"USB {'3' if self.usb3 else '2'} ({self.speed_mbps} Mb/s)"
-        return f"RealSense {self.model} serial {self.serial or '?'} on port {self.port}, {link}"
+        return f"RealSense {self.model} on USB port {self.port}, {link}"
 
 
 def _read(path: str) -> str:
@@ -68,7 +71,7 @@ def realsense_cameras(sysfs: str = "/sys/bus/usb/devices") -> list[UsbCamera]:
         except ValueError:
             speed = 0
         cameras.append(UsbCamera(model=PRODUCTS[pid], product_id=pid,
-                                 serial=_read(os.path.join(dev, "serial")),
+                                 usb_serial=_read(os.path.join(dev, "serial")),
                                  port=os.path.basename(dev), speed_mbps=speed))
     return cameras
 

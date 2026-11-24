@@ -97,6 +97,7 @@ ros2 launch chassis_bringup rover.launch.py mode:=real arm_camera:=false  # neve
 ```bash
 ros2 launch arm_vision arm_camera.launch.py
 ros2 launch arm_vision arm_camera.launch.py marker_size:=0.1 dictionary:=DICT_4X4_50
+ros2 launch arm_vision arm_camera.launch.py marker_sizes:=10-13:0.04   # keyboard markers: 40 mm
 ros2 launch arm_vision arm_camera.launch.py aruco:=false      # camera only
 ros2 launch arm_vision arm_camera.launch.py camera:=false     # ArUco only, e.g. on a rosbag of /arm_cam/*
 ros2 launch arm_vision arm_camera.launch.py serial_no:=838212070123   # a specific camera
@@ -108,7 +109,16 @@ ros2 launch arm_vision arm_camera.launch.py target_frame:=    # keyboard in the 
 (Gazebo on the Jetson) and **Arm** to Real, Mock (no hardware: jogging moves the arm model and the
 camera) or Off (joints held at 0, e.g. a RealSense on a testbed Jetson). See the dashboard's README,
 "Teleop · Arm: real or sim". In `mode:=sim` the arm camera and the arm's TF stay on the wall clock,
-since the RealSense is real hardware.
+since the RealSense is real hardware. **ArUco marker sizes (mm)** (Advanced) sets the printed
+sizes without editing the config files: `40` = every marker, `10-13:30` = those ids, or both
+(`rover.launch.py marker_size:=` / `marker_sizes:=`, which `rover.launch.py` hands to
+`arm_camera.launch.py`).
+
+**Marker sizes at launch:** `marker_size:=` (m) replaces `config/aruco.yaml`'s default size.
+`marker_sizes:=` takes `id:size_m` or `first-last:size_m` entries separated by commas; they are
+merged over `aruco.yaml`'s `marker_sizes` (ids not named keep theirs) for `aruco_node`, and replace
+the layout's size of those markers for `keyboard_node`, so both locate the keyboard's markers with
+the same size. A malformed entry stops the launch with the entry in the error.
 
 The arm's TF comes up with `rover.launch.py` (`arm_tf:=auto`) or `arm_camera.launch.py`
 (`arm_tf:=auto`), and moves with `/arm/joint_states` from `arm_bringup`'s `arm.launch.py`, which is
@@ -214,7 +224,9 @@ relative to the rover. It's in `arm_camera.launch.py` (`keyboard:=true`, the def
    has a negative z. A rotated marker gets `yaw:` (degrees), a different size `size:`.
 4. Check `key_unit` (distance between two neighbouring letter keys, 19.05 mm on most keyboards)
    and `rows:` (ANSI US by default, F-row included; arrows and the numpad are left out).
-5. If the markers' size isn't 30 mm, change `marker_sizes` in `config/aruco.yaml` too.
+5. If the markers' size isn't 30 mm, change `marker_sizes` in `config/aruco.yaml` too, or set it
+   at launch for both nodes: `marker_sizes:=10-13:0.04` (dashboard: **ArUco marker sizes**
+   `10-13:40`).
 
 **How it's located:** every `aruco/markers` message that has layout markers in it is one estimate.
 
@@ -363,7 +375,7 @@ cameras for the Jetson's cores made ArUco detection about 10× slower.
 | `depth_sync_slop` | `0.02` | s, colour/depth stamp match |
 | `opencv_threads` | `1` | |
 | `debug_image_rate` / `_quality` / `_width` | `15` / `75` / `640` | the ground station feed |
-| `marker_sizes` | `["10:0.03", ...]` | per-id sizes (the keyboard's markers) |
+| `marker_sizes` | `["10:0.03", ...]` | per-id sizes (the keyboard's markers); `"10-13:0.03"` ranges too. Launch: `marker_sizes:=` sets aruco_node's and keyboard_node's |
 | keyboard `target_frame` | `base_link` | `""` = camera frame |
 | keyboard `min_markers` / `max_reprojection_error` | `1` / `4.0` | px RMS |
 | keyboard `smoothing` / `hold_timeout` | `0.3` / `0` | `0` = hold until `~/reset` |
@@ -409,7 +421,7 @@ the same approach as ROS 2 nodes and changes it as follows:
 ## Status
 
 Tested in a cloud container, x86 with no camera attached:
-- `pytest` (`arm_vision/test`, 39 tests): detection, depth and PnP positions and orientation against
+- `pytest` (`arm_vision/test`, 47 tests): detection, depth and PnP positions and orientation against
   ground truth on synthetic RGB-D frames, depth holes, lens distortion, colour/depth pairing, USB
   detection, marker generation, per-id marker sizes; and the keyboard: layout parsing, text → keys,
   the pose from synthetic frames of the four markers (all, two, one; depth on and off; a marker
@@ -425,25 +437,29 @@ Tested in a cloud container, x86 with no camera attached:
   reports "No RealSense devices were found", and keeps waiting; the mount TF and the bridge come up;
   Ctrl-C stops everything cleanly. `rover.launch.py arm_camera:=auto|true|false` picks the right one.
 
-**Not yet run under ROS: `keyboard_node`, `arm_description.launch.py`, and the new launch
-arguments** (`keyboard`, `arm_tf`, `target_frame` in `arm_camera.launch.py`; `arm_tf` in
-`rover.launch.py`). The container they were written in couldn't install the pixi environment, so
-the node's code was only run against stubbed ROS messages and TF (a synthetic frame through a known
-camera → `base_link` transform: every key within 0.3 mm). First build and run:
+On the testbed Jetson (Orin Nano, JetPack 6.2.1, l4t container), 2026-11-23, with a real D435i
+(firmware 5.15.1, USB 3.2) and no arm: `xvfb-run -a vglrun -d egl ros2 launch chassis_bringup
+rover.launch.py mode:=sim arm_tf:=zero` (what the dashboard runs for Teleop · Arm: Sim, Arm Off):
+- The driver, `aruco_node`, `keyboard_node`, the arm's `robot_state_publisher` (`/arm`, joints held
+  at 0) all start, and Ctrl-C stops them cleanly. TF `base_link` ← `arm_cam_color_optical_frame`
+  resolves through the arm.
+- `/arm_cam/imu` 200 Hz. Colour about 24 Hz by `ros2 topic hz`, `aruco_node` 21-24 fps at
+  28-36 ms/frame, 80-93 % with depth: the CPU is saturated in sim (Gazebo takes a core). Plain
+  `cv2.aruco` detection measured 21-24 ms per 640×480 frame there, single-threaded.
+- `keyboard_node` under ROS, fed synthetic RGB-D frames of markers 10-13 (this D435i's intrinsics,
+  stamped in its optical frame, so through the live arm TF to `base_link`): all four markers
+  0.5 mm / 0.05° from the truth at 0.41 px RMS, markers 10 + 13 only 1.4 mm / 0.8°. The estimate is
+  held (`tracking: false`) with no markers in view, and `~/reset` drops it.
+- Fixed on that run: `keyboard_node` crashed on its first MarkerArray (an int in a float field,
+  which the stubbed messages it was written against allowed), and its TF listener's spin thread
+  also spun the whole node in a second executor. The launch log printed the camera's USB serial,
+  which on a D400 is not the `serial_no` the driver takes.
 
-```bash
-pixi run build --packages-up-to arm_vision arm_description chassis_bringup
-ros2 launch arm_description arm_description.launch.py joint_states:=gui rviz:=true   # model + camera
-ros2 launch arm_vision arm_camera.launch.py arm_tf:=zero      # camera, ArUco, keyboard, arm TF at 0
-ros2 topic echo /arm_cam/keyboard/pose                        # with the keyboard markers in view
-```
-
-**Not yet tested: a real D435i on the Jetson.** First run checklist: `rs-enumerate-devices -s`
-shows USB 3.2; `ros2 topic hz /arm_cam/color/image_raw` ≈ 30; `aruco_node` logs about 30 fps with
-"100% with depth"; a printed marker at a measured distance reads within a centimetre; the IMU
-publishes on `/arm_cam/imu`. Keyboard: `keyboard_node` logs a reprojection error under ~1-2 px
-with all four markers, and a key's position (`/arm_cam/keyboard/keys`, `target_frame:=` for the
-camera frame) is within a few mm of a tape-measure check.
+**Not yet tested: printed markers in front of the real camera.** Remaining checklist: a printed
+marker at a measured distance reads within a centimetre; with markers 10-13 in view,
+`/arm_cam/aruco/markers` lists them, `keyboard_node` logs a reprojection error under ~1-2 px, and
+a key's position (`/arm_cam/keyboard/keys`, `target_frame:=` for the camera frame) is within a few
+mm of a tape-measure check. Update the firmware (5.17.0.10 recommended) before relying on the IMU.
 
 **Placeholders:** the arm model (the B-004 arm, until the new arm is imported), the arm's mount on
 the rover, the camera's mount on the end effector, and the marker positions on the keyboard.
@@ -489,5 +505,11 @@ cd ../../arm_description && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
 - **The keyboard jumps when the arm moves:** the arm's TF is wrong (joint zero offsets, directions,
   the camera mount): with the keyboard still, `base_link -> keyboard` should not move with the arm.
   That's the check for the URDF and `arm_axes.yaml`.
+- **`mode:=sim` from a shell on the Jetson aborts with `Couldn't open X display`** (Gazebo, and the
+  whole launch with it): Gazebo's camera sensor renders through GLX even with `gui:=false`. Start
+  it as the dashboard and `tooling/sim-up` do: `xvfb-run -a vglrun -d egl ros2 launch ...`.
+- **`Hardware Notification: Motion Module force pause ... Hardware Error`** at startup: seen once
+  on firmware 5.15.1; `/arm_cam/imu` still published at 200 Hz. If the IMU stops, update the
+  firmware.
 - **`parameter 'serial_no' has invalid type`:** pass it through `arm_camera.launch.py serial_no:=`,
   which quotes it; a bare numeric serial in a YAML file becomes a number.

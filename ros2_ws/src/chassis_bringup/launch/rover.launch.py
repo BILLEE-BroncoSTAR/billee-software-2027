@@ -12,6 +12,7 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py mode:=real vio:=true         # + ZED VIO + EKF
     ros2 launch chassis_bringup rover.launch.py mode:=real arm_camera:=false # no arm RealSense
     ros2 launch chassis_bringup rover.launch.py mode:=real arm_tf:=zero      # arm TF, arm off
+    ros2 launch chassis_bringup rover.launch.py marker_sizes:=10-13:0.04     # keyboard markers 40 mm
     ros2 launch chassis_bringup rover.launch.py mode:=real status_light:=teleop  # blink(1): blue
 
 `mode:=sim`  -> sim_gz.launch.py  (Gazebo + ign_ros2_control, no CAN)
@@ -145,6 +146,19 @@ declare_args = [
         description="The arm's RealSense D435i + ArUco detection (/arm_cam/*): auto = if a "
         "RealSense is on USB at launch; true = always (waits for the camera); false = never. "
         "Both modes.",
+    ),
+    DeclareLaunchArgument(
+        "marker_size",
+        default_value="",
+        description="Arm camera: printed ArUco marker side in metres, black square only "
+        "(empty = arm_vision/config/aruco.yaml, 0.05).",
+    ),
+    DeclareLaunchArgument(
+        "marker_sizes",
+        default_value="",
+        description="Arm camera: markers printed at another size, 'id:size_m' or "
+        "'first-last:size_m' separated by commas, e.g. 10-13:0.04 (the keyboard's markers). "
+        "The ArUco and keyboard nodes both use them. Empty = the config files' (keyboard 30 mm).",
     ),
     DeclareLaunchArgument(
         "arm_tf",
@@ -389,6 +403,8 @@ def _arm_camera(context, mode):
             # Wall clock even in mode:=sim: the RealSense is real hardware and stamps its frames
             # with the system time, and keyboard_node looks TF up at those stamps (see _arm_tf).
             "use_sim_time": "false",
+            "marker_size": LaunchConfiguration("marker_size").perform(context),
+            "marker_sizes": LaunchConfiguration("marker_sizes").perform(context),
         }.items(),
     )]
 

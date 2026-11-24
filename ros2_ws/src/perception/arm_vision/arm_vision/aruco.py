@@ -19,6 +19,7 @@ z (along the optical axis, as the RealSense reports it), in metres.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
@@ -195,16 +196,34 @@ class ArucoDetector:
 
 
 def parse_marker_sizes(items) -> dict[int, float]:
-    """["10:0.03", "11:0.03"] -> {10: 0.03, 11: 0.03} (ROS parameters can't be maps)."""
+    """["10:0.03", "11:0.03"] -> {10: 0.03, 11: 0.03} (ROS parameters can't be maps).
+
+    An entry may name a range of ids, "10-13:0.03", and `items` may also be one string with the
+    entries separated by commas or spaces (a launch argument: "10-13:0.03,7:0.1")."""
+    if isinstance(items, str):
+        items = re.split(r"[\s,]+", items)
     sizes = {}
     for item in items:
         if not item.strip():
             continue
-        marker_id, sep, size = item.partition(":")
-        if not sep:
-            raise ValueError(f"marker_sizes entry {item!r}: expected 'id:size_m'")
-        sizes[int(marker_id)] = float(size)
+        ids, sep, size = item.strip().partition(":")
+        try:
+            first, _, last = ids.partition("-")
+            first, last = int(first), int(last or first)
+            size = float(size)
+        except ValueError:
+            first = None
+        if not sep or first is None or not 0 <= first <= last or not size > 0:
+            raise ValueError(f"marker_sizes entry {item!r}: expected 'id:size_m' or "
+                             "'first-last:size_m', size in metres > 0")
+        for marker_id in range(first, last + 1):
+            sizes[marker_id] = size
     return sizes
+
+
+def format_marker_sizes(sizes: dict[int, float]) -> list[str]:
+    """{10: 0.03} -> ["10:0.03"], the marker_sizes parameter's format."""
+    return [f"{marker_id}:{size:g}" for marker_id, size in sorted(sizes.items())]
 
 
 def marker_center(corners: np.ndarray) -> np.ndarray:

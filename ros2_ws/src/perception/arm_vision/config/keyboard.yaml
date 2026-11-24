@@ -8,6 +8,9 @@
     # TF (arm_description: joint angles + camera mount); "" = the camera's optical frame.
     target_frame: base_link
     keyboard_frame: keyboard          # TF child frame
+    # Printed marker sizes replacing the layout's, "id:size_m" or "first-last:size_m" ([""] = the
+    # layout's). arm_camera.launch.py marker_sizes:= sets this and aruco_node's together.
+    marker_sizes: [""]
 
     # Fit: at least this many layout markers in view (4 on the keyboard; 1 works, 2+ is much
     # steadier). Reprojection error above max_reprojection_error (px RMS) rejects the fit: the

@@ -6,8 +6,10 @@
     # inside rover.launch.py (arm_camera:=auto|true): the drivetrain already runs the bridge
     ros2 launch arm_vision arm_camera.launch.py standalone:=false
 
-    # markers: dictionary and printed size (m) of the black square
+    # markers: dictionary and printed size (m) of the black square; per-id sizes (the keyboard's
+    # markers: aruco_node and keyboard_node both use them)
     ros2 launch arm_vision arm_camera.launch.py dictionary:=DICT_4X4_50 marker_size:=0.1
+    ros2 launch arm_vision arm_camera.launch.py marker_sizes:=10-13:0.04
 
     # camera only / ArUco only (e.g. against a rosbag of /arm_cam/*)
     ros2 launch arm_vision arm_camera.launch.py aruco:=false
@@ -43,10 +45,12 @@ before the camera is plugged in. Foxglove layout: chassis_bringup/foxglove/rover
 
 import os
 
+import yaml
 from ament_index_python.packages import (
     PackageNotFoundError,
     get_package_share_directory,
 )
+from arm_vision.aruco import format_marker_sizes, parse_marker_sizes
 from arm_vision.usb import camera_warnings, realsense_cameras
 from launch import LaunchDescription
 from launch.actions import (
@@ -85,6 +89,11 @@ declare_args = [
     DeclareLaunchArgument("marker_size", default_value="",
                           description="Printed marker side in metres, black square only "
                           "(empty = aruco_config)."),
+    DeclareLaunchArgument("marker_sizes", default_value="",
+                          description="Markers printed at another size, 'id:size_m' or "
+                          "'first-last:size_m', separated by commas, e.g. 10-13:0.04. Merged "
+                          "over aruco_config's marker_sizes, and given to keyboard_node too (the "
+                          "keyboard's markers). Empty = the config files'."),
     DeclareLaunchArgument("keyboard", default_value="true",
                           description="Start keyboard_node: the keyboard's pose and keys from "
                           "the ArUco markers on it (config/keyboard_layout.yaml)."),
@@ -123,9 +132,25 @@ def _truthy(context, name):
     return LaunchConfiguration(name).perform(context).lower() in ("true", "1", "yes")
 
 
+def config_marker_sizes(path) -> dict[int, float]:
+    """marker_sizes from an aruco_node parameter file ({} if it has none)."""
+    with open(path) as f:
+        data = yaml.safe_load(f) or {}
+    for node in data.values():
+        params = (node or {}).get("ros__parameters", {}) if isinstance(node, dict) else {}
+        if "marker_sizes" in params:
+            return parse_marker_sizes(params["marker_sizes"])
+    return {}
+
+
 def _setup(context):
     actions = []
     sim_time = _truthy(context, "use_sim_time")
+    sizes_arg = LaunchConfiguration("marker_sizes").perform(context)
+    try:
+        size_override = parse_marker_sizes(sizes_arg)
+    except ValueError as e:
+        raise RuntimeError(f"arm_camera.launch.py marker_sizes:={sizes_arg}: {e}") from None
 
     if _truthy(context, "camera"):
         cameras = realsense_cameras()
@@ -167,6 +192,11 @@ def _setup(context):
         size = LaunchConfiguration("marker_size").perform(context)
         if size:
             overrides["marker_size"] = float(size)
+        config = LaunchConfiguration("aruco_config").perform(context)
+        if size_override:
+            # Merged over the file's list: ids not named keep the size the config gives them.
+            overrides["marker_sizes"] = format_marker_sizes(
+                {**config_marker_sizes(config), **size_override})
         actions.append(Node(
             package="arm_vision",
             executable="aruco_node",
@@ -175,7 +205,7 @@ def _setup(context):
             output="screen",
             respawn=True,
             respawn_delay=3.0,
-            parameters=[LaunchConfiguration("aruco_config").perform(context), overrides],
+            parameters=[config, overrides],
         ))
 
     if _truthy(context, "keyboard"):
@@ -184,6 +214,8 @@ def _setup(context):
         layout = LaunchConfiguration("keyboard_layout").perform(context)
         if layout:
             overrides["layout_file"] = layout
+        if size_override:
+            overrides["marker_sizes"] = format_marker_sizes(size_override)
         actions.append(Node(
             package="arm_vision",
             executable="keyboard_node",

@@ -40,7 +40,7 @@ from geometry_msgs.msg import (
     Vector3,
 )
 from rclpy.duration import Duration
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Time
@@ -50,7 +50,7 @@ from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformBroadcaster, TransformException, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
 
-from arm_vision.aruco import Intrinsics, rotation_to_quaternion
+from arm_vision.aruco import Intrinsics, parse_marker_sizes, rotation_to_quaternion
 from arm_vision.keyboard import (
     KeyboardLayout,
     KeyboardLocalizer,
@@ -70,6 +70,11 @@ class KeyboardNode(Node):
         layout_file = p("layout_file", "").value or os.path.join(
             get_package_share_directory("arm_vision"), "config", "keyboard_layout.yaml")
         self.layout = KeyboardLayout.from_yaml(layout_file)
+        # Printed sizes set at launch (marker_sizes:=, the same list aruco_node gets) replace the
+        # layout's for those ids: PnP over the layout's corners needs the real size.
+        size_override = parse_marker_sizes(p("marker_sizes", [""]).value)
+        if size_override:
+            self.layout = self.layout.with_marker_sizes(size_override)
         self.localizer = KeyboardLocalizer(
             self.layout,
             min_markers=p("min_markers", 1).value,
@@ -93,8 +98,13 @@ class KeyboardNode(Node):
         self._stats = {"messages": 0, "estimates": 0, "rejected": {}, "tf_failed": 0}
 
         self.tf_buffer = Buffer()
-        # Own spin thread: lookups wait for TF while this node's callbacks run.
-        self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
+        # main() spins this node in a MultiThreadedExecutor: the listener's subscriptions are in
+        # their own reentrant callback group, so TF keeps arriving while on_markers waits in
+        # lookup_transform, and this node's own callbacks (default group) never run at once.
+        # Not spin_thread=True: in Humble that spins the whole node in a second executor too
+        # (on_markers and the timers racing on the filter), and its thread prints an
+        # ExternalShutdownException traceback on every Ctrl-C.
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         self.tf = TransformBroadcaster(self)
         self.keys_pub = self.create_publisher(Keyboard, "keyboard/keys", 10)
         self.pose_pub = self.create_publisher(PoseStamped, "keyboard/pose", 10)
@@ -108,7 +118,8 @@ class KeyboardNode(Node):
             self.create_timer(1.0 / publish_rate, self.publish_held)
         self.create_timer(1.0, self.publish_viz)
         self.create_timer(STATUS_PERIOD, self.log_status)
-        ids = ", ".join(str(i) for i in sorted(self.layout.markers))
+        ids = ", ".join(f"{i} ({1000 * m.size:g} mm)"
+                        for i, m in sorted(self.layout.markers.items()))
         self.get_logger().info(
             f"layout {self.layout.name!r} ({layout_file}): markers {ids}, "
             f"{len(self.layout.keys)} keys; keyboard in {self.target_frame or 'the camera frame'}")
@@ -269,7 +280,9 @@ def keyboard_markers(layout: KeyboardLayout, frame: str, stamp) -> MarkerArray:
     w, h = (float(v) for v in layout.size)
     outline = marker("keyboard_outline", 0, Marker.LINE_STRIP, scale=Vector3(x=0.002),
                      color=ColorRGBA(r=0.2, g=0.8, b=1.0, a=1.0))
-    outline.points = [Point(x=x, y=y) for x, y in ((0, 0), (w, 0), (w, h), (0, h), (0, 0))]
+    # Floats only: rosidl rejects an int (0) in a float64 field with an AssertionError.
+    outline.points = [Point(x=x, y=y)
+                      for x, y in ((0.0, 0.0), (w, 0.0), (w, h), (0.0, h), (0.0, 0.0))]
     out.markers.append(outline)
     for i, key in enumerate(layout.keys.values()):
         cx, cy, cz = (float(v) for v in key.center)
@@ -297,7 +310,7 @@ def keyboard_markers(layout: KeyboardLayout, frame: str, stamp) -> MarkerArray:
 def main():
     rclpy.init()
     try:
-        rclpy.spin(KeyboardNode())
+        rclpy.spin(KeyboardNode(), MultiThreadedExecutor(num_threads=2))
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:

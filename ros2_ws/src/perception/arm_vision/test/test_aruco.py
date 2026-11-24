@@ -12,6 +12,7 @@ from arm_vision.aruco import (
     Intrinsics,
     deproject,
     draw_markers,
+    format_marker_sizes,
     generate_marker,
     marker_center,
     marker_depth,
@@ -105,8 +106,14 @@ def test_per_id_marker_size():
 
 def test_parse_marker_sizes():
     assert parse_marker_sizes(["10:0.03", " ", "4:0.1"]) == {10: 0.03, 4: 0.1}
-    with pytest.raises(ValueError):
-        parse_marker_sizes(["10"])
+    # A range of ids, and one string as a launch argument passes it.
+    assert parse_marker_sizes("10-12:0.04, 4:0.1") == {10: 0.04, 11: 0.04, 12: 0.04, 4: 0.1}
+    assert parse_marker_sizes("10-11:0.04 11:0.05") == {10: 0.04, 11: 0.05}  # last one wins
+    assert parse_marker_sizes("") == {}
+    assert format_marker_sizes({11: 0.04, 7: 0.1}) == ["7:0.1", "11:0.04"]
+    for bad in (["10"], ["x:0.03"], ["10:big"], ["13-10:0.03"], ["10:0"], ["10:-0.03"]):
+        with pytest.raises(ValueError):
+            parse_marker_sizes(bad)
 
 
 def test_mostly_missing_depth_falls_back_to_pnp(detector):
@@ -267,7 +274,9 @@ def test_usb_scan(tmp_path):
     cams = {c.port: c for c in realsense_cameras(str(tmp_path))}
     assert set(cams) == {"2-1", "1-2", "1-3"}
     assert cams["2-1"].model == "D435i" and cams["2-1"].usb3
-    assert cams["2-1"].serial == "838212070123"
+    assert cams["2-1"].usb_serial == "838212070123"
+    # The USB serial is a D400's ASIC id, not serial_no: it mustn't be in the launch log.
+    assert "838212070123" not in cams["2-1"].describe()
     warnings = camera_warnings(list(cams.values()))
     assert len(warnings) == 2
     assert any("USB 2" in w for w in warnings) and any("recovery" in w for w in warnings)

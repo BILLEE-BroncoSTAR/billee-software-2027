@@ -203,6 +203,25 @@ def test_wrong_marker_size(layout, ids):
         assert error() < 0.006
 
 
+def test_marker_size_override(layout):
+    """marker_sizes:= at launch: the keyboard's markers printed at 40 mm instead of the layout's
+    30 mm. With the layout's sizes every corner is off and the fit is rejected; with the
+    override (what keyboard_node applies) it's as good as a matching layout."""
+    big = layout.with_marker_sizes({i: 0.04 for i in (10, 11, 12, 13)} | {99: 0.1})
+    assert all(m.size == 0.04 for m in big.markers.values()) and 99 not in big.markers
+    assert layout.markers[10].size == 0.03  # the original is untouched
+    assert big.keys == layout.keys
+    R, t = pose_for(layout, looking_down())
+    color, depth = render(big, R, t)  # the real (40 mm) markers
+    obs = observe(big, color, depth)
+    wrong = KeyboardLocalizer(layout)
+    assert wrong.estimate(obs, INTR) is None
+    assert "reprojection error" in wrong.last_rejection
+    est = KeyboardLocalizer(big).estimate(obs, INTR)
+    assert est is not None and est.reprojection_error < 1.0
+    np.testing.assert_allclose(est.t, t, atol=0.004)
+
+
 def test_rejects_moved_marker(layout):
     """A marker that isn't where the layout says (moved 4 cm) is caught by the reprojection
     error instead of silently skewing the keyboard."""
@@ -236,3 +255,25 @@ def test_filter_smooths_and_resets():
     assert f.samples == 1
     _, qq = f.update([0.5, 0, 0], rotation_to_quaternion(rot("z", 4)))
     assert angle_between(quaternion_to_rotation(qq), rot("z", 2)) < 0.01
+
+
+# --- keyboard_node messages -----------------------------------------------------------------
+
+def test_keyboard_markers_with_real_messages(layout):
+    """keyboard_node's MarkerArray, built with the real ROS message classes: they reject an int
+    in a float field (AssertionError), which the stubbed messages it was first written against
+    didn't, and the node died on its first visualization tick."""
+    pytest.importorskip("visualization_msgs.msg")
+    from arm_vision.keyboard_node import keyboard_markers
+    from builtin_interfaces.msg import Time
+
+    out = keyboard_markers(layout, "keyboard", Time(sec=1))
+    by_ns = {}
+    for m in out.markers:
+        by_ns.setdefault(m.ns, []).append(m)
+    assert len(by_ns["keyboard_keys"]) == len(by_ns["keyboard_labels"]) == len(layout.keys)
+    assert len(by_ns["keyboard_markers"]) == len(layout.markers)
+    outline = by_ns["keyboard_outline"][0]
+    assert [(p.x, p.y) for p in outline.points][:3] == [
+        (0.0, 0.0), (layout.size[0], 0.0), (layout.size[0], layout.size[1])]
+    assert all(m.header.frame_id == "keyboard" for m in out.markers)
