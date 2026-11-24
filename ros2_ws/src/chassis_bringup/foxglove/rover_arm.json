@@ -37,7 +37,7 @@
       }
     },
     "3D!odometry": {
-      "foxglovePanelTitle": "3D: odometry, ZED point cloud, OpenPose skeletons, arm + keyboard",
+      "foxglovePanelTitle": "3D: rover + arm, odometry, ZED point cloud, OpenPose skeletons, ArUco markers, keyboard",
       "cameraState": {
         "perspective": true,
         "distance": 12,
@@ -195,7 +195,7 @@
       }
     },
     "Image!arm_cam": {
-      "foxglovePanelTitle": "Arm RealSense D435i + ArUco + keyboard overlay (arm_camera:=auto/true)",
+      "foxglovePanelTitle": "Arm RealSense D435i + ArUco + keyboard overlay",
       "imageMode": {
         "imageTopic": "/arm_cam/aruco/image/compressed",
         "calibrationTopic": "/arm_cam/color/camera_info"

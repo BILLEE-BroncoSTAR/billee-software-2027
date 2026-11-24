@@ -17,6 +17,11 @@ joint_states:=
         (bench tests of the camera). Do NOT use it with arm.launch.py running (two publishers).
   gui   joint_state_publisher_gui: sliders, to check the URDF and the camera mount by eye.
 
+use_sim_time:=true (rover.launch.py mode:=sim): the arm's TF is stamped on the sim clock, like
+the rover's, so viewers can place the arm in odom. With joint_states:=arm the driver's
+/arm/joint_states (wall clock) go through joint_state_restamp to /arm/joint_states/restamped,
+which robot_state_publisher reads.
+
 Mount offsets (placeholders until the new arm is measured; see the xacro files):
   mount_xyz / mount_rpy    arm base on the rover, in base_link
   camera_xyz / camera_rpy  D435i bottom screw on the end effector, in arm_tool_link
@@ -45,22 +50,42 @@ def _setup(context):
         xacro_cmd += [f" {xacro_arg}:=\"", lc(launch_arg), "\""]
     description = ParameterValue(Command(xacro_cmd), value_type=str)
     use_sim_time = lc("use_sim_time").perform(context) == "true"
+    source = lc("joint_states").perform(context)
+    # On sim time with the arm driver's joint states (wall clock, see joint_state_restamp.py),
+    # read a copy restamped on the sim clock, so the arm's TF joins the rover's. zero / gui
+    # publish on this launch's clock already.
+    restamp = use_sim_time and source == "arm"
 
     actions = [Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
         namespace=NAMESPACE,
         output="screen",
-        parameters=[{"robot_description": description, "use_sim_time": use_sim_time}],
+        # publish_frequency caps the moving joints' TF, counted in message time: the default
+        # 20 Hz is 50 ms of sim time, ~360 ms of wall time with Gazebo at 0.14x real time on the
+        # Jetson, and keyboard_node's lookups (and the arm in Foxglove) waited on it. 1000 Hz
+        # lets every joint state through: the driver's rate (100 Hz) sets it.
+        parameters=[{"robot_description": description, "use_sim_time": use_sim_time,
+                     "publish_frequency": 1000.0}],
+        remappings=[("joint_states", "joint_states/restamped")] if restamp else [],
     )]
-    source = lc("joint_states").perform(context)
+    if restamp:
+        actions.append(Node(
+            package="arm_description",
+            executable="joint_state_restamp",
+            namespace=NAMESPACE,
+            output="screen",
+            parameters=[{"use_sim_time": True}],
+        ))
     if source in ("zero", "gui"):
         actions.append(Node(
             package="joint_state_publisher_gui" if source == "gui" else "joint_state_publisher",
             executable="joint_state_publisher_gui" if source == "gui" else "joint_state_publisher",
             namespace=NAMESPACE,
             output="screen",
-            parameters=[{"use_sim_time": use_sim_time}],
+            # 100 Hz, not the default 10: on sim time that's 1.4 Hz of wall time at the Jetson's
+            # real-time factor, too slow for TF lookups at the camera's stamps.
+            parameters=[{"use_sim_time": use_sim_time, "rate": 100}],
         ))
     if lc("rviz").perform(context) == "true":
         actions.append(Node(

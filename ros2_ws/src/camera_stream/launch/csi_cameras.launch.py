@@ -11,7 +11,7 @@ sensor-id N and publishes
 
 The camera list (name and flip for each camera) lives in config/cameras.yaml in this package.
 Index = Argus sensor-id = /camN: the first entry is cam0, the second cam1, and so on. Names
-match the Foxglove dashboard panels (chassis_bringup/foxglove/rover_dashboard.json) and the
+match the Foxglove layouts' panels (chassis_bringup/foxglove/rover.json, rover_arm.json) and the
 RViz displays. Change the file and relaunch; nothing to rebuild with a --symlink-install build.
 
 Argus numbers the cameras it found at boot 0, 1, 2... in device-tree port order, so a camera

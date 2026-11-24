@@ -23,6 +23,7 @@ docs/arm-camera.md and arm_vision/aruco.py.
 from __future__ import annotations
 
 import time
+from dataclasses import replace
 
 import cv2
 import rclpy
@@ -33,7 +34,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import ColorRGBA
+from std_msgs.msg import ColorRGBA, Header
 from tf2_ros import TransformBroadcaster
 from visualization_msgs.msg import Marker as VizMarker
 from visualization_msgs.msg import MarkerArray
@@ -68,6 +69,10 @@ class ArucoNode(Node):
         self.image_rate = p("debug_image_rate", 15.0).value
         self.image_quality = int(p("debug_image_quality", 75).value)
         self.image_width = int(p("debug_image_width", 640).value)
+        # Stamp the outputs (markers, TF, annotated image) with this node's clock instead of the
+        # image's. mode:=sim: the RealSense stamps on the wall clock, the rover's TF and the
+        # viewers run on Gazebo's, and a marker stamped on the wall clock can't be placed in odom.
+        self.restamp = bool(p("restamp", False).value)
 
         self.rgbd = RgbdSubscriber(
             self, self.on_frame,
@@ -100,6 +105,12 @@ class ArucoNode(Node):
 
     def on_frame(self, frame: RgbdFrame):
         start = time.perf_counter()
+        if self.restamp:
+            now = self.get_clock().now()
+            if now.nanoseconds == 0:  # use_sim_time, no /clock yet
+                return
+            frame = replace(frame, header=Header(stamp=now.to_msg(),
+                                                 frame_id=frame.header.frame_id))
         markers = self.detector.process(frame.color, frame.intrinsics, frame.depth)
         if self.marker_ids:
             markers = [m for m in markers if m.id in self.marker_ids]

@@ -104,8 +104,9 @@ setup of both machines (clone, container, build, OpenPose models) is in
   ground station's `view:=` with the same name (`camera:=none` ↔ `view:=drivetrain`).
 - No motors connected: use the virtual bus instead ([docs/running.md → CAN testing without motors](docs/running.md#can-testing-without-motors)).
 - On the ground-station **host**, open Foxglove Studio, connect to `ws://localhost:8765`, and
-  import `ros2_ws/src/chassis_bringup/foxglove/rover_dashboard.json`, the one layout for every
-  mode ([docs/running.md → Foxglove](docs/running.md#foxglove)).
+  import the two layouts in `ros2_ws/src/chassis_bringup/foxglove/`: `rover.json` (every mode
+  but Teleop · Arm) and `rover_arm.json` (Teleop · Arm: + the RealSense and the arm)
+  ([docs/running.md → Foxglove](docs/running.md#foxglove)).
 - To drive, hold **LB / L1** on the gamepad and move the two sticks up and down.
 
 Every combination written out (sim or real, with or without ODESCs, each camera mode), the

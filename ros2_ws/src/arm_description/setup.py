@@ -33,6 +33,7 @@ setup(
     entry_points={
         'console_scripts': [
             'import_urdf = arm_description.import_urdf:main',
+            'joint_state_restamp = arm_description.joint_state_restamp:main',
         ],
     },
 )

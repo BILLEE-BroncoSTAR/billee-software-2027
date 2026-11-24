@@ -72,7 +72,7 @@ After pulling this branch on the Jetson:
 3. **Jetson container**, build:
    ```bash
    cd ros2_ws && pixi shell -e l4t
-   pixi run build --packages-up-to arm_vision chassis_bringup
+   pixi run build --packages-up-to arm_vision arm_description arm_bringup chassis_bringup
    source install/local_setup.bash
    rs-enumerate-devices -s    # serial, firmware, USB type 3.2: the SDK sees the camera
    ```
@@ -108,8 +108,8 @@ ros2 launch arm_vision arm_camera.launch.py target_frame:=    # keyboard in the 
 **From the BILLEE dashboard:** **Teleop · Arm** runs all of this. Set **Drivetrain** to Real or Sim
 (Gazebo on the Jetson) and **Arm** to Real, Mock (no hardware: jogging moves the arm model and the
 camera) or Off (joints held at 0, e.g. a RealSense on a testbed Jetson). See the dashboard's README,
-"Teleop · Arm: real or sim". In `mode:=sim` the arm camera and the arm's TF stay on the wall clock,
-since the RealSense is real hardware. **ArUco marker sizes (mm)** (Advanced) sets the printed
+"Teleop · Arm: real or sim". The dashboard opens Foxglove with the `rover_arm.json` layout in
+Teleop · Arm. **ArUco marker sizes (mm)** (Advanced) sets the printed
 sizes without editing the config files: `40` = every marker, `10-13:30` = those ids, or both
 (`rover.launch.py marker_size:=` / `marker_sizes:=`, which `rover.launch.py` hands to
 `arm_camera.launch.py`).
@@ -126,18 +126,35 @@ started separately. See [Arm URDF](#arm-urdf-the-camera-on-the-rover).
 
 **Ground station:** Foxglove Studio → `ws://<rover>:8765` (or `ws://localhost:8765` when the ground
 station runs its own bridge, as with `ground_station.launch.py`).
-- `rover_dashboard.json` (chassis_bringup), the Foxglove layout, has an **Arm RealSense** panel
+- `rover_arm.json` (chassis_bringup/foxglove), the Teleop · Arm Foxglove layout, has an **Arm RealSense** panel
   showing the annotated feed with the located keyboard's keys drawn over it, and a **3D: arm**
   panel with the arm model, TF, the markers and the keyboard around `base_link`. They read
   "waiting for messages" until the camera is up.
-- RViz: `chassis_bringup/rviz/drivetrain.rviz` has the arm model, the marker and keyboard
-  MarkerArrays and the annotated feed; `ros2 launch arm_description arm_description.launch.py
+- RViz: every ground-station view (`chassis_bringup/rviz/drivetrain.rviz`, and
+  `people/rviz/zed_points.rviz` / `people_rover.rviz` for the ZED's `view:=`) has the arm model,
+  the marker and keyboard MarkerArrays and the annotated feed; `ros2 launch arm_description arm_description.launch.py
   rviz:=true` opens a view of just the arm (`arm_description/rviz/arm.rviz`).
 
 Bandwidth: the bridge sends only what a panel subscribes to. The annotated JPEG is about 10-40 kB
 at 15 Hz (well under 1 Mbit/s). `/arm_cam/color/image_raw/compressed` is JPEG at 30 Hz. **Don't
 subscribe to the raw images or `aligned_depth_to_color/image_raw` from the ground station**: that's
 27 MB/s of colour over Wi-Fi.
+
+**Clocks in `mode:=sim`.** Gazebo's `/clock` drives the rover's TF and the viewers (Foxglove
+takes the bridge's time, RViz runs with `use_sim_time`), while the RealSense and `arm.launch.py`
+(real or mock) are hardware and stamp on the wall clock. A viewer can only place a frame whose
+whole chain to `odom` is on one clock, so `rover.launch.py` puts the arm's side on sim time:
+- `aruco_node` (`restamp: true`) stamps its markers, TF and annotated image with its own clock;
+  `keyboard_node` follows those stamps.
+- `arm_description` reads `/arm/joint_states` through `joint_state_restamp`
+  (`/arm/joint_states/restamped`, stamped on arrival) with Arm Mock or Real; with Arm Off its
+  `joint_state_publisher` is on sim time already.
+
+Before this, in sim the arm, the RealSense on it and the markers never appeared in Foxglove or in
+RViz with `odom` as fixed frame ("extrapolation into the past: requested 139 s, earliest data
+1.8e9 s"). The arm's TF also needs its joint states at all: with **Arm** Mock or Real,
+`arm_bringup` has to be built, or `arm.launch.py` fails with "package 'arm_bringup' not found"
+and the arm hangs in a TF tree of its own.
 
 ## Topics and frames
 

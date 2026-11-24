@@ -40,7 +40,7 @@ TF: arm_cam_link -> arm_cam_{color,depth,...}_optical_frame (driver), optical fr
     robot_state_publisher, arm_description/launch/arm_description.launch.py).
 
 realsense2_camera waits for the camera and reconnects after a USB drop, so the launch can start
-before the camera is plugged in. Foxglove layout: chassis_bringup/foxglove/rover_dashboard.json.
+before the camera is plugged in. Foxglove layout: chassis_bringup/foxglove/rover_arm.json.
 """
 
 import os
@@ -124,7 +124,11 @@ declare_args = [
       for k in ("x", "y", "z", "roll", "pitch", "yaw")],
     DeclareLaunchArgument("log_level", default_value="info",
                           description="realsense2_camera log level (debug for USB problems)."),
-    DeclareLaunchArgument("use_sim_time", default_value="false"),
+    DeclareLaunchArgument("use_sim_time", default_value="false",
+                          description="true with a sim (rover.launch.py mode:=sim): the ArUco "
+                          "and keyboard nodes and the arm's TF run on /clock, and the ArUco "
+                          "node restamps its outputs, since the camera itself stays on the "
+                          "wall clock."),
 ]
 
 
@@ -162,7 +166,9 @@ def _setup(context):
             actions.append(LogInfo(msg=(
                 "arm_camera.launch.py: no RealSense on USB yet; realsense2_camera waits for one. "
                 "Check `lsusb | grep 8086` and the cable (USB 3).")))
-        overrides = {"camera_name": CAMERA_NAME, "use_sim_time": sim_time}
+        # Always the wall clock: the RealSense is hardware and stamps its frames with the system
+        # time. With use_sim_time:=true the ArUco node restamps its outputs on the sim clock.
+        overrides = {"camera_name": CAMERA_NAME, "use_sim_time": False}
         serial = LaunchConfiguration("serial_no").perform(context)
         if serial:
             # Quoted, as realsense2_camera's own rs_launch.py does: the value goes through a YAML
@@ -185,7 +191,9 @@ def _setup(context):
         ))
 
     if _truthy(context, "aruco"):
-        overrides = {"use_sim_time": sim_time}
+        # Sim time: outputs restamped on the sim clock, so markers, the keyboard and the arm's
+        # TF (arm_description, also on sim time) share the clock of the rover's TF and viewers.
+        overrides = {"use_sim_time": sim_time, "restamp": sim_time}
         dictionary = LaunchConfiguration("dictionary").perform(context)
         if dictionary:
             overrides["dictionary"] = dictionary

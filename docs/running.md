@@ -286,7 +286,7 @@ arguments (there's no argument to turn them off). Each publishes two streams:
 - **H.264 needs `foxglove_msgs`**, which is built from `src/third_party/foxglove_msgs` with the rest
   of the workspace. Without it the node logs `foxglove_msgs isn't built` and publishes only JPEG,
   so the dashboard's camera panels stay empty. RViz still works.
-- **Viewing:** Foxglove's `rover_dashboard.json` shows all five, with the ZED 2i on a second tab of
+- **Viewing:** both Foxglove layouts (`rover.json`, `rover_arm.json`) show all five, with the ZED 2i on a second tab of
   the front view ([Foxglove](#foxglove)). In RViz, every `view:=` has an Image display per camera.
 - **Bandwidth:** at most 5 × 3 Mbit/s of H.264 while Foxglove shows the cameras, usually about a
   third to half of that (quality-floored VBR, see [cameras.md](cameras.md)). A JPEG stream crosses the
@@ -332,12 +332,16 @@ networking, so the host can reach their port 8765.
    | `ws://localhost:8765` | the ground station's own, started by `ground_station.launch.py` (setup 1: `sim_gz.launch.py foxglove:=true`) | normal case. It shows the Jetson's topics, received over DDS. |
    | `ws://<jetson-ip>:8765` | the Jetson's, started by `rover.launch.py` | DDS between the machines doesn't work, or you have no ground-station container. Get the IP with `hostname -I` on the Jetson. |
 
-2. **Layouts → Import from file** (once; Foxglove keeps it):
-   `ros2_ws/src/chassis_bringup/foxglove/rover_dashboard.json`. It is **the** layout, for every
-   mode and every `camera:=`: the five [CSI cameras](#csi-cameras) (front: tabs for cam0 and the ZED
-   2i's video, with any `camera:=` but `none`; it shows the skeletons with `openpose` or `both`), the arm RealSense, the GPS map, and a 3D
-   view that follows the rover (rover model, odometry, ZED point cloud, OpenPose skeletons). Panels
-   whose topics aren't running read "waiting for messages".
+2. **Layouts → Import from file** (once each; Foxglove keeps them), from
+   `ros2_ws/src/chassis_bringup/foxglove/`. There are two, for every `camera:=`:
+
+   | Layout | Modes | Shows |
+   |---|---|---|
+   | `rover.json` | Teleop · Drive, Teleop · Science, Autonomous, Astronaut, the sim | the five [CSI cameras](#csi-cameras) (front: tabs for cam0 and the ZED 2i's video, with any `camera:=` but `none`; it shows the skeletons with `openpose` or `both`), the GPS map, and a 3D view that follows the rover (rover model, odometry, ZED point cloud, OpenPose skeletons). No arm. |
+   | `rover_arm.json` | Teleop · Arm | all of `rover.json`, plus the arm RealSense feed (ArUco markers and the keyboard drawn over it), the arm model with the D435i on the rover, and the ArUco markers and keyboard in 3D |
+
+   Panels whose topics aren't running read "waiting for messages". The BILLEE dashboard opens the
+   right one per mode once their IDs are in its config (its README, "Foxglove layouts").
 
 **Without the ground-station container** (e.g. a Mac): the
 [dashboard](../BILLEE-dashboard-tool/README.md#setup-make-setup-dash) runs every mode on the rover

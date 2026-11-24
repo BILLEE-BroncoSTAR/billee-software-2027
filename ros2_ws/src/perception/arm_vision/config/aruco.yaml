@@ -35,6 +35,11 @@
     # contended thread pool made detection 10x slower. 2-4 for 1280x720 on a quiet CPU.
     opencv_threads: 1
 
+    # Stamp the outputs with this node's clock, not the image's: arm_camera.launch.py sets it
+    # with use_sim_time:=true (rover.launch.py mode:=sim), where the RealSense stamps on the wall
+    # clock and the rover's TF on Gazebo's.
+    restamp: false
+
     # TF: <colour optical frame> -> <tf_prefix><id> per located marker.
     publish_tf: true
     tf_prefix: aruco_

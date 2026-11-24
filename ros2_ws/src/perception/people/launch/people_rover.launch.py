@@ -15,7 +15,7 @@
 
 Skeletons are placed in base_link, i.e. relative to the rover, using the URDF's
 base_link -> camera_link mount. Ground station layouts:
-  Foxglove (ws://<rover>:8765): chassis_bringup/foxglove/rover_dashboard.json (every mode)
+  Foxglove (ws://<rover>:8765): chassis_bringup/foxglove/rover.json (rover_arm.json with the arm)
   RViz, one per mode: people/rviz/people_rover.rviz | zed_points.rviz
 """
 
