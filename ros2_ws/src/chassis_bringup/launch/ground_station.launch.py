@@ -47,6 +47,13 @@ declare_args = [
         "view-only station or where no /dev/input gamepad exists (Mac container, CI).",
     ),
     DeclareLaunchArgument(
+        "cmd_vel_topic",
+        default_value="/diff_drive_controller/cmd_vel_unstamped",
+        description="Where the joystick publishes. Default: the rover's diff_drive_controller. "
+        "Use /cmd_vel_joy when the rover runs Nav2 (rover.launch.py nav_mode:=debug|full), "
+        "whose command mux then lets the joystick override Nav2.",
+    ),
+    DeclareLaunchArgument(
         "view",
         default_value="drivetrain",
         choices=["drivetrain", "cloud", "openpose", "both"],
@@ -109,6 +116,7 @@ def generate_launch_description():
                 [FindPackageShare("teleop"), "launch", "teleop.launch.py"]
             )
         ),
+        launch_arguments={"cmd_vel_topic": LaunchConfiguration("cmd_vel_topic")}.items(),
         condition=IfCondition(LaunchConfiguration("joystick")),
     )
 

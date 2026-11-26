@@ -65,3 +65,6 @@ ros2_ws/build
 cpp_pubsub
 # OpenPose weights etc. (src/perception/zed_openpose/scripts/get_openpose_models.sh)
 ros2_ws/models/
+
+# Nav2 sim test output (ros2 run navigation run_nav_tests.sh)
+nav_test_results*/

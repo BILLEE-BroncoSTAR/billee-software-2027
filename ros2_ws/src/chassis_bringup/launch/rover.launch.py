@@ -10,9 +10,18 @@ Wraps the existing backends and always starts the foxglove bridge:
     ros2 launch chassis_bringup rover.launch.py mode:=real camera:=both      # + both
     ros2 launch chassis_bringup rover.launch.py mode:=real vio:=true         # + ZED VIO + EKF
     ros2 launch chassis_bringup rover.launch.py mode:=real csi_cameras:=0    # no CSI cameras
+    ros2 launch chassis_bringup rover.launch.py nav_mode:=full world_file:=worlds/nav_test.sdf
+                                            # sim + full Nav2 in the navigation test world
 
 `mode:=sim`  -> sim_gz.launch.py  (Gazebo + ign_ros2_control, no CAN)
 `mode:=real` -> real.launch.py    (standalone controller_manager + OdescSystemHardware)
+
+`nav_mode` (navigation/launch/nav2.launch.py): auto = debug in sim (costmaps, no goals), off on
+the rover. On the rover Nav2 runs only when asked for (nav_mode:=debug|full). It then uses
+global_frame odom (the rover has no map frame yet) and `cloud_topic` (default /zed/points,
+camera:=cloud|both), and starts twist_mux on the rover: the ground station's teleop must then
+publish /cmd_vel_joy (ground_station.launch.py cmd_vel_topic:=/cmd_vel_joy). Real Nav2 is
+prepared but NOT validated on hardware; see docs/navigation.md.
 
 The rover is headless, so `rviz` defaults false; the foxglove bridge (:8765) is always on.
 The ground station runs its own view and the gamepad teleop with `ground_station.launch.py`,
@@ -111,6 +120,26 @@ declare_args = [
         "(odom_tf is then false). Any camera:=. Jetson (l4t) only.",
     ),
     DeclareLaunchArgument(
+        "nav_mode",
+        default_value="auto",
+        choices=["auto", "off", "debug", "full"],
+        description="Nav2: debug = costmaps + planner/controller, no goals (teleop debugging); "
+        "full = whole Nav2 stack (goals); off; auto = debug in mode:=sim, off in mode:=real. "
+        "mode:=real is NOT validated on hardware.",
+    ),
+    DeclareLaunchArgument(
+        "world_file",
+        default_value="worlds/gps_world.sdf",
+        description="mode:=sim only. Gazebo world, relative to the robot_description share "
+        "(worlds/nav_test.sdf = obstacle courses for Nav2 testing).",
+    ),
+    DeclareLaunchArgument(
+        "cloud_topic",
+        default_value="/zed/points",
+        description="mode:=real only. PointCloud2 for the Nav2 costmaps (the sim always uses "
+        "/depth_cam/points).",
+    ),
+    DeclareLaunchArgument(
         "csi_cameras",
         default_value="5",
         description="CSI cameras to start, cam0 upwards: cam0 front, cam1 rear_left, "
@@ -136,12 +165,18 @@ def _setup(context):
     camera, vio, actions = _camera_and_vio(context, mode)
     common = {"foxglove": "true", "rviz": LaunchConfiguration("rviz")}
 
+    nav_mode = LaunchConfiguration("nav_mode").perform(context)
+    if nav_mode == "auto":
+        nav_mode = "debug" if mode == "sim" else "off"
+
     if mode == "sim":
         target = "sim_gz.launch.py"
         args = {
             **common,
             "gui": LaunchConfiguration("gui"),
             "joy_control": LaunchConfiguration("joy_control"),
+            "nav_mode": nav_mode,
+            "world_file": LaunchConfiguration("world_file"),
         }
     elif mode == "real":
         target = "real.launch.py"
@@ -153,6 +188,7 @@ def _setup(context):
             # The EKF owns odom -> base_footprint; diff_drive_controller must not also send it.
             "odom_tf": "false" if vio else LaunchConfiguration("odom_tf"),
         }
+        real_nav = nav_mode != "off"
         # real.launch.py has no teleop of its own (sim_gz does, via joy_control).
         actions.append(
             IncludeLaunchDescription(
@@ -161,9 +197,15 @@ def _setup(context):
                         [FindPackageShare("teleop"), "launch", "teleop.launch.py"]
                     )
                 ),
+                launch_arguments={
+                    "cmd_vel_topic": "/cmd_vel_joy" if real_nav
+                    else "/diff_drive_controller/cmd_vel_unstamped",
+                }.items(),
                 condition=IfCondition(LaunchConfiguration("joy_control")),
             )
         )
+        if real_nav:
+            actions += _real_nav2(nav_mode, camera, vio)
     else:  # DeclareLaunchArgument(choices=...) already guards this
         raise RuntimeError(f"rover.launch.py: unknown mode {mode!r} (use sim|real)")
 
@@ -215,6 +257,48 @@ def _setup(context):
         ),
         *actions,
     ]
+
+
+def _real_nav2(nav_mode, camera, vio):
+    """Nav2 + the command mux on the rover. Prepared for hardware, not validated on it."""
+    actions = [LogInfo(msg=(
+        f"rover.launch.py: nav_mode:={nav_mode} on the real rover (NOT validated on hardware). "
+        "Nav2 drives through twist_mux; the joystick must publish /cmd_vel_joy "
+        "(ground_station.launch.py cmd_vel_topic:=/cmd_vel_joy) to override it."))]
+    if camera not in ("cloud", "both"):
+        actions.append(LogInfo(msg=(
+            "rover.launch.py: no point cloud (camera:=cloud|both), so the costmaps see no "
+            "obstacles.")))
+    if not vio:
+        actions.append(LogInfo(msg=(
+            "rover.launch.py: vio:=false, so odom -> base_footprint is wheel odometry alone, "
+            "which drifts quickly when the rover turns.")))
+    actions += [
+        Node(
+            package="twist_mux",
+            executable="twist_mux",
+            name="twist_mux",
+            output="screen",
+            parameters=[
+                PathJoinSubstitution(
+                    [FindPackageShare("chassis_bringup"), "config", "twist_mux.yaml"]),
+                {"use_sim_time": False},
+            ],
+            remappings=[("cmd_vel_out", "/diff_drive_controller/cmd_vel_unstamped")],
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution(
+                    [FindPackageShare("navigation"), "launch", "nav2.launch.py"])),
+            launch_arguments={
+                "nav_mode": nav_mode,
+                "use_sim_time": "false",
+                "global_frame": "odom",
+                "cloud_topic": LaunchConfiguration("cloud_topic"),
+            }.items(),
+        ),
+    ]
+    return actions
 
 
 def _camera_and_vio(context, mode):

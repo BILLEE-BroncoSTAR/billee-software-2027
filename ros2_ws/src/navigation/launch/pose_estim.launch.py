@@ -1,4 +1,7 @@
-"""Launch the simulation pose estimator and local obstacle costmap."""
+"""Simulation localization: synthetic VIO, local + global EKF, navsat and the GPS covariance relay.
+
+Nav2 (costmaps, planner, controller, navigator) is navigation/launch/nav2.launch.py.
+"""
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -26,9 +29,6 @@ def generate_launch_description():
 
     params_file = PathJoinSubstitution(
         [FindPackageShare("zed2i"), "config", "synthetic_vio.yaml"]
-    )
-    costmap_params_file = PathJoinSubstitution(
-        [FindPackageShare("navigation"), "config", "costmap.yaml"]
     )
 
     launch_nodes.append(
@@ -112,53 +112,8 @@ def generate_launch_description():
             ],
         )
     )
-    # ControllerServer owns the local_costmap.
-    launch_nodes.extend([
-        Node(
-            package="nav2_controller",
-            executable="controller_server",
-            name="controller_server",
-            output="screen",
-            parameters=[costmap_params_file, {'use_sim_time': use_sim}],
-            # The diff-drive controller accepts geometry_msgs/Twist on this
-            remappings=[('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')],
-        ),
-        Node(
-            package="nav2_planner",
-            executable="planner_server",
-            name="planner_server",
-            output="screen",
-            parameters=[costmap_params_file, {'use_sim_time': use_sim}],
-        ),
-        # auto start planner server via a lifecycle node
-        Node(
-            package='nav2_lifecycle_manager',
-            executable='lifecycle_manager',
-            name='lifecycle_manager_planner',
-            output='screen',
-            parameters=[{
-                'use_sim_time': use_sim,
-                'autostart': True,
-                'node_names': ['planner_server']
-            }]
-        ),
-        Node(
-            package="nav2_lifecycle_manager",
-            executable="lifecycle_manager",
-            name="controller_lifecycle_manager",
-            output="screen",
-            parameters=[
-                {
-                    'use_sim_time': use_sim,
-                    'autostart': True,
-                    'node_names': ['controller_server'],
-                }
-            ],
-        ),
-    ])
-
 
     return LaunchDescription([
-        *launch_args,       
+        *launch_args,
         *launch_nodes
     ])

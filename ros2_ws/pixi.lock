@@ -927,6 +927,8 @@ environments:
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-tricycle-controller-2.53.1-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-tricycle-steering-controller-2.53.1-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-turtlesim-1.4.3-np2py312h2ed9cc7_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-twist-mux-4.3.0-np2py312h2ed9cc7_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-twist-mux-msgs-3.0.1-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-uncrustify-vendor-2.0.2-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-unique-identifier-msgs-2.2.1-np2py312h2ed9cc7_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-urdf-2.6.1-np2py312h2ed9cc7_18.conda
@@ -1834,6 +1836,8 @@ environments:
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-tricycle-controller-2.53.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-tricycle-steering-controller-2.53.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-turtlesim-1.4.3-np2py312h61f2ce4_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-twist-mux-4.3.0-np2py312h61f2ce4_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-twist-mux-msgs-3.0.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-uncrustify-vendor-2.0.2-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-unique-identifier-msgs-2.2.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-urdf-2.6.1-np2py312h61f2ce4_18.conda
@@ -2740,6 +2744,8 @@ environments:
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-tricycle-controller-2.53.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-tricycle-steering-controller-2.53.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-turtlesim-1.4.3-np2py312h61f2ce4_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-twist-mux-4.3.0-np2py312h61f2ce4_18.conda
+      - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-twist-mux-msgs-3.0.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-uncrustify-vendor-2.0.2-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-unique-identifier-msgs-2.2.1-np2py312h61f2ce4_18.conda
       - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-urdf-2.6.1-np2py312h61f2ce4_18.conda
@@ -4709,7 +4715,7 @@ packages:
   - python_abi 3.12.* *_cp312
   license: BSD-3-Clause
   purls:
-  - pkg:pypi/kiwisolver?source=compressed-mapping
+  - pkg:pypi/kiwisolver?source=hash-mapping
   run_exports: {}
   size: 75073
   timestamp: 1787938396652
@@ -7706,7 +7712,7 @@ packages:
   - python_abi 3.12.* *_cp312
   license: BSD-3-Clause and MIT-CMU
   purls:
-  - pkg:pypi/lxml?source=compressed-mapping
+  - pkg:pypi/lxml?source=hash-mapping
   run_exports: {}
   size: 1593892
   timestamp: 1787133195108
@@ -7986,7 +7992,7 @@ packages:
   - numpy-base <0a0
   license: BSD-3-Clause
   purls:
-  - pkg:pypi/numpy?source=compressed-mapping
+  - pkg:pypi/numpy?source=hash-mapping
   run_exports:
     weak:
     - numpy >=1.25,<3
@@ -8438,7 +8444,7 @@ packages:
   license: BSD-3-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/psutil?source=compressed-mapping
+  - pkg:pypi/psutil?source=hash-mapping
   run_exports: {}
   size: 225418
   timestamp: 1787417371835
@@ -8542,7 +8548,7 @@ packages:
   - python_abi 3.12.* *_cp312
   license: LGPL-2.1-only OR MPL-1.1
   purls:
-  - pkg:pypi/pycairo?source=compressed-mapping
+  - pkg:pypi/pycairo?source=hash-mapping
   run_exports: {}
   size: 121051
   timestamp: 1786388618767
@@ -8926,7 +8932,7 @@ packages:
   - __glibc >=2.17
   license: MIT
   purls:
-  - pkg:pypi/ruff?source=compressed-mapping
+  - pkg:pypi/ruff?source=hash-mapping
   run_exports: {}
   size: 8955205
   timestamp: 1787865273472
@@ -18096,7 +18102,7 @@ packages:
   license: BSD-3-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/idna?source=compressed-mapping
+  - pkg:pypi/idna?source=hash-mapping
   run_exports: {}
   size: 177433
   timestamp: 1787059857580
@@ -18109,7 +18115,7 @@ packages:
   - python
   license: Apache-2.0
   purls:
-  - pkg:pypi/importlib-metadata?source=compressed-mapping
+  - pkg:pypi/importlib-metadata?source=hash-mapping
   run_exports: {}
   size: 34920
   timestamp: 1787943971257
@@ -18544,7 +18550,7 @@ packages:
   license: MPL-2.0
   license_family: OTHER
   purls:
-  - pkg:pypi/pytest-rerunfailures?source=compressed-mapping
+  - pkg:pypi/pytest-rerunfailures?source=hash-mapping
   run_exports: {}
   size: 26527
   timestamp: 1788434181061
@@ -18644,7 +18650,7 @@ packages:
   license: BSD-3-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/rospkg?source=compressed-mapping
+  - pkg:pypi/rospkg?source=hash-mapping
   run_exports: {}
   size: 32453
   timestamp: 1788606519349
@@ -27869,6 +27875,48 @@ packages:
   run_exports: {}
   size: 703025
   timestamp: 1778998186456
+- conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-twist-mux-4.3.0-np2py312h2ed9cc7_18.conda
+  sha256: 85352da7802a707874e6c75affc8f1960f598b3076345cfa5abe6f7f74fc5a1b
+  md5: 8d8d4904cb7c1323255a0ad759ba80e0
+  depends:
+  - python
+  - ros-humble-diagnostic-updater
+  - ros-humble-geometry-msgs
+  - ros-humble-rclcpp
+  - ros-humble-ros-workspace
+  - ros-humble-std-msgs
+  - ros-humble-twist-mux-msgs
+  - ros-humble-visualization-msgs
+  - ros2-distro-mutex 0.9.* humble_*
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - libstdcxx >=14
+  - numpy >=1.23,<3
+  - python_abi 3.12.* *_cp312
+  - ros2-distro-mutex >=0.9.0,<0.10.0a0
+  license: Apache-2.0
+  run_exports: {}
+  size: 322135
+  timestamp: 1778998848327
+- conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-twist-mux-msgs-3.0.1-np2py312h2ed9cc7_18.conda
+  sha256: 4dff456238b7418e9085687d015a80ab39ff29a91b04844c2e2139c98260eee0
+  md5: cfbed5e7963ff1ee90b6347a9bf7347a
+  depends:
+  - python
+  - ros-humble-action-msgs
+  - ros-humble-ros-workspace
+  - ros-humble-rosidl-default-runtime
+  - ros2-distro-mutex 0.9.* humble_*
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - libstdcxx >=14
+  - numpy >=1.23,<3
+  - ros2-distro-mutex >=0.9.0,<0.10.0a0
+  - python_abi 3.12.* *_cp312
+  license: Apache-2.0
+  run_exports: {}
+  size: 161198
+  timestamp: 1778996929155
 - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-uncrustify-vendor-2.0.2-np2py312h2ed9cc7_18.conda
   sha256: 10dd48aa4cca4475ecb79c14da9a6956ed99f1f9e8a3a38e726ac67b62946648
   md5: 5da607d7246fd8d2853f951c71029529
@@ -36782,6 +36830,46 @@ packages:
   run_exports: {}
   size: 720003
   timestamp: 1778825154949
+- conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-twist-mux-4.3.0-np2py312h61f2ce4_18.conda
+  sha256: 8714ca49a3752baa9298dee9862a08b370af8cc386269d2689d921dccc2b16b9
+  md5: e2ed9e6911d9afda288e442f2543413d
+  depends:
+  - python
+  - ros-humble-diagnostic-updater
+  - ros-humble-geometry-msgs
+  - ros-humble-rclcpp
+  - ros-humble-ros-workspace
+  - ros-humble-std-msgs
+  - ros-humble-twist-mux-msgs
+  - ros-humble-visualization-msgs
+  - ros2-distro-mutex 0.9.* humble_*
+  - libstdcxx >=14
+  - libgcc >=14
+  - ros2-distro-mutex >=0.9.0,<0.10.0a0
+  - numpy >=1.23,<3
+  - python_abi 3.12.* *_cp312
+  license: Apache-2.0
+  run_exports: {}
+  size: 323734
+  timestamp: 1778994705344
+- conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-twist-mux-msgs-3.0.1-np2py312h61f2ce4_18.conda
+  sha256: b6a9814d86da9a2a9b36e4c6a451dd49d359eff75284c3787be5925ce9c5a406
+  md5: 3afd1614bab551a96ee4df1f3fc30363
+  depends:
+  - python
+  - ros-humble-action-msgs
+  - ros-humble-ros-workspace
+  - ros-humble-rosidl-default-runtime
+  - ros2-distro-mutex 0.9.* humble_*
+  - libstdcxx >=14
+  - libgcc >=14
+  - numpy >=1.23,<3
+  - python_abi 3.12.* *_cp312
+  - ros2-distro-mutex >=0.9.0,<0.10.0a0
+  license: Apache-2.0
+  run_exports: {}
+  size: 163410
+  timestamp: 1778823918788
 - conda: https://prefix.dev/robostack-humble/linux-aarch64/ros-humble-uncrustify-vendor-2.0.2-np2py312h61f2ce4_18.conda
   sha256: 9de2afcccdc5a6f8188cd8c3b2afafae98e299fd7058d7cc186e5df398197644
   md5: a6046d1b695233ba555c37d9d9c944ce

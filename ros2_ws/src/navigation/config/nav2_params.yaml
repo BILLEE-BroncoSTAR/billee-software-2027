@@ -1,0 +1,311 @@
+# Nav2 parameters for BILLEE (ROS 2 Humble, Nav2 1.1.x).
+#
+# One file for both launch modes in navigation/launch/nav2.launch.py:
+#   nav_mode:=debug -> controller_server + planner_server only (their costmaps, no goals)
+#   nav_mode:=full  -> nav2_bringup navigation_launch.py (adds bt_navigator, behavior_server,
+#                      velocity_smoother, smoother_server, waypoint_follower)
+#
+# Defaults are the SIMULATION values. nav2.launch.py rewrites these at launch:
+#   use_sim_time            every node (each block must list it: RewrittenYaml only rewrites
+#                           keys that exist)
+#   global_frame            global_costmap + bt_navigator: map (sim, global EKF) or odom (rover,
+#                           which has no map frame yet)
+#   cloud_topic             the voxel layers' point cloud: /depth_cam/points (sim) or /zed/points
+#
+# Geometry (robot_description URDF collision meshes, in base_link; see docs/navigation.md):
+#   front x = +0.505 (front wheels), rear x = -0.615 (rear wheels), sides y = +/-0.391 (wheel faces)
+#   footprint_padding 0.05 m on every side, for the CAD-vs-built tolerance and suspension flex
+#   -> inscribed radius ~0.44 m, circumscribed radius ~0.80 m
+#
+# Humble parameter names (checked against the installed 1.1.20): controller_server takes the
+# singular `progress_checker_plugin`, planner_server takes `planner_plugins`, and there is no
+# `enable_stamped_cmd_vel` (Humble always publishes geometry_msgs/Twist).
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /odometry/filtered
+    transform_tolerance: 0.3
+    bt_loop_duration: 10
+    default_server_timeout: 20
+    # Rewritten by nav2.launch.py bt_xml (default: navigation/behavior_trees/
+    # navigate_to_pose_keep_nearby.xml = Humble's stock navigate_to_pose_w_replanning_and_recovery
+    # with costmap clears that keep obstacles near the rover). Empty = Nav2's stock tree.
+    default_nav_to_pose_bt_xml: ""
+    # plugin_lib_names unset: Humble's built-in default list loads every stock BT node.
+
+# bt_navigator's internal client nodes (Humble creates them; they need the same clock).
+bt_navigator_navigate_to_pose_rclcpp_node:
+  ros__parameters:
+    use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+
+bt_navigator_navigate_through_poses_rclcpp_node:
+  ros__parameters:
+    use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+
+controller_server:
+  ros__parameters:
+    use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+    controller_frequency: 20.0
+    odom_topic: /diff_drive_controller/odom
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugin: "progress_checker"
+    goal_checker_plugins: ["goal_checker"]
+    controller_plugins: ["FollowPath"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.25
+      movement_time_allowance: 10.0
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.20
+      yaw_goal_tolerance: 0.25
+      stateful: true
+    # DWB. Speed/acceleration limits unchanged from the earlier costmap.yaml. The critic set and
+    # scales are Nav2's standard Humble set (nav2_bringup params/nav2_params.yaml): the earlier set
+    # (BaseObstacle, GoalDist, ObstacleFootprint, PreferForward, PathDist, all at scale 1) has no
+    # alignment or rotate critics, and in the detour test it stalled in front of the obstacle
+    # (vx 0, wz +/-0.05) and, after a Spin, drove straight on at 0.11 m/s instead of turning back to
+    # the path. Differences from the standard set: ObstacleFootprint instead of BaseObstacle (it
+    # checks the rectangular footprint, not the centre point) and forward_point_distance 0.3 m
+    # (the critics' own default is 0.325; the 0.1 m in Nav2's file is for a TurtleBot).
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      goal_checker_id: "goal_checker"
+      critics: ["RotateToGoal", "Oscillation", "ObstacleFootprint", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      ObstacleFootprint.scale: 0.02
+      PathAlign.scale: 32.0
+      PathAlign.forward_point_distance: 0.3
+      GoalAlign.scale: 24.0
+      GoalAlign.forward_point_distance: 0.3
+      PathDist.scale: 32.0
+      GoalDist.scale: 24.0
+      RotateToGoal.scale: 32.0
+      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.lookahead_time: -1.0
+      xy_goal_tolerance: 0.20       # same as goal_checker: RotateToGoal starts turning inside it
+      trans_stopped_velocity: 0.25
+      short_circuit_trajectory_evaluation: true
+      stateful: true
+      linear_granularity: 0.05
+      angular_granularity: 0.025
+      min_vel_x: 0.0
+      max_vel_x: 0.5
+      min_vel_y: 0.0
+      max_vel_y: 0.0
+      max_vel_theta: 1.0
+      min_speed_xy: 0.0
+      max_speed_xy: 0.5
+      min_speed_theta: 0.0
+      acc_lim_x: 0.5
+      acc_lim_y: 0.0
+      acc_lim_theta: 1.0
+      decel_lim_x: -0.5
+      decel_lim_y: 0.0
+      decel_lim_theta: -1.0
+      vx_samples: 20
+      vy_samples: 1
+      vtheta_samples: 20
+      sim_time: 1.7
+
+planner_server:
+  ros__parameters:
+    use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+    expected_planner_frequency: 1.0
+    planner_plugins: ["GridBased"]
+    # Smac 2D A*: plans around costmap obstacles (the StraightLine plugin still exists in this
+    # package, unused, and ignores the costmap). It checks the robot centre against the inflated
+    # costmap, so the inflation radius below must cover the footprint.
+    GridBased:
+      plugin: "nav2_smac_planner/SmacPlanner2D"
+      tolerance: 0.25
+      downsample_costmap: false
+      downsampling_factor: 1
+      allow_unknown: true           # mapless: everything the camera hasn't seen is unknown
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 2.0
+      cost_travel_multiplier: 2.0
+      use_final_approach_orientation: false
+      smoother:
+        max_iterations: 1000
+        w_smooth: 0.3
+        w_data: 0.2
+        tolerance: 1.0e-10
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+    costmap_topic: local_costmap/costmap_raw
+    footprint_topic: local_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait"]
+    spin:
+      plugin: "nav2_behaviors/Spin"
+    backup:
+      plugin: "nav2_behaviors/BackUp"
+    drive_on_heading:
+      plugin: "nav2_behaviors/DriveOnHeading"
+    wait:
+      plugin: "nav2_behaviors/Wait"
+    global_frame: odom
+    robot_base_frame: base_link
+    transform_tolerance: 0.3
+    simulate_ahead_time: 2.0
+    # Within DWB's 1.0 rad/s. In-place spins are hard on a skid-steer drivetrain and
+    # make the global (no-IMU) heading drift; see docs/navigation.md.
+    max_rotational_vel: 0.5
+    min_rotational_vel: 0.2
+    rotational_acc_lim: 1.0
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+    smoothing_frequency: 20.0
+    scale_velocities: false
+    feedback: "OPEN_LOOP"
+    # Matches the DWB envelope (forward 0.5 m/s, 1.0 rad/s, 0.5 m/s^2, 1.0 rad/s^2).
+    max_velocity: [0.5, 0.0, 1.0]
+    min_velocity: [-0.5, 0.0, -1.0]
+    max_accel: [0.5, 0.0, 1.0]
+    max_decel: [-0.5, 0.0, -1.0]
+    odom_topic: /odometry/filtered
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: true
+
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: true
+      waypoint_pause_duration: 0
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+      global_frame: map             # rewritten to odom on the rover
+      robot_base_frame: base_link
+      update_frequency: 2.0
+      publish_frequency: 1.0
+      transform_tolerance: 0.5
+      # Mapless: a fixed 100 x 100 m grid centred on the start (the map/odom origin), not a
+      # rolling window, so obstacles stay remembered. Goals must lie inside it.
+      rolling_window: false
+      width: 100
+      height: 100
+      origin_x: -50.0
+      origin_y: -50.0
+      resolution: 0.1
+      track_unknown_space: true
+      footprint: "[[0.505, 0.391], [0.505, -0.391], [-0.615, -0.391], [-0.615, 0.391]]"
+      footprint_padding: 0.05
+      plugins: ["voxel_layer", "inflation_layer"]
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        publish_voxel_map: false
+        origin_z: 0.0
+        z_resolution: 0.0625        # 16 voxels x 0.0625 m = 1.0 m of column
+        z_voxels: 16
+        max_obstacle_height: 1.0
+        mark_threshold: 0
+        unknown_threshold: 15
+        observation_sources: pointcloud
+        pointcloud:
+          topic: /depth_cam/points  # rewritten from cloud_topic
+          data_type: "PointCloud2"
+          marking: true
+          clearing: true
+          # Above flat ground noise and below the rover's own height.
+          min_obstacle_height: 0.15
+          max_obstacle_height: 1.0
+          obstacle_max_range: 9.5   # depth camera far clip is 10 m
+          obstacle_min_range: 0.0
+          raytrace_max_range: 10.0
+          raytrace_min_range: 0.0
+          expected_update_rate: 0.0 # sim runs slower than real time
+          observation_persistence: 0.0
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # >= circumscribed radius (0.80 m) so the centre-point planner keeps the whole
+        # footprint clear. Cost falls as 252*exp(-k*(d - 0.44)) beyond the inscribed radius: with
+        # k = 3.0 the detour path passed 5.5 cm from the block (truth). k = 1.5 keeps the cost high
+        # further out, so paths stay clear by more than the ~0.1-0.2 m localization error where
+        # there is room, while the 1.6 m test gap (centre 0.8 m from each wall, cost ~147 < 253)
+        # stays passable.
+        inflation_radius: 1.0
+        cost_scaling_factor: 1.5
+      always_send_full_costmap: true
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: true        # rewritten by nav2.launch.py use_sim_time
+      global_frame: odom
+      robot_base_frame: base_link
+      update_frequency: 10.0
+      publish_frequency: 5.0
+      transform_tolerance: 0.5
+      rolling_window: true
+      width: 6
+      height: 6
+      resolution: 0.05
+      # false (Nav2's default for a local costmap): unseen cells count as free. The one depth
+      # camera looks forward only and sees the ground from ~0.8 m ahead, so the cells under and
+      # beside the rover are never observed; tracked as unknown, DWB and the recovery behaviors
+      # reject every footprint pose. Consequence: nothing to the sides or behind is ever marked.
+      track_unknown_space: false
+      footprint: "[[0.505, 0.391], [0.505, -0.391], [-0.615, -0.391], [-0.615, 0.391]]"
+      footprint_padding: 0.05
+      plugins: ["voxel_layer", "inflation_layer"]
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        publish_voxel_map: false
+        origin_z: 0.0
+        z_resolution: 0.0625
+        z_voxels: 16
+        max_obstacle_height: 1.0
+        mark_threshold: 0
+        unknown_threshold: 15
+        observation_sources: pointcloud
+        pointcloud:
+          topic: /depth_cam/points  # rewritten from cloud_topic
+          data_type: "PointCloud2"
+          marking: true
+          clearing: true
+          min_obstacle_height: 0.15
+          max_obstacle_height: 1.0
+          obstacle_max_range: 3.5
+          obstacle_min_range: 0.0
+          raytrace_max_range: 4.0
+          raytrace_min_range: 0.0
+          expected_update_rate: 0.0
+          observation_persistence: 0.0
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        inflation_radius: 0.85
+        cost_scaling_factor: 3.0
+      always_send_full_costmap: true

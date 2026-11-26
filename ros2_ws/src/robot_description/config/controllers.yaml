@@ -46,3 +46,18 @@ diff_drive_controller:
     # truth, and the earlier 0.05 made the global EKF lag and overshoot turns by 7-13 deg.
     pose_covariance_diagonal: [0.05, 0.05, 1000000.0, 1000000.0, 1000000.0, 0.2]
     twist_covariance_diagonal: [0.01, 0.01, 1000000.0, 1000000.0, 1000000.0, 0.01]
+joint_state_broadcaster:
+  ros__parameters:
+    # Fixed /joint_states order (otherwise it follows the hardware's interface order, which in
+    # Gazebo is r1, l1, l2, r2, r3, l3). chassis_bringup/foxglove/navigation.json plots
+    # velocity[0..5] as R1, R2, R3, L1, L2, L3.
+    joints:
+      - joint_wheel_r1
+      - joint_wheel_r2
+      - joint_wheel_r3
+      - joint_wheel_l1
+      - joint_wheel_l2
+      - joint_wheel_l3
+    interfaces:
+      - position
+      - velocity

@@ -1,0 +1,183 @@
+<?xml version="1.0" ?>
+<!--
+  Nav2 test world: gps_world.sdf (flat plane, NavSat system, the same geodetic origin) plus
+  static obstacles in four parallel lanes. Generated from gps_world.sdf; obstacle models are
+  named obs_* (navigation/scripts/nav_scenario_test.py reads them to measure clearance).
+
+  Every lane: spawn at x = 0 facing east (yaw 0, which navsat needs) and drive to x = 15, i.e.
+  map-frame goal (15, 0), since the map origin is the start. Lanes are 20 m apart in y, beyond the
+  depth camera's 10 m range, so one lane's obstacles never reach another's costmap.
+
+    lane     spawn y   course
+    open        0      nothing in the way
+    detour     20      1.0 x 3.0 m block across the line at x = 7
+    narrow     40      wall across the lane at x = 7 (10 m each side) with a 1.6 m gap on the line
+    blocked    60      goal inside a closed 4 x 4 m pen: unreachable
+
+    ros2 launch chassis_bringup sim_gz.launch.py world_file:=worlds/nav_test.sdf y:=20 nav_mode:=full
+
+  Obstacles are 1.0 m tall boxes with matching collision and visual geometry.
+-->
+<sdf version="1.6">
+  <world name="nav_test">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin
+      filename="ignition-gazebo-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="ignition-gazebo-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+      filename="ignition-gazebo-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin
+      filename="ignition-gazebo-contact-system"
+      name="gz::sim::systems::Contact">
+    </plugin>
+    <!-- NavSat system: required for navsat sensors to publish. Fortress uses the
+         ignition- filename; the tutorial's gz-sim-navsat-system is the Garden+ name.
+         Unlike the systems above, this plugin registers no gz:: alias in Fortress,
+         so it must use the ignition:: name. -->
+    <plugin
+      filename="ignition-gazebo-navsat-system"
+      name="ignition::gazebo::systems::NavSat">
+    </plugin>
+
+    <!-- Geodetic origin of the world frame: center of the testing ground square mile. -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>38.418</latitude_deg>
+      <longitude_deg>-110.777</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- 2 km plane covers the whole ~1.6 km testing ground from the origin. -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2000 2000</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2000 2000</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obs_detour_block">
+      <static>true</static>
+      <pose>7.0 20.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1.0 3.0 1.0</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>1.0 3.0 1.0</size></box></geometry>
+          <material><ambient>0.8 0.3 0.1 1</ambient><diffuse>0.8 0.3 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="obs_narrow_wall_n">
+      <static>true</static>
+      <pose>7.0 45.8 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.2 10.0 1.0</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 10.0 1.0</size></box></geometry>
+          <material><ambient>0.1 0.4 0.8 1</ambient><diffuse>0.1 0.4 0.8 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="obs_narrow_wall_s">
+      <static>true</static>
+      <pose>7.0 34.2 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.2 10.0 1.0</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 10.0 1.0</size></box></geometry>
+          <material><ambient>0.1 0.4 0.8 1</ambient><diffuse>0.1 0.4 0.8 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="obs_blocked_pen_w">
+      <static>true</static>
+      <pose>13.0 60.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.2 4.2 1.0</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 4.2 1.0</size></box></geometry>
+          <material><ambient>0.7 0.1 0.1 1</ambient><diffuse>0.7 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="obs_blocked_pen_e">
+      <static>true</static>
+      <pose>17.0 60.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.2 4.2 1.0</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 4.2 1.0</size></box></geometry>
+          <material><ambient>0.7 0.1 0.1 1</ambient><diffuse>0.7 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="obs_blocked_pen_n">
+      <static>true</static>
+      <pose>15.0 62.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>4.2 0.2 1.0</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>4.2 0.2 1.0</size></box></geometry>
+          <material><ambient>0.7 0.1 0.1 1</ambient><diffuse>0.7 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="obs_blocked_pen_s">
+      <static>true</static>
+      <pose>15.0 58.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>4.2 0.2 1.0</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>4.2 0.2 1.0</size></box></geometry>
+          <material><ambient>0.7 0.1 0.1 1</ambient><diffuse>0.7 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

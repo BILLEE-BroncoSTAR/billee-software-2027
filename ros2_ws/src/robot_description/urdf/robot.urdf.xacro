@@ -7,6 +7,9 @@
          The property mirror keeps every downstream ${use_sim} reference working. -->
     <xacro:arg name="use_sim" default="true"/>
     <xacro:property name="use_sim" value="$(arg use_sim)"/>
+    <!-- Gazebo depth camera resolution (see macros.xacro); inert outside the sim. -->
+    <xacro:arg name="sim_camera_width" default="320"/>
+    <xacro:arg name="sim_camera_height" default="180"/>
 
     <xacro:include filename="robot_core.urdf.xacro"/>
     <!-- robot_gz.urdf.xacro is left included unconditionally: its <gazebo> blocks

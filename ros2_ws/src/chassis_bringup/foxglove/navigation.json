@@ -1,0 +1,458 @@
+{
+  "configById": {
+    "3D!nav": {
+      "foxglovePanelTitle": "Navigation 3D (fixed frame map; Publish pose -> /goal_pose)",
+      "cameraState": {
+        "perspective": false,
+        "distance": 22,
+        "phi": 0.01,
+        "thetaOffset": 90,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.01,
+        "far": 5000
+      },
+      "followMode": "follow-position",
+      "followTf": "map",
+      "scene": {
+        "transforms": {
+          "showLabel": false,
+          "axisScale": 0.3
+        },
+        "backgroundColor": "#303030",
+        "meshUpAxis": "z_up"
+      },
+      "transforms": {},
+      "topics": {
+        "/global_costmap/costmap": {
+          "visible": true,
+          "colorMode": "costmap",
+          "alpha": 0.5,
+          "frameLocked": false
+        },
+        "/local_costmap/costmap": {
+          "visible": true,
+          "colorMode": "costmap",
+          "alpha": 0.7,
+          "frameLocked": false
+        },
+        "/plan": {
+          "visible": true,
+          "type": "line",
+          "lineWidth": 0.08,
+          "gradient": [
+            "#00e5ffff",
+            "#00e5ffff"
+          ]
+        },
+        "/local_plan": {
+          "visible": true,
+          "type": "line",
+          "lineWidth": 0.06,
+          "gradient": [
+            "#ffd000ff",
+            "#ffd000ff"
+          ]
+        },
+        "/local_costmap/published_footprint": {
+          "visible": true,
+          "color": "#ff00ffff"
+        },
+        "/goal_pose": {
+          "visible": true,
+          "type": "arrow",
+          "arrowScale": [
+            1,
+            0.15,
+            0.15
+          ],
+          "color": "#00ff00ff"
+        },
+        "/depth_cam/points": {
+          "visible": false,
+          "pointSize": 2,
+          "colorField": "z",
+          "colorMode": "colormap",
+          "colorMap": "turbo",
+          "decayTime": 0
+        },
+        "/zed/points": {
+          "visible": false,
+          "pointSize": 2,
+          "colorField": "z",
+          "colorMode": "colormap",
+          "colorMap": "turbo",
+          "decayTime": 0
+        },
+        "/odometry/filtered": {
+          "visible": true,
+          "type": "arrow",
+          "arrowScale": [
+            0.6,
+            0.08,
+            0.08
+          ],
+          "color": "#4a90e2ff",
+          "historySize": 1
+        },
+        "/odometry/global": {
+          "visible": true,
+          "type": "arrow",
+          "arrowScale": [
+            0.6,
+            0.08,
+            0.08
+          ],
+          "color": "#f5a623ff",
+          "historySize": 1
+        },
+        "/gz/odom": {
+          "visible": false,
+          "type": "arrow",
+          "arrowScale": [
+            0.6,
+            0.08,
+            0.08
+          ],
+          "color": "#ffffffff",
+          "historySize": 1
+        }
+      },
+      "layers": {
+        "grid": {
+          "layerId": "foxglove.Grid",
+          "instanceId": "grid",
+          "label": "Grid",
+          "visible": true,
+          "frameLocked": true,
+          "order": 1,
+          "size": 40,
+          "divisions": 40,
+          "lineWidth": 1,
+          "color": "#a0a0a440",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "urdf": {
+          "layerId": "foxglove.Urdf",
+          "instanceId": "urdf",
+          "label": "Robot Model",
+          "visible": true,
+          "frameLocked": false,
+          "order": 2,
+          "sourceType": "topic",
+          "topic": "/robot_description"
+        }
+      },
+      "publish": {
+        "type": "pose",
+        "poseTopic": "/goal_pose",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26
+      }
+    },
+    "Plot!wheels": {
+      "foxglovePanelTitle": "Wheel speeds (rad/s, /joint_states)",
+      "paths": [
+        {
+          "value": "/joint_states.velocity[0]",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "R1"
+        },
+        {
+          "value": "/joint_states.velocity[1]",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "R2"
+        },
+        {
+          "value": "/joint_states.velocity[2]",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "R3"
+        },
+        {
+          "value": "/joint_states.velocity[3]",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "L1"
+        },
+        {
+          "value": "/joint_states.velocity[4]",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "L2"
+        },
+        {
+          "value": "/joint_states.velocity[5]",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "L3"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30,
+      "sidebarDimension": 240
+    },
+    "Plot!vx": {
+      "foxglovePanelTitle": "Forward speed (m/s): command vs measured",
+      "paths": [
+        {
+          "value": "/diff_drive_controller/cmd_vel_unstamped.linear.x",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "cmd (mux out)"
+        },
+        {
+          "value": "/diff_drive_controller/odom.twist.twist.linear.x",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "wheel odom"
+        },
+        {
+          "value": "/odometry/filtered.twist.twist.linear.x",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "local EKF"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30,
+      "sidebarDimension": 240
+    },
+    "Plot!wz": {
+      "foxglovePanelTitle": "Yaw rate (rad/s): command vs measured",
+      "paths": [
+        {
+          "value": "/diff_drive_controller/cmd_vel_unstamped.angular.z",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "cmd (mux out)"
+        },
+        {
+          "value": "/diff_drive_controller/odom.twist.twist.angular.z",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "wheel odom"
+        },
+        {
+          "value": "/odometry/filtered.twist.twist.angular.z",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "local EKF"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30,
+      "sidebarDimension": 240
+    },
+    "Plot!sources": {
+      "foxglovePanelTitle": "Command sources into twist_mux (linear.x)",
+      "paths": [
+        {
+          "value": "/cmd_vel_joy.linear.x",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "joystick (prio 100)"
+        },
+        {
+          "value": "/cmd_vel.linear.x",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "Nav2 (prio 10)"
+        },
+        {
+          "value": "/diff_drive_controller/cmd_vel_unstamped.linear.x",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "mux output"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30,
+      "sidebarDimension": 240
+    },
+    "Plot!nav": {
+      "foxglovePanelTitle": "Nav2 goal progress",
+      "paths": [
+        {
+          "value": "/navigate_to_pose/_action/feedback.distance_remaining",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "distance remaining (m)"
+        },
+        {
+          "value": "/navigate_to_pose/_action/feedback.number_of_recoveries",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "recoveries"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30,
+      "sidebarDimension": 240
+    },
+    "StateTransitions!status": {
+      "foxglovePanelTitle": "Nav2 goal status (2 accepted, 4 succeeded, 5 canceled, 6 aborted)",
+      "paths": [
+        {
+          "value": "/navigate_to_pose/_action/status.status_list[-1].status",
+          "timestampMethod": "receiveTime",
+          "label": "NavigateToPose"
+        }
+      ],
+      "isSynced": true
+    },
+    "CallService!cancel": {
+      "foxglovePanelTitle": "Cancel every Nav2 goal",
+      "serviceName": "/navigate_to_pose/_action/cancel_goal",
+      "requestPayload": "{}",
+      "buttonText": "Cancel goal",
+      "buttonTooltip": "action_msgs/srv/CancelGoal with an empty goal id cancels all goals",
+      "buttonColor": "#d0021b"
+    },
+    "map!gps": {
+      "foxglovePanelTitle": "GPS",
+      "center": {
+        "lat": 38.418,
+        "lon": -110.777
+      },
+      "zoomLevel": 19,
+      "customTileUrl": "",
+      "disabledTopics": [],
+      "followTopic": "/gps/filtered",
+      "layer": "map",
+      "topicColors": {
+        "/gps": "#f5a623",
+        "/gps/filtered": "#4a90e2"
+      }
+    },
+    "DiagnosticSummary!diag": {
+      "foxglovePanelTitle": "Diagnostics (EKFs, Nav2 health)",
+      "minLevel": 0,
+      "pinnedIds": [],
+      "hardwareIdFilter": "",
+      "topicToRender": "/diagnostics",
+      "sortByLevel": true
+    },
+    "RosOut!log": {
+      "foxglovePanelTitle": "Log (warnings and errors)",
+      "searchTerms": [],
+      "minLogLevel": 3,
+      "topicToRender": "/rosout"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "splitPercentage": 55,
+    "first": {
+      "direction": "column",
+      "splitPercentage": 72,
+      "first": "3D!nav",
+      "second": {
+        "direction": "row",
+        "splitPercentage": 50,
+        "first": "StateTransitions!status",
+        "second": "CallService!cancel"
+      }
+    },
+    "second": {
+      "direction": "column",
+      "splitPercentage": 66,
+      "first": {
+        "direction": "column",
+        "splitPercentage": 50,
+        "first": {
+          "direction": "row",
+          "splitPercentage": 50,
+          "first": "Plot!vx",
+          "second": "Plot!wz"
+        },
+        "second": {
+          "direction": "row",
+          "splitPercentage": 50,
+          "first": "Plot!wheels",
+          "second": "Plot!sources"
+        }
+      },
+      "second": {
+        "direction": "row",
+        "splitPercentage": 34,
+        "first": "Plot!nav",
+        "second": {
+          "direction": "row",
+          "splitPercentage": 50,
+          "first": "map!gps",
+          "second": {
+            "direction": "column",
+            "splitPercentage": 50,
+            "first": "DiagnosticSummary!diag",
+            "second": "RosOut!log"
+          }
+        }
+      }
+    }
+  }
+}

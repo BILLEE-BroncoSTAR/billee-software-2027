@@ -1,0 +1,12 @@
+# QoS overrides for run_nav_tests.sh -b. Without them rosbag2 can match /tf with the first
+# publisher's QoS (diff_drive_controller's) and drop the EKFs' transforms.
+/tf:
+  reliability: reliable
+  durability: volatile
+  history: keep_last
+  depth: 1000
+/tf_static:
+  reliability: reliable
+  durability: transient_local
+  history: keep_last
+  depth: 100

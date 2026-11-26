@@ -39,8 +39,13 @@
         </visual>
     </xacro:macro>
 
-    <xacro:property name="zed_width" value="1280" />
-    <xacro:property name="zed_height" value="720" />
+    <!-- Simulated depth camera resolution (robot.urdf.xacro args sim_camera_width/height).
+         The point cloud has one point per pixel, 24 bytes each: at 1280x720 that is 22 MB per
+         cloud, which DDS mostly drops, so the Nav2 costmaps received almost no clouds. 320x180
+         (1.4 MB) matches the density of the real ZED cloud (zed_openpose cloud_step 4 on HD720).
+         The intrinsics below follow the width, so the field of view stays 120 deg. -->
+    <xacro:property name="zed_width" value="$(arg sim_camera_width)" />
+    <xacro:property name="zed_height" value="$(arg sim_camera_height)" />
     <xacro:property name="zed_horizontal_fov_deg" value="120" />
     <xacro:property name="zed_horizontal_fov" value="${zed_horizontal_fov_deg * pi / 180.0}" />
     <xacro:property name="zed_fx" value="${zed_width / (2 * tan(zed_horizontal_fov / 2))}" />

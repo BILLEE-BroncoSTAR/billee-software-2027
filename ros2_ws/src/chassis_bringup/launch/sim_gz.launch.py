@@ -5,7 +5,8 @@ from launch_ros.parameter_descriptions import ParameterValue
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
-from launch.actions import OpaqueFunction
+from launch.actions import LogInfo, OpaqueFunction, RegisterEventHandler
+from launch.event_handlers import OnProcessExit
 from launch_ros.substitutions import FindPackageShare
 
 import glob
@@ -99,9 +100,29 @@ declare_args = [
             "navigation",
             default_value="true",
             description=(
-                "Start the simulation pose estimator (synthetic VIO + EKF) and the Nav2 "
-                "controller/planner servers. The EKF is the only odom -> base_footprint TF "
-                "source, so the viewers' odom fixed frame needs this."
+                "Start the simulation localization (synthetic VIO, local + global EKF, navsat). "
+                "The local EKF is the only odom -> base_footprint TF source and the global EKF "
+                "the only map -> odom source, so the viewers' fixed frames need this. "
+                "nav_mode needs it."
+            ),
+        ),
+        DeclareLaunchArgument(
+            "nav_mode",
+            default_value="debug",
+            choices=["off", "debug", "full"],
+            description=(
+                "Nav2 (navigation/launch/nav2.launch.py). debug = planner/controller servers "
+                "and both costmaps, no goals (teleop debugging); full = the whole Nav2 stack, "
+                "goals via NavigateToPose or /goal_pose; off = none. Needs navigation:=true."
+            ),
+        ),
+        DeclareLaunchArgument(
+            "cmd_mux",
+            default_value="true",
+            description=(
+                "Route drive commands through twist_mux (config/twist_mux.yaml): joystick "
+                "/cmd_vel_joy overrides Nav2 /cmd_vel. false = teleop drives "
+                "diff_drive_controller directly (Nav2 then also does, and the two compete)."
             ),
         ),
         DeclareLaunchArgument(
@@ -263,6 +284,53 @@ def _launch_description(ctx):
         condition=IfCondition(LaunchConfiguration("navigation")),
     )
 
+    # Nav2 in the sim: global costmap in map (global EKF), the Gazebo depth camera's cloud.
+    nav_mode = LaunchConfiguration("nav_mode").perform(ctx)
+    localization = LaunchConfiguration("navigation").perform(ctx).lower() in ("true", "1")
+    nav2 = []
+    if nav_mode != "off" and not localization:
+        nav2 = [LogInfo(msg=(
+            f"sim_gz.launch.py: nav_mode:={nav_mode} ignored, it needs navigation:=true "
+            "(the EKFs publish the odom and map frames Nav2 uses)."))]
+    elif nav_mode != "off":
+        nav2_include = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare("navigation"), "launch", "nav2.launch.py"
+                ])
+            ),
+            launch_arguments={
+                "nav_mode": nav_mode,
+                "use_sim_time": "true",
+                "global_frame": "map",
+                "cloud_topic": "/depth_cam/points",
+            }.items(),
+        )
+        # Start Nav2 once the controller spawner exits, i.e. Gazebo is stepping and the drive
+        # controllers are active. Started together with Gazebo's spawn and camera start-up, a
+        # lifecycle change_state reply was occasionally lost and the lifecycle manager waited
+        # forever (Humble has no timeout there); it also floods "waiting for transform".
+        nav2 = [RegisterEventHandler(OnProcessExit(
+            target_action=diff_drive_controller_spawner,
+            on_exit=[LogInfo(msg="sim_gz.launch.py: controllers active, starting Nav2"),
+                     nav2_include],
+        ))]
+
+    # Drive-command mux: the joystick (priority 100) overrides Nav2 (priority 10).
+    cmd_mux = LaunchConfiguration("cmd_mux").perform(ctx).lower() in ("true", "1")
+    twist_mux = Node(
+        package="twist_mux",
+        executable="twist_mux",
+        name="twist_mux",
+        output="screen",
+        parameters=[
+            PathJoinSubstitution([FindPackageShare("chassis_bringup"), "config", "twist_mux.yaml"]),
+            {"use_sim_time": True},
+        ],
+        remappings=[("cmd_vel_out", "/diff_drive_controller/cmd_vel_unstamped")],
+        condition=IfCondition(LaunchConfiguration("cmd_mux")),
+    )
+
     # A second, namespaced controller manager mirrors the command into the
     # ODESC/vCAN path. Gazebo remains authoritative for robot physics and TF.
     odesc_shadow = IncludeLaunchDescription(
@@ -289,6 +357,10 @@ def _launch_description(ctx):
                 FindPackageShare("teleop"), "launch", "teleop.launch.py"
             ])
         ),
+        launch_arguments={
+            "cmd_vel_topic": "/cmd_vel_joy" if cmd_mux
+            else "/diff_drive_controller/cmd_vel_unstamped",
+        }.items(),
         condition=IfCondition(LaunchConfiguration("joy_control")),
     )
 
@@ -303,6 +375,8 @@ def _launch_description(ctx):
             teleop,
             odesc_shadow,
             navigation,
+            twist_mux,
+            *nav2,
             viz,
         ]
 

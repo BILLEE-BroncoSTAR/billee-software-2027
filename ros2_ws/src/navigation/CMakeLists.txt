@@ -44,9 +44,15 @@ ament_target_dependencies(nav2_straightline_planner_plugin
 add_executable(gps_covariance_relay src/gps_covariance_relay.cpp)
 ament_target_dependencies(gps_covariance_relay rclcpp sensor_msgs)
 
-install(DIRECTORY config launch
+install(DIRECTORY config launch behavior_trees
   DESTINATION share/${PROJECT_NAME}
 )
+
+# Sim test tools: ros2 run navigation nav_scenario_test.py | run_nav_tests.sh
+install(PROGRAMS scripts/nav_scenario_test.py scripts/run_nav_tests.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+install(FILES scripts/bag_qos.yaml DESTINATION lib/${PROJECT_NAME})
 
 install(
   TARGETS gps_covariance_relay

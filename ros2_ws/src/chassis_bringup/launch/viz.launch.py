@@ -88,6 +88,10 @@ def generate_launch_description():
                 "address": "0.0.0.0",
                 "use_sim_time": use_sim_time,
                 "topic_whitelist": [".*"],
+                # Expose hidden names too: Nav2's action status/feedback topics and its
+                # cancel_goal service (/navigate_to_pose/_action/*), used by
+                # foxglove/navigation.json. Nothing is sent until a client subscribes.
+                "include_hidden": True,
                 "send_buffer_limit": 10000000,
             }
         ],

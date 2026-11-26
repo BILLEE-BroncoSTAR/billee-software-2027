@@ -47,12 +47,20 @@ class JoyTankDrive : public rclcpp::Node{
                 twistMsg.angular.x = 0;
                 twistMsg.angular.y =  0;
                 twistMsg.angular.z = ((rightAxis - leftAxis) / trackWidth) * maxVel;
+            } else if(!wasHeld){
+                // Deadman released: publish nothing, so a command mux (twist_mux) times this
+                // source out and lets lower-priority sources (Nav2) drive. diff_drive_controller
+                // stops on its own cmd_vel_timeout when nothing else publishes.
+                return;
             }
+            // Held: the stick command. Just released: one zero, so the rover stops at once.
+            wasHeld = safetyButton != 0;
 
             twistPublisher_->publish(twistMsg);
 
         }
 
+        bool wasHeld = false;
         int leftAxisId;
         int rightAxisId;
         int safetyButtonId;

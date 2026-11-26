@@ -1,0 +1,23 @@
+# twist_mux: the only publisher to diff_drive_controller when cmd_mux:=true.
+#
+# The highest-priority input that has published within its timeout wins; others are ignored.
+# Output: cmd_vel_out, remapped in the launch file to /diff_drive_controller/cmd_vel_unstamped.
+#
+# joy_tank_drive publishes only while its deadman is held (plus one zero on release), so
+# releasing the deadman hands control back to Nav2 after `timeout`. Holding the deadman
+# always overrides Nav2, even with the sticks centred (it then commands zero).
+twist_mux:
+  ros__parameters:
+    topics:
+      joystick:
+        topic: /cmd_vel_joy       # teleop (joy_tank_drive)
+        timeout: 0.5
+        priority: 100
+      keyboard:
+        topic: /cmd_vel_key       # teleop_twist_keyboard --ros-args -r cmd_vel:=/cmd_vel_key
+        timeout: 0.5
+        priority: 90
+      navigation:
+        topic: /cmd_vel           # Nav2 (velocity_smoother and behavior_server)
+        timeout: 0.5
+        priority: 10
