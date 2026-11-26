@@ -1,4 +1,4 @@
-# Waypoint navigation with Nav2 (work in progress)
+# Waypoint navigation with Nav2
 
 > **Work in progress.** Tested in the Gazebo sim only. Nothing here has run on the real rover yet.
 
@@ -6,9 +6,7 @@ Code:
 - [`ros2_ws/src/navigation/`](../ros2_ws/src/navigation): `launch/nav2.launch.py`, `config/nav2_params.yaml`, `behavior_trees/`, `scripts/`.
 - [`ros2_ws/src/chassis_bringup/`](../ros2_ws/src/chassis_bringup): `config/twist_mux.yaml`, `foxglove/navigation.json`.
 
-The rover drives itself to a goal pose (a waypoint) with Nav2, avoiding obstacles seen by the depth
-camera. You can send goals from Foxglove or from a terminal. The joystick or keyboard can always
-take over.
+The rover drives itself to a goal pose (a waypoint) with Nav2, avoiding obstacles seen by the depth camera. You can send goals from Foxglove or from a terminal. The joystick or keyboard can always take over.
 
 ## Start up
 
@@ -16,7 +14,6 @@ All terminals are VS Code terminals inside the devcontainer, started in `ros2_ws
 after pulling, install the new dependency (`twist_mux`) and build:
 
 ```bash
-cd /workspaces/URC-2027/ros2_ws
 pixi install
 pixi run build
 ```
@@ -25,23 +22,22 @@ pixi run build
 `Managed nodes are active` in the log.
 
 ```bash
-# Obstacle test world
+# Obstacle test world for object avoidence
 pixi run ros2 launch chassis_bringup rover.launch.py mode:=sim gui:=true nav_mode:=full world_file:=worlds/nav_test.sdf
 # Or the default (empty) world
 pixi run ros2 launch chassis_bringup rover.launch.py mode:=sim gui:=true nav_mode:=full
 ```
 
-**Terminal 2, driving (optional).** Pick one and leave it running.
+**Terminal 2, driving if needed** 
 
 ```bash
-# Keyboard: click into this terminal; i = forward, k = stop
+# Keyboard controlls
 pixi run ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/cmd_vel_key
-# Gamepad: hold LB / L1 to drive
+# Gamepad controlls
 pixi run ros2 launch teleop teleop.launch.py cmd_vel_topic:=/cmd_vel_joy
 ```
 
-**Foxglove Studio.** Open a connection: **Foxglove WebSocket**, `ws://localhost:8765`. The first time,
-use **Layouts → Import from file** and pick
+**Foxglove Studio.** Open a connection: **Foxglove WebSocket**, `ws://localhost:8765`. The first time, use **Layouts → Import from file** and pick
 `ros2_ws/src/chassis_bringup/foxglove/navigation.json`. After that, just select the layout.
 
 **Shutting down.** Press Ctrl+C in each terminal, in reverse order. If the next start misbehaves
@@ -61,8 +57,7 @@ pixi run bash -c "fastdds shm clean"
 
 ## Using waypoints
 
-A goal is a position in the `map` frame. The origin is where the rover spawned, +x is east (straight
-ahead at spawn) and +y is north. Units are metres.
+A goal is a position in the `map` frame. The origin is where the rover spawned, +x is east (straight ahead at spawn) and +y is north. Units are metres.
 
 **From Foxglove.** In the **Navigation 3D** panel, pick the **Publish pose** tool. Click where you
 want the rover to go, then drag to set the direction it should face. The green arrow marks the goal.
@@ -130,6 +125,22 @@ Nav2      /cmd_vel      (priority 10)  ─┘
 - **Recoveries.** When stuck, Nav2 clears the costmaps (except a 4 × 4 m area around the rover), spins, waits and backs up, then retries. It gives up after 6 tries.
 - **`twist_mux`** (`chassis_bringup/config/twist_mux.yaml`) decides who drives. The joystick only publishes while its deadman is held, so Nav2 gets control back when you let go.
 - **Sim camera** is 320×180. At 1280×720 the point clouds were too large and most never reached Nav2.
+
+## New files
+
+Paths are under `ros2_ws/src/`.
+
+| File | Role |
+|---|---|
+| `navigation/launch/nav2.launch.py` | Starts Nav2 in `debug` or `full` mode. Included by `rover.launch.py` / `sim_gz.launch.py` |
+| `navigation/config/nav2_params.yaml` | All Nav2 settings: planner, controller, costmaps, footprint, recoveries. Replaces the old `costmap.yaml` |
+| `navigation/behavior_trees/navigate_to_pose_keep_nearby.xml` | Nav2's standard goal behavior tree, changed so recoveries keep obstacles near the rover |
+| `chassis_bringup/config/twist_mux.yaml` | Who drives the wheels: joystick > keyboard > Nav2 |
+| `chassis_bringup/foxglove/navigation.json` | Foxglove layout for navigation (see [Foxglove layout](#foxglove-layout)) |
+| `robot_description/worlds/nav_test.sdf` | Gazebo world with four obstacle lanes for testing |
+| `navigation/scripts/run_nav_tests.sh` | Runs every test scenario N times, each in a fresh sim |
+| `navigation/scripts/nav_scenario_test.py` | Runs one test scenario and records the results |
+| `navigation/scripts/bag_qos.yaml` | Recording settings for `run_nav_tests.sh -b` |
 
 ## Testing
 
