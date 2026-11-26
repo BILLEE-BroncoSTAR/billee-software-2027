@@ -122,7 +122,14 @@ class ArucoDetector:
         depth_inner_fraction: float = 0.6,
         min_valid_depth_fraction: float = 0.25,
         marker_sizes: dict[int, float] | None = None,
+        full_frame_every: int = 1,
+        track_margin: float = 0.75,
     ):
+        """full_frame_every > 1: tracking. Between full-frame scans (every full_frame_every
+        frames) only padded boxes around the last frame's markers are searched, at full
+        resolution, so a frame costs a few ms instead of 11-25 ms on the Jetson. A marker that
+        isn't found again triggers a full scan at once; a new one shows up at the next full scan.
+        track_margin: box padding, as a fraction of the marker's size (min 24 px)."""
         if position_source not in POSITION_SOURCES:
             raise ValueError(f"position_source {position_source!r}, expected {POSITION_SOURCES}")
         if corner_refinement not in CORNER_REFINEMENT:
@@ -141,19 +148,65 @@ class ArucoDetector:
         params = cv2.aruco.DetectorParameters()
         params.cornerRefinementMethod = CORNER_REFINEMENT[corner_refinement]
         self._detector = cv2.aruco.ArucoDetector(self.dictionary, params)
+        self.full_frame_every = max(1, int(full_frame_every))
+        self.track_margin = float(track_margin)
+        self._frames = 0
+        self._tracked: list[Marker] = []   # last frame's markers
+        self.last_full_scan = True         # whether the last detect() scanned the whole frame
 
     def detect(self, image: np.ndarray) -> list[Marker]:
         """2D detection only: ids, corners and centres, sorted by id."""
         gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        self._frames += 1
+        markers = None
+        if (self.full_frame_every > 1 and self._tracked
+                and self._frames % self.full_frame_every != 0):
+            markers = self._detect_tracked(gray)
+        self.last_full_scan = markers is None
+        if markers is None:
+            markers = self._detect_in(gray, 0, 0)
+        markers.sort(key=lambda m: m.id)
+        self._tracked = markers
+        return markers
+
+    def _detect_in(self, gray: np.ndarray, x0: int, y0: int) -> list[Marker]:
         corners, ids, _rejected = self._detector.detectMarkers(gray)
         if ids is None:
             return []
-        markers = []
+        out = []
         for c, marker_id in zip(corners, ids.ravel()):
-            c = np.asarray(c, dtype=np.float64).reshape(4, 2)
-            markers.append(Marker(id=int(marker_id), corners=c, center=marker_center(c)))
-        markers.sort(key=lambda m: m.id)
-        return markers
+            c = np.asarray(c, dtype=np.float64).reshape(4, 2) + (x0, y0)
+            out.append(Marker(id=int(marker_id), corners=c, center=marker_center(c)))
+        return out
+
+    def _detect_tracked(self, gray: np.ndarray) -> list[Marker] | None:
+        """Search boxes around the tracked markers; None = do a full scan instead (a tracked
+        marker wasn't found again, or the boxes cover most of the frame anyway)."""
+        h, w = gray.shape
+        boxes = []
+        for m in self._tracked:
+            lo, hi = m.corners.min(axis=0), m.corners.max(axis=0)
+            pad = max(24.0, self.track_margin * float(max(hi - lo)))
+            x0, y0 = (int(max(0, v - pad)) for v in lo)
+            x1, y1 = int(min(w, hi[0] + pad)), int(min(h, hi[1] + pad))
+            boxes.append([x0, y0, x1, y1])
+        merged = []  # overlapping boxes would find the same marker twice: merge them
+        for b in sorted(boxes):
+            for m in merged:
+                if b[0] < m[2] and b[2] > m[0] and b[1] < m[3] and b[3] > m[1]:
+                    m[:] = [min(m[0], b[0]), min(m[1], b[1]), max(m[2], b[2]), max(m[3], b[3])]
+                    break
+            else:
+                merged.append(b)
+        if sum((x1 - x0) * (y1 - y0) for x0, y0, x1, y1 in merged) > 0.5 * w * h:
+            return None
+        found: dict[int, Marker] = {}
+        for x0, y0, x1, y1 in merged:
+            for m in self._detect_in(gray[y0:y1, x0:x1], x0, y0):
+                found.setdefault(m.id, m)
+        if {m.id for m in self._tracked} - set(found):
+            return None  # lost one (moved fast, or out of its box): look everywhere
+        return list(found.values())
 
     def locate(
         self,

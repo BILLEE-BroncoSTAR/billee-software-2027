@@ -33,7 +33,12 @@ from dataclasses import dataclass
 import numpy as np
 from cv_bridge import CvBridge, CvBridgeError
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import (
+    HistoryPolicy,
+    QoSProfile,
+    ReliabilityPolicy,
+    qos_profile_sensor_data,
+)
 from sensor_msgs.msg import CameraInfo, Image
 from std_msgs.msg import Header
 
@@ -90,11 +95,18 @@ class RgbdSubscriber:
         self.frames = 0
         self.frames_with_depth = 0
 
-        node.create_subscription(Image, color_topic, self._on_color, qos_profile_sensor_data)
+        # Colour: keep only the newest frame. With sensor_data's queue of 5, a stage slower than
+        # the camera worked through stale frames, up to ~0.5 s behind the video. Depth: 2, so the
+        # depth image of the waiting colour frame isn't pushed out by the next one.
+        newest = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
+                            reliability=ReliabilityPolicy.BEST_EFFORT)
+        node.create_subscription(Image, color_topic, self._on_color, newest)
         node.create_subscription(CameraInfo, camera_info_topic, self._on_info,
                                  qos_profile_sensor_data)
         if use_depth:
-            node.create_subscription(Image, depth_topic, self._on_depth, qos_profile_sensor_data)
+            node.create_subscription(Image, depth_topic, self._on_depth,
+                                     QoSProfile(depth=2, history=HistoryPolicy.KEEP_LAST,
+                                                reliability=ReliabilityPolicy.BEST_EFFORT))
         self.topics = {
             "color": node.resolve_topic_name(color_topic),
             "camera_info": node.resolve_topic_name(camera_info_topic),

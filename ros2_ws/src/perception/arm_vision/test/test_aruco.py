@@ -281,3 +281,36 @@ def test_usb_scan(tmp_path):
     assert len(warnings) == 2
     assert any("USB 2" in w for w in warnings) and any("recovery" in w for w in warnings)
     assert realsense_cameras(str(tmp_path / "missing")) == []
+
+
+# --- tracking ---------------------------------------------------------------------------------
+
+def _canvas(placements, side=60):
+    """Grey 640x480 image with DICT_5X5_50 markers pasted at (id, x, y) top-left positions."""
+    img = np.full((480, 640), 150, np.uint8)
+    for marker_id, x, y in placements:
+        tag = generate_marker(DICT, marker_id, side)
+        img[y:y + tag.shape[0], x:x + tag.shape[1]] = tag
+    return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+
+def test_tracking_matches_full_scans_and_recovers():
+    full = ArucoDetector(DICT)
+    tracked = ArucoDetector(DICT, full_frame_every=4)
+    a = _canvas([(3, 100, 100), (9, 400, 250)])
+    ref = {m.id: m.corners for m in full.detect(a)}
+    scans = []
+    for _ in range(4):  # first frame is a full scan, the next ones search around 3 and 9
+        found = {m.id: m.corners for m in tracked.detect(a)}
+        scans.append(tracked.last_full_scan)
+        assert found.keys() == ref.keys()
+        for k, corners in ref.items():
+            np.testing.assert_allclose(found[k], corners, atol=1e-6)
+    assert scans == [True, False, False, True]
+    # 9 jumps far out of its box: the tracked search misses it, so the same frame scans fully.
+    b = _canvas([(3, 100, 100), (9, 60, 330)])
+    assert [m.id for m in tracked.detect(b)] == [3, 9] and tracked.last_full_scan
+    # A new marker shows up by the next full scan at the latest.
+    c = _canvas([(3, 100, 100), (9, 60, 330), (20, 450, 60)])
+    seen = [sorted(m.id for m in tracked.detect(c)) for _ in range(4)]
+    assert [3, 9, 20] in seen

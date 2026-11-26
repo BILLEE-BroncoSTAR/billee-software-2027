@@ -73,6 +73,7 @@ class ArucoNode(Node):
             min_depth=p("min_depth", 0.1).value,
             max_depth=p("max_depth", 6.0).value,
             marker_sizes=parse_marker_sizes(p("marker_sizes", [""]).value),
+            full_frame_every=int(p("full_frame_every", 6).value),
         )
         self.marker_ids = set(p("marker_ids", [-1]).value) - {-1}  # [-1] = every id
         self.publish_tf = p("publish_tf", True).value

@@ -21,6 +21,11 @@
     max_depth: 6.0
     # Corner refinement: none | subpix | contour | apriltag. subpix steadies the PnP orientation.
     corner_refinement: subpix
+    # Tracking: scan the whole image every full_frame_every frames, and in between only boxes
+    # around the markers already found (full resolution, same corners): ~3 ms a frame instead of
+    # 11-25 ms, so the overlays keep up with the 30 fps video. A lost marker triggers a full scan
+    # at once; a new one appears within full_frame_every frames (0.2 s). 1 = always full scans.
+    full_frame_every: 6
 
     # Inputs, relative to the node's namespace (/arm_cam).
     color_topic: color/image_raw
