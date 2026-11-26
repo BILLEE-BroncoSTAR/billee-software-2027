@@ -21,6 +21,8 @@ and `sim_gz.launch.py` are in [running.md → Launch options](running.md#launch-
 | `config/gz_params.yaml` | Gazebo params |
 | `foxglove/rover.json` | The Foxglove layout for every mode but Teleop · Arm: the five CSI cameras (front tab also shows the ZED 2i), GPS map (`/gps`, nothing publishes it yet), and a 3D view that follows the rover (odometry, point cloud, skeletons). No arm. |
 | `foxglove/rover_arm.json` | The Teleop · Arm layout: `rover.json` plus the arm RealSense (ArUco + keyboard overlay), the arm model with the camera on the rover, and the markers and keyboard in 3D |
+
+Both Foxglove layouts have four battery gauges (DRIVE, LOGIC, SCIENCE, ARM, 0-100 %) from the RCM's F´ GDS: `rcm_telemetry` (its README), started by `rover.launch.py` (`battery:=`).
 | `rviz/drivetrain.rviz` | RViz layout. `ground_station.launch.py` sets RViz's fixed frame to `odom` (`fixed_frame:=`). The sim's EKF (`navigation:=true`) or the real path's wheel-odometry TF (`odom_tf:=true`) publishes it |
 
 ## What `rover.launch.py` starts

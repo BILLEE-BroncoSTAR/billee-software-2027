@@ -179,6 +179,14 @@ declare_args = [
         "autonomous = solid red, arrived = flashing green, idle = slow yellow pulse. none = don't "
         "start it. The BILLEE dashboard sets it per mode. Both modes.",
     ),
+    DeclareLaunchArgument(
+        "battery",
+        default_value="true",
+        choices=["true", "false"],
+        description="Battery charge of the four RCM packs (drive, logic, science, arm) from the "
+        "RCM's F´ GDS on this Jetson (rcm_telemetry battery_node): /battery/<pack> and "
+        "/battery/<pack>/percent, the Foxglove gauges. Both modes.",
+    ),
 ]
 
 # nvarguscamerasrc, present only in the Jetson (l4t) container.
@@ -266,6 +274,7 @@ def _setup(context):
     actions += _arm_tf(context, mode)
     actions += _arm_camera(context, mode)
     actions += _status_light(context)
+    actions += _battery(context, mode)
     if vio:
         actions.append(
             Node(
@@ -355,6 +364,23 @@ def _status_light(context):
             "built here (pixi run build --packages-select status_light)."))]
     return [Node(package="status_light", executable="status_light", name="status_light",
                  output="screen", parameters=[{"pattern": pattern}])]
+
+
+def _battery(context, mode):
+    """The RCM battery packs from its F´ GDS (battery:=true), or why it isn't started."""
+    if LaunchConfiguration("battery").perform(context) != "true":
+        return []
+    try:
+        share = get_package_share_directory("rcm_telemetry")
+    except PackageNotFoundError:
+        return [LogInfo(msg=(
+            "rover.launch.py: battery gauges not started, the rcm_telemetry package isn't built "
+            "here (pixi run build --packages-select rcm_telemetry)."))]
+    # It polls the GDS over HTTP and waits for it if it isn't up, so it never blocks the launch.
+    return [Node(package="rcm_telemetry", executable="battery_node", name="rcm_battery",
+                 output="screen", respawn=True, respawn_delay=5.0,
+                 parameters=[os.path.join(share, "config", "battery.yaml"),
+                             {"use_sim_time": mode == "sim"}])]
 
 
 def _can_problem(context):

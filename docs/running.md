@@ -340,6 +340,9 @@ networking, so the host can reach their port 8765.
    | `rover.json` | Teleop · Drive, Teleop · Science, Autonomous, Astronaut, the sim | the five [CSI cameras](#csi-cameras) (front: tabs for cam0 and the ZED 2i's video, with any `camera:=` but `none`; it shows the skeletons with `openpose` or `both`), the GPS map, and a 3D view that follows the rover (rover model, odometry, ZED point cloud, OpenPose skeletons). No arm. |
    | `rover_arm.json` | Teleop · Arm | all of `rover.json`, plus the arm RealSense feed (ArUco markers and the keyboard drawn over it), the arm model with the D435i on the rover, and the ArUco markers and keyboard in 3D |
 
+   Both have four battery gauges across the top (DRIVE, LOGIC, SCIENCE, ARM, 0-100 %, from the
+   RCM's F´ GDS: `ros2_ws/src/rcm_telemetry/README.md`).
+
    Panels whose topics aren't running read "waiting for messages". The BILLEE dashboard opens the
    right one per mode once their IDs are in its config (its README, "Foxglove layouts").
 

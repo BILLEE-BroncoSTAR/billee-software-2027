@@ -177,6 +177,58 @@
         "/gps": "#f5a623",
         "/gps/filtered": "#4a90e2"
       }
+    },
+    "Gauge!battery_drive": {
+      "foxglovePanelTitle": "DRIVE battery %",
+      "path": "/battery/drive/percent.data",
+      "minValue": 0,
+      "maxValue": 100,
+      "colorMode": "colormap",
+      "colorMap": "red-yellow-green",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false
+    },
+    "Gauge!battery_logic": {
+      "foxglovePanelTitle": "LOGIC battery %",
+      "path": "/battery/logic/percent.data",
+      "minValue": 0,
+      "maxValue": 100,
+      "colorMode": "colormap",
+      "colorMap": "red-yellow-green",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false
+    },
+    "Gauge!battery_science": {
+      "foxglovePanelTitle": "SCIENCE battery %",
+      "path": "/battery/science/percent.data",
+      "minValue": 0,
+      "maxValue": 100,
+      "colorMode": "colormap",
+      "colorMap": "red-yellow-green",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false
+    },
+    "Gauge!battery_arm": {
+      "foxglovePanelTitle": "ARM battery %",
+      "path": "/battery/arm/percent.data",
+      "minValue": 0,
+      "maxValue": 100,
+      "colorMode": "colormap",
+      "colorMap": "red-yellow-green",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false
     }
   },
   "globalVariables": {},
@@ -214,9 +266,29 @@
     },
     "second": {
       "direction": "column",
-      "first": "3D!odometry",
-      "second": "map!gps",
-      "splitPercentage": 65
+      "first": {
+        "direction": "row",
+        "first": {
+          "direction": "row",
+          "first": "Gauge!battery_drive",
+          "second": "Gauge!battery_logic",
+          "splitPercentage": 50
+        },
+        "second": {
+          "direction": "row",
+          "first": "Gauge!battery_science",
+          "second": "Gauge!battery_arm",
+          "splitPercentage": 50
+        },
+        "splitPercentage": 50
+      },
+      "second": {
+        "direction": "column",
+        "first": "3D!odometry",
+        "second": "map!gps",
+        "splitPercentage": 65
+      },
+      "splitPercentage": 14
     },
     "splitPercentage": 62
   }

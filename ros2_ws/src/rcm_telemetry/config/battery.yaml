@@ -1,0 +1,19 @@
+# rcm_battery (rcm_telemetry battery_node): the four RCM battery packs from the RCM's F´ GDS.
+/**:
+  ros__parameters:
+    # The RCM GDS's web API (the GDS runs on the Jetson host; the container shares its network).
+    gds_url: http://localhost:5000
+    period: 1.0          # s between polls / publishes
+    stale_s: 5.0         # s without a valid reading -> present: false, percentage NaN
+    # 100 % = cells x this (LiPo full charge). 0 % = the pack's undervoltage fault bound, read
+    # live from the RCM (fpManager.*_POWER_BOUNDS); these are fprime-billee lucadev's defaults,
+    # used until the RCM reports its own (3.4 V/cell).
+    full_cell_voltage: 4.2
+    drive_cells: 4
+    drive_empty_voltage: 13.6
+    logic_cells: 6
+    logic_empty_voltage: 20.4
+    science_cells: 6
+    science_empty_voltage: 20.4
+    arm_cells: 6
+    arm_empty_voltage: 20.4
